@@ -348,138 +348,25 @@ def generate_partner_suggestions(remaining: List[Rectangle],
 
     return suggestions
 
-
-# def regroup_remainders(remaining: List[Rectangle],
-#                        min_width: int,
-#                        max_width: int,
-#                        tolerance_length: int,
-#                        start_group_id: int = 10000) -> (List[Group], List[Rectangle]):  # type: ignore
-#     """
-#     خوارزمية إعادة التجميع للبواقي (الإصدار المطور).
-#     - تكرر العنصر نفسه ضمن المجموعة إذا لزم الأمر.
-#     - تحاول استخراج أقصى عدد من المجموعات الممكنة.
-#     - تتوقف فقط إذا لم تعد أي توليفة تحقق الشروط.
-#     """
-#     remainders = [Rectangle(r.id, r.width, r.length, r.qty) for r in remaining if r.qty > 0]
-#     if not remainders:
-#         return [], []
-
-#     # ترتيب حسب العرض تنازلياً
-#     remainders.sort(key=lambda x: x.width, reverse=True)
-
-#     id_map = {r.id: r for r in remainders}
-#     remaining_qty: Dict[int, int] = {r.id: r.qty for r in remainders}
-#     widths_map = defaultdict(list)
-#     for r in remainders:
-#         widths_map[r.width].append(r.id)
-
-#     groups: List[Group] = []
-#     group_id = start_group_id
-
-#     safety = 0
-#     max_iters = 10000
-#     progress = True  # لتتبع ما إذا تم إنشاء أي مجموعة في الدورة
-
-#     while progress and safety < max_iters:
-#         safety += 1
-#         progress = False  # نفترض مبدئيًا أنه لن تُنشأ مجموعة هذه الدورة
-
-#         for primary in remainders:
-#             if remaining_qty.get(primary.id, 0) <= 0:
-#                 continue
-
-#             primary_avail = remaining_qty[primary.id]
-
-#             # نحاول أكثر من مجموعة من نفس العنصر طالما هناك كمية متبقية
-#             while remaining_qty.get(primary.id, 0) > 0:
-#                 made_group = False
-
-#                 for use_primary in range(min(primary_avail, 50), 0, -1):  # جرب حتى 50 وحدة دفعة واحدة
-#                     if remaining_qty[primary.id] < use_primary:
-#                         continue
-
-#                     ref_total_len = primary.length * use_primary
-#                     chosen_items: List[UsedItem] = [UsedItem(primary.id, primary.width, primary.length, use_primary, primary.qty)]
-#                     chosen_width = primary.width
-
-#                     temp_qty = dict(remaining_qty)
-#                     temp_qty[primary.id] -= use_primary
-
-#                     candidate_widths = sorted(widths_map.keys(), reverse=True)
-
-#                     for w in candidate_widths:
-#                         if chosen_width + w > max_width:
-#                             continue
-#                         for cid in widths_map[w]:
-#                             avail = temp_qty.get(cid, 0)
-#                             if avail <= 0:
-#                                 continue
-
-#                             cand = id_map[cid]
-#                             desired_qty = max(1, int(round(ref_total_len / cand.length)))
-#                             take = min(desired_qty, avail)
-
-#                             if take <= 0:
-#                                 continue
-
-#                             cand_total_len = cand.length * take
-#                             diff = abs(cand_total_len - ref_total_len)
-
-#                             if diff <= tolerance_length and chosen_width + cand.width <= max_width:
-#                                 chosen_items.append(UsedItem(cid, cand.width, cand.length, take, cand.qty))
-#                                 chosen_width += cand.width
-#                                 temp_qty[cid] -= take
-
-#                                 if chosen_width >= min_width:
-#                                     break
-#                         if chosen_width >= min_width:
-#                             break
-
-#                     # تحقق صلاحية المجموعة
-#                     if min_width <= chosen_width <= max_width:
-#                         for it in chosen_items:
-#                             remaining_qty[it.rect_id] = max(0, remaining_qty.get(it.rect_id, 0) - it.used_qty)
-#                             if it.rect_id in id_map:
-#                                 id_map[it.rect_id].qty = remaining_qty[it.rect_id]
-#                         groups.append(Group(group_id, chosen_items))
-#                         group_id += 1
-#                         made_group = True
-#                         progress = True
-#                         break  # انتهت هذه المجموعة، جرب التالية
-
-#                 if not made_group:
-#                     break  # لم ننجح بتكوين أي مجموعة إضافية من هذا العنصر، انتقل لعنصر آخر
-
-#         # تنظيف العناصر التي نفدت كمياتها
-#         keys_to_remove = [k for k, v in remaining_qty.items() if v <= 0]
-#         for k in keys_to_remove:
-#             remaining_qty.pop(k, None)
-
-#     # إعداد البواقي النهائية
-#     remaining_after = []
-#     for r in remainders:
-#         q = remaining_qty.get(r.id, 0)
-#         if q > 0:
-#             remaining_after.append(Rectangle(r.id, r.width, r.length, q))
-
-#     return groups, remaining_after
 def regroup_remainders(remaining: List[Rectangle],
                        min_width: int,
                        max_width: int,
                        tolerance_length: int,
-                       start_group_id: int = 10000) -> (List[Group], List[Rectangle]):  # type: ignore
+                       start_group_id: int = 10000) -> (List[Group], List[Rectangle]):
     """
-    خوارزمية إعادة التجميع للبواقي (الإصدار الذكي المحسّن).
-    - تكرر العنصر نفسه ضمن المجموعة إذا لزم.
-    - تحاول استخدام أقصى الكميات الممكنة ضمن السماحية.
-    - ترفع السماحية تدريجيًا في حال لم يتم توليد مجموعات جديدة.
-    - تستمر حتى لا يمكن تشكيل أي مجموعة جديدة إطلاقًا.
+    خوارزمية إعادة التجميع للبواقي - الإصدار المحسّن النهائي.
+    ✅ تتابع المحاولة على كامل البواقي حتى لا يمكن تشكيل أي مجموعة جديدة.
+    ✅ تستهلك الكميات القصوى الممكنة.
+    ✅ تكرر العنصر نفسه ضمن المجموعة إن لزم.
+    ✅ تحافظ على منطق التوافق السابق.
     """
 
+    # تحضير البيانات
     remainders = [Rectangle(r.id, r.width, r.length, r.qty) for r in remaining if r.qty > 0]
     if not remainders:
         return [], []
 
+    # ترتيب تنازلي حسب العرض
     remainders.sort(key=lambda x: x.width, reverse=True)
     id_map = {r.id: r for r in remainders}
     remaining_qty: Dict[int, int] = {r.id: r.qty for r in remainders}
@@ -490,97 +377,92 @@ def regroup_remainders(remaining: List[Rectangle],
     groups: List[Group] = []
     group_id = start_group_id
 
-    base_tolerance = tolerance_length
-    safety = 0
-    max_iters = 20000
+    # نكرر المحاولة حتى لا يمكن تشكيل أي مجموعة جديدة
     progress = True
+    outer_safety = 0
+    max_outer_iters = 5000
 
-    while progress and safety < max_iters:
-        safety += 1
-        progress = False
-        formed_in_cycle = 0  # عدّاد لمعرفة هل شكلنا مجموعات
+    while progress and outer_safety < max_outer_iters:
+        outer_safety += 1
+        progress = False  # سنفعّله إذا أنشأنا أي مجموعة
+
+        # ترتيب العناصر مجددًا حسب الكمية المتبقية (الأعرض أولًا)
+        remainders.sort(key=lambda x: (x.width, remaining_qty.get(x.id, 0)), reverse=True)
 
         for primary in remainders:
-            if remaining_qty.get(primary.id, 0) <= 0:
+            avail_primary = remaining_qty.get(primary.id, 0)
+            if avail_primary <= 0:
                 continue
 
-            # طالما هناك كمية متبقية
-            while remaining_qty.get(primary.id, 0) > 0:
+            # نحاول استخراج أكثر من مجموعة من نفس العنصر إن أمكن
+            inner_try_count = 0
+            while remaining_qty.get(primary.id, 0) > 0 and inner_try_count < 100:
+                inner_try_count += 1
                 made_group = False
-                best_group = None
-                best_width = 0
 
-                primary_avail = remaining_qty[primary.id]
+                # نحاول بأكبر كمية ممكنة من القطعة الأساسية
+                for use_primary in range(min(avail_primary, 100), 0, -1):
+                    if remaining_qty[primary.id] < use_primary:
+                        continue
 
-                # نحاول بأكبر كمية ممكنة أولاً
-                for use_primary in range(primary_avail, 0, -1):
                     ref_total_len = primary.length * use_primary
-                    temp_qty = dict(remaining_qty)
-                    temp_qty[primary.id] -= use_primary
                     chosen_items: List[UsedItem] = [
                         UsedItem(primary.id, primary.width, primary.length, use_primary, primary.qty)
                     ]
                     chosen_width = primary.width
+                    temp_qty = dict(remaining_qty)
+                    temp_qty[primary.id] -= use_primary
 
-                    # نحاول إضافة عناصر أخرى للوصول إلى أقصى عرض ممكن
+                    # البحث عن شركاء مناسبين
                     candidate_widths = sorted(widths_map.keys(), reverse=True)
                     for w in candidate_widths:
                         if chosen_width + w > max_width:
                             continue
                         for cid in widths_map[w]:
-                            avail = temp_qty.get(cid, 0)
-                            if avail <= 0:
+                            if temp_qty.get(cid, 0) <= 0:
                                 continue
                             cand = id_map[cid]
                             desired_qty = max(1, int(round(ref_total_len / cand.length)))
-                            take = min(desired_qty, avail)
+                            take = min(desired_qty, temp_qty[cid])
+
                             if take <= 0:
                                 continue
-                            cand_total_len = cand.length * take
-                            diff = abs(cand_total_len - ref_total_len)
+
+                            diff = abs((cand.length * take) - ref_total_len)
                             if diff <= tolerance_length and chosen_width + cand.width <= max_width:
                                 chosen_items.append(UsedItem(cid, cand.width, cand.length, take, cand.qty))
                                 chosen_width += cand.width
                                 temp_qty[cid] -= take
 
-                    # نحفظ أفضل مجموعة ذات عرض أكبر ممكن
-                    if min_width <= chosen_width <= max_width and chosen_width > best_width:
-                        best_group = chosen_items
-                        best_width = chosen_width
+                                # إذا وصلنا للنطاق المقبول نوقف
+                                if chosen_width >= min_width:
+                                    break
+                        if chosen_width >= min_width:
+                            break
 
-                # إذا وجدنا مجموعة أفضل
-                if best_group:
-                    for it in best_group:
-                        remaining_qty[it.rect_id] = max(0, remaining_qty.get(it.rect_id, 0) - it.used_qty)
-                        id_map[it.rect_id].qty = remaining_qty[it.rect_id]
-                    groups.append(Group(group_id, best_group))
-                    group_id += 1
-                    made_group = True
-                    progress = True
-                    formed_in_cycle += 1
-                else:
-                    break
+                    # تحقق من صلاحية المجموعة
+                    if min_width <= chosen_width <= max_width:
+                        # ثبت القيم الفعلية
+                        for it in chosen_items:
+                            remaining_qty[it.rect_id] = max(0, remaining_qty[it.rect_id] - it.used_qty)
+                            if it.rect_id in id_map:
+                                id_map[it.rect_id].qty = remaining_qty[it.rect_id]
+                        groups.append(Group(group_id, chosen_items))
+                        group_id += 1
+                        progress = True
+                        made_group = True
+                        break  # انتقل لتكوين مجموعة أخرى
 
-            # نظف العناصر المنتهية
-            keys_to_remove = [k for k, v in remaining_qty.items() if v <= 0]
-            for k in keys_to_remove:
-                remaining_qty.pop(k, None)
+                if not made_group:
+                    break  # لم يعد يمكن تكوين أي مجموعة جديدة من هذا العنصر
 
-        # إذا لم تُنشأ أي مجموعة هذه الدورة، زد السماحية قليلاً وحاول مجددًا
-        if formed_in_cycle == 0:
-            tolerance_length += 5
-        else:
-            tolerance_length = base_tolerance
-
-        # شرط توقف إذا لم يحدث أي تقدم لعدد دورات متتالية
-        if not progress and tolerance_length > base_tolerance * 5:
-            break
+        # تنظيف الكميات المنتهية
+        remaining_qty = {k: v for k, v in remaining_qty.items() if v > 0}
 
     # إعداد البواقي النهائية
-    remaining_after = []
-    for r in remainders:
-        q = remaining_qty.get(r.id, 0)
-        if q > 0:
-            remaining_after.append(Rectangle(r.id, r.width, r.length, q))
+    remaining_after = [
+        Rectangle(r.id, r.width, r.length, remaining_qty.get(r.id, 0))
+        for r in remainders if remaining_qty.get(r.id, 0) > 0
+    ]
 
     return groups, remaining_after
