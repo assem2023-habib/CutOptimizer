@@ -1,0 +1,7 @@
+pandas
+openpyxl
+xlsxwriter
+PySide6
+matplotlib
+fpdf2
+pyinstaller

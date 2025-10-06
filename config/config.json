@@ -1,0 +1,9 @@
+{
+    "min_width": 370,
+    "max_width": 400,
+    "tolerance_length": 100,
+    "min_total_area": null,
+    "max_total_area": null,
+    "start_with_largest": true,
+    "allow_split_rows": true
+}
