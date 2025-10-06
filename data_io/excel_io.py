@@ -1,10 +1,11 @@
 import pandas as pd
-from typing import  List, Dict, Optional
+from typing import  List, Dict, Optional, Tuple
 from core.models import Rectangle, Group, UsedItem
 import os
 from pandas.api.types import is_numeric_dtype
 from xlsxwriter.utility import xl_col_to_name
 from collections import defaultdict
+import math
 
 def read_input_excel(path: str, sheet_name = 0) -> List[Rectangle]:
     """
@@ -145,38 +146,24 @@ def write_output_excel(path: str,
 
     # 2) **إعادة التجميع الفعلية** للبواقي (نُجرب تكوين مجموعات فعلياً من remaining)
     # ترجع: (قائمة مجموعات من البواقي, قائمة بقايا نهائية بعد المحاولة)
-    computed_remainder_groups, computed_remaining_after = regroup_remainders(
-        remaining, min_width, max_width, tolerance_length
+      # ------ استدعاء الإعادة التكرارية للبواقي حتى الاستنفاد ------
+    # اختيار 'start_group_id' بحيث لا يتداخل مع المجموعات الأصلية
+    existing_max_id = max((g.id for g in groups), default=0)
+    start_rem_group_id = max(existing_max_id + 1, 10000)
+
+    computed_remainder_groups, computed_remaining_after = exhaustively_regroup(
+        remaining,
+        min_width,
+        max_width,
+        tolerance_length,
+        start_group_id=start_rem_group_id,
+        max_rounds=100  # يمكنك تعديل هذا للحد الأقصى للجولات
     )
+    
     # إذا caller مرر remainder_groups في باراميتر الدالة، نستخدمه؛ وإلا نستخدم المحسوب
     to_write_remainder_groups = remainder_groups if remainder_groups is not None else computed_remainder_groups
     to_write_remaining_after = computed_remaining_after
     
-
-    # ---------------------------
-    #  الآن كتابة الأوراق في الملف
-    # ---------------------------
-    
-    # ---------------------------
-    #  جديد: كتابة مجموعات البواقي (إن وُجدت)
-    # ---------------------------
-    # if remainder_groups:
-    #     rem_group_rows = []
-    #     for g in remainder_groups:
-    #         for it in g.items:
-    #             rem_group_rows.append({
-    #                 'رقم المجموعة' : f'باقي_{g.id}',
-    #                 'معرف السجاد' : it.rect_id,
-    #                 'العرض' : it.width,
-    #                 'الطول' : it.length,
-    #                 'الكمية المستخدمة' : it.used_qty,
-    #                 'الطول الاجمالي للسجادة' : it.length * it.used_qty,
-    #                 'الكمية الأصلية' : it.original_qty
-    #             })
-    #     df_rem_groups = pd.DataFrame(rem_group_rows)
-    #     # اكتب الـ DataFrame أولاً ثم أضف صف المجموع
-    #     df_rem_groups.to_excel(writer, sheet_name='مجموعات من البواقي', index=False)
-    #     _append_totals_row(writer, 'مجموعات من البواقي', df_rem_groups)
     rem_group_rows = []
     for g in (to_write_remainder_groups or []):
         for it in g.items:
@@ -348,121 +335,171 @@ def generate_partner_suggestions(remaining: List[Rectangle],
 
     return suggestions
 
-def regroup_remainders(remaining: List[Rectangle],
-                       min_width: int,
-                       max_width: int,
-                       tolerance_length: int,
-                       start_group_id: int = 10000) -> (List[Group], List[Rectangle]):
+
+
+
+def regroup_remainders(
+    rectangles: List[Rectangle],
+    min_width: float,
+    max_width: float,
+    tolerance_length: float,
+    start_group_id: int = 10000
+) -> Tuple[List[Group], List[Rectangle]]:
     """
-    خوارزمية إعادة التجميع للبواقي - الإصدار المحسّن النهائي.
-    ✅ تتابع المحاولة على كامل البواقي حتى لا يمكن تشكيل أي مجموعة جديدة.
-    ✅ تستهلك الكميات القصوى الممكنة.
-    ✅ تكرر العنصر نفسه ضمن المجموعة إن لزم.
-    ✅ تحافظ على منطق التوافق السابق.
+    خوارزمية مُحسَّنة لتجميع البواقي بطريقة منطقية:
+    - تقلل عدد المجموعات الناتجة.
+    - تدمج عروض مختلفة (ضمن حدود min/max).
+    - تراعي فرق الأطوال ضمن tolerance_length.
+    - تحاول استهلاك الكميات الكبيرة تدريجياً لتقليل السجلات.
     """
 
-    # تحضير البيانات
-    remainders = [Rectangle(r.id, r.width, r.length, r.qty) for r in remaining if r.qty > 0]
-    if not remainders:
-        return [], []
-
-    # ترتيب تنازلي حسب العرض
-    remainders.sort(key=lambda x: x.width, reverse=True)
-    id_map = {r.id: r for r in remainders}
-    remaining_qty: Dict[int, int] = {r.id: r.qty for r in remainders}
-    widths_map = defaultdict(list)
-    for r in remainders:
-        widths_map[r.width].append(r.id)
+    # ترتيب تنازلي حسب العرض لتبدأ بالأعرض
+    rectangles = sorted(rectangles, key=lambda r: r.width, reverse=True)
+    remaining_qty = {r.id: r.qty for r in rectangles}
 
     groups: List[Group] = []
-    group_id = start_group_id
+    group_index = start_group_id
 
-    # نكرر المحاولة حتى لا يمكن تشكيل أي مجموعة جديدة
-    progress = True
-    outer_safety = 0
-    max_outer_iters = 5000
+    # نحاول حتى نستهلك الكميات
+    while True:
+        valid_group_found = False
 
-    while progress and outer_safety < max_outer_iters:
-        outer_safety += 1
-        progress = False  # سنفعّله إذا أنشأنا أي مجموعة
-
-        # ترتيب العناصر مجددًا حسب الكمية المتبقية (الأعرض أولًا)
-        remainders.sort(key=lambda x: (x.width, remaining_qty.get(x.id, 0)), reverse=True)
-
-        for primary in remainders:
-            avail_primary = remaining_qty.get(primary.id, 0)
-            if avail_primary <= 0:
+        # نبدأ كل مجموعة من القطع التي لا تزال متبقية
+        for base in rectangles:
+            if remaining_qty[base.id] <= 0:
                 continue
 
-            # نحاول استخراج أكثر من مجموعة من نفس العنصر إن أمكن
-            inner_try_count = 0
-            while remaining_qty.get(primary.id, 0) > 0 and inner_try_count < 100:
-                inner_try_count += 1
-                made_group = False
+            current_group: List[Rectangle] = []
+            total_width = 0
 
-                # نحاول بأكبر كمية ممكنة من القطعة الأساسية
-                for use_primary in range(min(avail_primary, 100), 0, -1):
-                    if remaining_qty[primary.id] < use_primary:
-                        continue
+            # نستخدم كمية مبدئية من القطعة الأساسية
+            use_qty = min(remaining_qty[base.id], int(max_width // base.width))
+            if use_qty == 0:
+                continue
 
-                    ref_total_len = primary.length * use_primary
-                    chosen_items: List[UsedItem] = [
-                        UsedItem(primary.id, primary.width, primary.length, use_primary, primary.qty)
-                    ]
-                    chosen_width = primary.width
-                    temp_qty = dict(remaining_qty)
-                    temp_qty[primary.id] -= use_primary
+            # أضف بعضاً من القطعة الأساسية
+            for _ in range(use_qty):
+                if total_width + base.width > max_width:
+                    break
+                current_group.append(base)
+                total_width += base.width
 
-                    # البحث عن شركاء مناسبين
-                    candidate_widths = sorted(widths_map.keys(), reverse=True)
-                    for w in candidate_widths:
-                        if chosen_width + w > max_width:
-                            continue
-                        for cid in widths_map[w]:
-                            if temp_qty.get(cid, 0) <= 0:
-                                continue
-                            cand = id_map[cid]
-                            desired_qty = max(1, int(round(ref_total_len / cand.length)))
-                            take = min(desired_qty, temp_qty[cid])
+            # حاول إكمال العرض بمقاطع أخرى قريبة
+            for other in rectangles:
+                if remaining_qty[other.id] <= 0 or other.id == base.id:
+                    continue
 
-                            if take <= 0:
-                                continue
+                # السماح بدمج إذا كان الفرق في العرض معقول (<= 40%)
+                if abs(other.width - base.width) / base.width > 0.4:
+                    continue
 
-                            diff = abs((cand.length * take) - ref_total_len)
-                            if diff <= tolerance_length and chosen_width + cand.width <= max_width:
-                                chosen_items.append(UsedItem(cid, cand.width, cand.length, take, cand.qty))
-                                chosen_width += cand.width
-                                temp_qty[cid] -= take
+                # تحقق من فرق الأطوال ضمن السماحية
+                if abs(other.length - base.length) > tolerance_length:
+                    continue
 
-                                # إذا وصلنا للنطاق المقبول نوقف
-                                if chosen_width >= min_width:
-                                    break
-                        if chosen_width >= min_width:
-                            break
+                # أضف أكبر عدد ممكن من هذا النوع دون تجاوز max_width
+                while remaining_qty[other.id] > 0 and total_width + other.width <= max_width:
+                    current_group.append(other)
+                    total_width += other.width
+                    remaining_qty[other.id] -= 1
 
-                    # تحقق من صلاحية المجموعة
-                    if min_width <= chosen_width <= max_width:
-                        # ثبت القيم الفعلية
-                        for it in chosen_items:
-                            remaining_qty[it.rect_id] = max(0, remaining_qty[it.rect_id] - it.used_qty)
-                            if it.rect_id in id_map:
-                                id_map[it.rect_id].qty = remaining_qty[it.rect_id]
-                        groups.append(Group(group_id, chosen_items))
-                        group_id += 1
-                        progress = True
-                        made_group = True
-                        break  # انتقل لتكوين مجموعة أخرى
+                    # إن اقتربنا من الحد الأعلى كفاية، توقف
+                    if total_width >= max_width * 0.95:
+                        break
 
-                if not made_group:
-                    break  # لم يعد يمكن تكوين أي مجموعة جديدة من هذا العنصر
+                if total_width >= max_width * 0.9:
+                    break
 
-        # تنظيف الكميات المنتهية
-        remaining_qty = {k: v for k, v in remaining_qty.items() if v > 0}
+            # تحقق من صحة المجموعة
+            if not (min_width <= total_width <= max_width):
+                continue
 
-    # إعداد البواقي النهائية
-    remaining_after = [
-        Rectangle(r.id, r.width, r.length, remaining_qty.get(r.id, 0))
-        for r in remainders if remaining_qty.get(r.id, 0) > 0
-    ]
+            # تحقق من السماحية في الأطوال الفعلية داخل المجموعة
+            lengths = [r.length for r in current_group]
+            if lengths and (max(lengths) - min(lengths)) > tolerance_length:
+                continue
 
-    return groups, remaining_after
+            # ✅ تشكيل المجموعة النهائية
+            usage = {}
+            for r in current_group:
+                usage[r.id] = usage.get(r.id, 0) + 1
+
+            # خصم الكميات من المتبقي
+            for rid, used in usage.items():
+                remaining_qty[rid] -= used
+
+            # بناء كائن Group فعلي
+            used_items = [
+                UsedItem(
+                    rect_id=r.id,
+                    width=r.width,
+                    length=r.length,
+                    used_qty=usage[r.id],
+                    original_qty=r.qty
+                )
+                for r in current_group if r.id in usage
+            ]
+
+            group_index += 1
+            groups.append(Group(id=group_index, items=used_items))
+            valid_group_found = True
+
+        # إذا لم يتم إنشاء أي مجموعة جديدة — توقف
+        if not valid_group_found:
+            break
+
+    # إنشاء البواقي النهائية
+    remaining = []
+    for r in rectangles:
+        if remaining_qty[r.id] > 0:
+            rem = r.copy()
+            rem.qty = remaining_qty[r.id]
+            remaining.append(rem)
+
+    return groups, remaining
+
+
+
+def exhaustively_regroup(remaining: List[Rectangle],
+                         min_width: int,
+                         max_width: int,
+                         tolerance_length: int,
+                         start_group_id: int = 10000,
+                         max_rounds: int = 50) -> (List[Group], List[Rectangle]): # type: ignore
+    """
+    استدعي regroup_remainders تكراراً حتى لا يبقى شيء قابل للتجميع.
+    - remaining: قائمة البواقي الابتدائية (لن يتم تعديل ملفات الإكسل الأصلية)
+    - start_group_id: بداية ترقيم مجموعات البواقي (تجنّب تداخل مع المجموعات الأصلية)
+    - max_rounds: حد أمان لتجنب حلقات لا نهائية
+    ترجع: (كل المجموعات المولّدة من البواقي، البواقي النهائية بعد استهلاك الممكن)
+    """
+    # نعمل على نسخة محلية من البواقي
+    current_remaining = [Rectangle(r.id, r.width, r.length, r.qty) for r in remaining if r.qty > 0]
+    all_groups: List[Group] = []
+    next_group_id = start_group_id
+    rounds = 0
+
+    while rounds < max_rounds:
+        rounds += 1
+        # استدعاء مرة واحدة: regroup_remainders يستهلك أكبر قدر ممكن (حسب تصميمه)
+        formed, leftover = regroup_remainders(current_remaining, min_width, max_width, tolerance_length, start_group_id=next_group_id)
+
+        if not formed:
+            # لا أية مجموعة جديدة تشكّلت — انتهينا
+            break
+
+        # جمع المجموعات الجديدة
+        all_groups.extend(formed)
+        # زيادة المؤشر الابتدائي للأعرف لاستخدامه في الاستدعاء التالي (لا تداخل)
+        next_group_id = (all_groups[-1].id if all_groups else next_group_id) + 1
+
+        # تحضير الجولة التالية: البقايا المتبقية من هذه الجولة
+        current_remaining = [Rectangle(r.id, r.width, r.length, r.qty) for r in leftover if r.qty > 0]
+
+        # لو لم يعد هناك بواقي قابلة للاستعمال -> انتهى
+        if not current_remaining:
+            break
+
+    # بعد الخروج: نعيد كل المجموعات التي كونّاها و البواقي النهائية
+    final_remaining = [Rectangle(r.id, r.width, r.length, r.qty) for r in current_remaining if r.qty > 0]
+    return all_groups, final_remaining

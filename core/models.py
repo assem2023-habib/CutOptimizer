@@ -1,4 +1,5 @@
-from dataclasses import dataclass
+import copy
+from dataclasses import dataclass, field
 from typing import Optional, List
 
 @dataclass
@@ -7,6 +8,10 @@ class Rectangle:
     width: int
     length: int
     qty: int
+    group: str = field(default=None)
+
+    def copy(self):
+        return copy.deepcopy(self)
     
 @dataclass
 class UsedItem:
