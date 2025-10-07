@@ -50,7 +50,11 @@ def read_input_excel(path: str, sheet_name = 0) -> List[Rectangle]:
 def write_output_excel(path: str,
                        groups: List[Group],
                        remaining: List[Rectangle],
-                       remainder_groups: Optional[List[Group]] = None):
+                       remainder_groups: Optional[List[Group]] = None,
+                       min_width: Optional[int] = None,
+                       max_width: Optional[int] = None,
+                       tolerance_length: Optional[int] = None,
+                       originals: Optional[List[Rectangle]] = None):
     # sheet1: group details
     row = []
     for g in groups:
@@ -80,16 +84,30 @@ def write_output_excel(path: str,
         })
     df2 = pd.DataFrame(summary)
 
-    # sheet3: remaining
-    rem_rows = []
+    # sheet3: remaining (deduplicated by id,width,length)
+    aggregated = {}
     for r in remaining:
+        key = (r.id, r.width, r.length)
+        aggregated[key] = aggregated.get(key, 0) + int(r.qty)
+    rem_rows = []
+    for (rid, w, l), q in aggregated.items():
         rem_rows.append({
-            'معرف السجادة' : r.id,
-            'العرض' : r.width,
-            'الطول' : r.length,
-            'الكمية المتبقية' : r.qty,
+            'معرف السجادة' : rid,
+            'العرض' : w,
+            'الطول' : l,
+            'الكمية المتبقية' : q,
         })
     df3 = pd.DataFrame(rem_rows)
+    if not df3.empty:
+        df3 = (
+            df3
+            .groupby(['معرف السجادة', 'العرض', 'الطول'], as_index=False)['الكمية المتبقية']
+            .sum()
+            .sort_values(by=['معرف السجادة', 'العرض', 'الطول'])
+        )
+    # أضف عمود "ملاحظة" حتى يظهر نص "المجموع" بجوار صف الإجماليات
+    if 'ملاحظة' not in df3.columns:
+        df3['ملاحظة'] = ''
 
     # sheet4: UI-like summary (mirrors the on-screen table order and labels)
     ui_rows = []
@@ -109,6 +127,13 @@ def write_output_excel(path: str,
         totals_row_idx = nrows + 1  # 0-based index in Excel where header at row 0, data rows start at 1
         # Label cell in first column
         ws.write(totals_row_idx, 0, 'المجموع')
+        # محاولة وضع الكلمة في عمود 'ملاحظة' إن وُجد لزيادة الوضوح
+        try:
+            if 'ملاحظة' in df.columns:
+                note_col_idx = df.columns.get_loc('ملاحظة')
+                ws.write(totals_row_idx, note_col_idx, 'المجموع')
+        except Exception:
+            pass
         for col_idx, col_name in enumerate(df.columns):
             if is_numeric_dtype(df[col_name]):
                 col_letter = xl_col_to_name(col_idx)
@@ -127,8 +152,8 @@ def write_output_excel(path: str,
 
     # إجمالي بعد العملية (المتبقي فقط)
     total_after = 0
-    for r in remaining:
-        total_after += r.width * r.length * r.qty
+    for (rid, w, l), q in aggregated.items():
+        total_after += w * l * q
 
     totals_df = pd.DataFrame([{
         "الإجمالي قبل العملية": total_before,
@@ -136,55 +161,60 @@ def write_output_excel(path: str,
         "المستهلك": total_before - total_after
     }])
 
-    # توليد اقتراحات التشكيل (نحتاج تمرير حدود النطاق والهامش)
-    # استخدم القيم المطلوبة هنا؛ إذا تريد تمريرها من الخارج، عدل التوقيع
-    min_width = 370   # أو قراءة من config
-    max_width = 400
-    tolerance_length = 100
+    # توليد اقتراحات التشكيل باستخدام القيم الممررة من الواجهة إن وُجدت
+    eff_min_width = 370 if min_width is None else int(min_width)
+    eff_max_width = 400 if max_width is None else int(max_width)
+    eff_tolerance = 100 if tolerance_length is None else int(tolerance_length)
 
      # 1) اقتراحات تحليلية (كما كانت سابقًا)
-    suggestions = generate_partner_suggestions(remaining,min_width,max_width, tolerance_length)
+    suggestions = generate_partner_suggestions(remaining, eff_min_width, eff_max_width, eff_tolerance)
     df_sugg = pd.DataFrame(suggestions)
 
-    # 2) **إعادة التجميع الفعلية** للبواقي (نُجرب تكوين مجموعات فعلياً من remaining)
-    # ترجع: (قائمة مجموعات من البواقي, قائمة بقايا نهائية بعد المحاولة)
-      # ------ استدعاء الإعادة التكرارية للبواقي حتى الاستنفاد ------
-    # اختيار 'start_group_id' بحيث لا يتداخل مع المجموعات الأصلية
-    existing_max_id = max((g.id for g in groups), default=0)
-    start_rem_group_id = max(existing_max_id + 1, 10000)
+    # تدقيق: تحقق أن (المستخدم + المتبقي) = الأصلي لكل عنصر
+    # 1) تجميع المستخدم من جميع المجموعات
+    used_totals: Dict[tuple, int] = {}
+    def _accumulate_used(from_groups: List[Group]):
+        for g in from_groups or []:
+            for it in g.items:
+                key = (it.rect_id, it.width, it.length)
+                used_totals[key] = used_totals.get(key, 0) + int(it.used_qty)
+    _accumulate_used(groups)
+    _accumulate_used(remainder_groups or [])
 
-    computed_remainder_groups, computed_remaining_after = exhaustively_regroup(
-        remaining,
-        min_width,
-        max_width,
-        tolerance_length,
-        start_group_id=start_rem_group_id,
-        max_rounds=100  # يمكنك تعديل هذا للحد الأقصى للجولات
-    )
-    
-    # إذا caller مرر remainder_groups في باراميتر الدالة، نستخدمه؛ وإلا نستخدم المحسوب
-    to_write_remainder_groups = remainder_groups if remainder_groups is not None else computed_remainder_groups
-    to_write_remaining_after = computed_remaining_after
-    
-    rem_group_rows = []
-    for g in (to_write_remainder_groups or []):
-        for it in g.items:
-            rem_group_rows.append({
-                'رقم المجموعة' : f'باقي_{g.id}',
-                'معرف السجاد' : it.rect_id,
-                'العرض' : it.width,
-                'الطول' : it.length,
-                'الكمية المستخدمة' : it.used_qty,
-                'الطول الاجمالي للسجادة' : it.length * it.used_qty,
-                'الكمية الأصلية' : it.original_qty
-            })
-    df_rem_groups = pd.DataFrame(rem_group_rows)
+    # 2) تجميع المتبقي (افتراضيًا aggregated أعلاه)
+    remaining_totals: Dict[tuple, int] = dict(aggregated)
 
-    # 4) جدول البواقي النهائية بعد محاولة إعادة التجميع
-    df_remaining_after = pd.DataFrame([
-        {'معرف السجادة': r.id, 'العرض': r.width, 'الطول': r.length, 'الكمية المتبقية بعد إعادة التجميع': r.qty}
-        for r in (to_write_remaining_after or [])
-    ])
+    # 3) تجميع الأصلي من مدخلات caller إن وُجدت، وإلا نفترض الأصلي = المستخدم + المتبقي
+    original_totals: Dict[tuple, int] = {}
+    if originals is not None:
+        for r in originals:
+            key = (r.id, r.width, r.length)
+            original_totals[key] = original_totals.get(key, 0) + int(r.qty)
+    else:
+        # fallback: استنتاج الأصلي من المستخدم + المتبقي
+        all_keys = set(list(used_totals.keys()) + list(remaining_totals.keys()))
+        for k in all_keys:
+            original_totals[k] = used_totals.get(k, 0) + remaining_totals.get(k, 0)
+
+    # 4) بناء جدول التدقيق
+    audit_rows = []
+    all_keys = set(list(original_totals.keys()) + list(used_totals.keys()) + list(remaining_totals.keys()))
+    for (rid, w, l) in sorted(all_keys, key=lambda x: (x[0] if x[0] is not None else -1, x[1], x[2])):
+        orig = int(original_totals.get((rid, w, l), 0))
+        used = int(used_totals.get((rid, w, l), 0))
+        rem = int(remaining_totals.get((rid, w, l), 0))
+        diff = used + rem - orig
+        audit_rows.append({
+            'معرف السجادة': rid,
+            'العرض': w,
+            'الطول': l,
+            'الكمية الأصلية': orig,
+            'الكمية المستخدمة': used,
+            'الكمية المتبقية': rem,
+            'فارق (المستخدم+المتبقي-الأصلي)': diff,
+            'مطابق؟': 'نعم' if diff == 0 else 'لا'
+        })
+    df_audit = pd.DataFrame(audit_rows)
     with pd.ExcelWriter(path, engine='xlsxwriter') as writer:
         df1.to_excel(writer, sheet_name='تفاصيل المجموعات', index= False)
         _append_totals_row(writer, 'تفاصيل المجموعات', df1)
@@ -203,27 +233,10 @@ def write_output_excel(path: str,
         
         # الشيت الجديد: اقتراحات تشكيل مجموعات
         df_sugg.to_excel(writer, sheet_name='اقتراحات تشكيل مجموعات', index=False)
-        # ---------------------------
-        #  شيت: مجموعات من البواقي المعاد تجميعها (إن وُجدت)
-        # ---------------------------
-        if not df_rem_groups.empty:
-            df_rem_groups.to_excel(writer, sheet_name='مجموعات البواقي', index=False)
-            _append_totals_row(writer, 'مجموعات البواقي', df_rem_groups)
-        else:
-            # نكتب رسالة صغيرة توضيحية في الشيت لو لم توجد مجموعات
-            pd.DataFrame([{'ملاحظة': 'لا توجد مجموعات قابلة للتشكيل من البواقي'}]).to_excel(
-                writer, sheet_name='مجموعات البواقي', index=False
-            )
-        # ---------------------------
-        #  شيت: البواقي النهائية بعد إعادة التجميع
-        # ---------------------------
-        if not df_remaining_after.empty:
-            df_remaining_after.to_excel(writer, sheet_name='البواقي النهائية', index=False)
-            _append_totals_row(writer, 'البواقي النهائية', df_remaining_after)
-        else:
-            pd.DataFrame([{'ملاحظة': 'لا توجد بواقي بعد إعادة التجميع'}]).to_excel(
-                writer, sheet_name='البواقي النهائية', index=False
-            )
+        # شيت التدقيق
+        if not df_audit.empty:
+            df_audit.to_excel(writer, sheet_name='تدقيق الكميات', index=False)
+            _append_totals_row(writer, 'تدقيق الكميات', df_audit)
 
         
 # ---------- generate partner suggestions ----------

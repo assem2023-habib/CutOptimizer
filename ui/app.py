@@ -179,7 +179,16 @@ class RectPackApp(QWidget):
         # write excel
         try:
             # نمرر مجموعات البواقي لتُدمج في جداول المجموعات، ونكتب البواقي النهائية بعد إعادة التجميع
-            write_output_excel(output_path, groups, rem_final_remaining, remainder_groups=rem_groups)
+            write_output_excel(
+                output_path,
+                groups,
+                rem_final_remaining,
+                remainder_groups=rem_groups,
+                min_width=min_width,
+                max_width=max_width,
+                tolerance_length=tolerance_len,
+                originals=carpets
+            )
             self.log_append(f"حفظ ملف : {output_path}")
         except Exception as e:
             self.log_append(f"خطأ بحفظ اكسل: {e}")
