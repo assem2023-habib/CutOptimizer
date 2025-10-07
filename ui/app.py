@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (QApplication, QWidget, QPushButton, QVBoxLayout, 
                                QLabel, QLineEdit, QTextEdit, QHBoxLayout, QMessageBox, QTableWidget, QTableWidgetItem, QComboBox)
 
 from PySide6.QtCore import Qt
-from data_io.excel_io import read_input_excel, write_output_excel
+from data_io.excel_io import read_input_excel, write_output_excel, exhaustively_regroup
 from data_io.pdf_report import SimplePDFReport
 # from core.grouping import group_carpets_greedy, generate_groups_from_remaining
 from core.grouping import group_carpets_greedy
@@ -165,25 +165,21 @@ class RectPackApp(QWidget):
 
         self.log_append(f"تم تشكيل {len(groups)} مجموعة . المتبقي: {len(remaining)} أنواع (مع كميات).")
 
-        # try:
-        #     rem_groups, rem_final_remaining = generate_groups_from_remaining(
-        #         remaining,
-        #         min_width=min_width,
-        #         max_width=max_width,
-        #         tolerance_length=tolerance_len,
-        #         max_items_per_group=6,    # غيّر حسب حاجتك
-        #         max_groups=None,
-        #         start_group_id=10000
-        #     )
-        #     self.log_append(f"تم تشكيل {len(rem_groups)} مجموعة من البواقي.")
-        # except Exception as e:
-        #     rem_groups = []
-        #     rem_final_remaining = remaining
-        #     self.log_append("خطأ أثناء تشكيل مجموعات من البواقي: " + str(e))
+        # محاولة إعادة تجميع البواقي إلى مجموعات إضافية مع السماح بالتكرار داخل المجموعة
+        rem_groups, rem_final_remaining = exhaustively_regroup(
+            remaining,
+            min_width=min_width,
+            max_width=max_width,
+            tolerance_length=tolerance_len,
+            start_group_id=max([g.id for g in groups] + [0]) + 1,
+            max_rounds=100
+        )
+        self.log_append(f"تم تشكيل {len(rem_groups)} مجموعة إضافية من البواقي. تبقّى بعد ذلك: {len(rem_final_remaining)} أنواع.")
 
         # write excel
         try:
-            write_output_excel(output_path, groups, remaining, remainder_groups=None)
+            # نمرر مجموعات البواقي لتُدمج في جداول المجموعات، ونكتب البواقي النهائية بعد إعادة التجميع
+            write_output_excel(output_path, groups, rem_final_remaining, remainder_groups=rem_groups)
             self.log_append(f"حفظ ملف : {output_path}")
         except Exception as e:
             self.log_append(f"خطأ بحفظ اكسل: {e}")
