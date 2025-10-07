@@ -337,6 +337,10 @@ def generate_partner_suggestions(remaining: List[Rectangle],
 
     return suggestions
 
+from typing import List, Dict, Tuple, Optional
+import copy
+import math
+
 
 def regroup_residuals_advanced(residuals: List[Dict], min_width: int, max_width: int, tolerance: int,
                                max_depth: int = 6) -> Tuple[List[Dict], List[Dict]]:
@@ -578,14 +582,201 @@ def regroup_residuals_advanced(residuals: List[Dict], min_width: int, max_width:
 
     return groups, updated_residuals
 
+
+# مثال سريع (غير مُفعل تلقائيًا) على كيفية استخدام الدالة:
+if __name__ == '__main__':
+    sample = [
+        {'id': 1, 'width': 120, 'length': 200, 'remaining': 2},
+        {'id': 2, 'width': 80, 'length': 100, 'remaining': 3},
+        {'id': 3, 'width': 60, 'length': 200, 'remaining': 4},
+        {'id': 4, 'width': 40, 'length': 195, 'remaining': 10},
+    ]
+
+    gs, rem = regroup_residuals_advanced(sample, min_width=180, max_width=260, tolerance=20)
+    print('groups:')
+    for g in gs:
+        print(g)
+    print('remaining:')
+    for r in rem:
+        print(r)
+
+
+def regroup_residuals_full(
+    remaining: List[Rectangle],
+    min_width: int,
+    max_width: int,
+    tolerance: int,
+    start_group_id: int = 10000
+) -> Tuple[List[Group], List[Rectangle]]:
+    """
+    خوارزمية موسعة تقوم بإعادة التجميع حتى لا تبقى بواقي ممكنة.
+    """
+
+    current_remaining = copy.deepcopy(remaining)
+    all_groups: List[Group] = []
+    seen_combinations = set()
+    group_id = start_group_id
+
+    def can_tolerate(len_a, qty_a, len_b, qty_b) -> bool:
+        """هل الفرق في الطول ضمن حدود السماحية"""
+        return abs(len_a * qty_a - len_b * qty_b) <= tolerance
+
+    while True:
+        current_remaining = [r for r in current_remaining if r.qty > 0]
+        if not current_remaining:
+            break
+
+        # ترتيب تنازلي حسب العرض
+        current_remaining.sort(key=lambda r: r.width, reverse=True)
+
+        group_items = []
+        total_width = 0
+        ref_rect = current_remaining[0]
+        used_indices = set()
+        remaining_width = max_width
+
+        # نبدأ بأكبر عنصر طالما عرضه < max_width
+        if ref_rect.width > max_width:
+            # لا يمكن استخدام هذا المقاس
+            current_remaining.pop(0)
+            continue
+
+        # نبدأ باستخدام العنصر المرجعي
+        ref_used_qty = max(1, ref_rect.qty // 2)
+        group_items.append(
+            UsedItem(
+                rect_id=ref_rect.id,
+                width=ref_rect.width,
+                length=ref_rect.length,
+                used_qty=ref_used_qty,
+                original_qty=ref_rect.qty
+            )
+        )
+        total_width += ref_rect.width
+        remaining_width -= ref_rect.width
+        ref_rect.qty -= ref_used_qty
+
+        # نحاول إضافة عناصر أخرى حتى نصل للنطاق المطلوب
+        for idx, other in enumerate(current_remaining[1:], start=1):
+            if total_width >= max_width:
+                break
+            if other.qty <= 0:
+                continue
+
+            if not can_tolerate(ref_rect.length, ref_used_qty, other.length, 1):
+                continue
+
+            # إذا كنا نحتاج عرض إضافي يكمل إلى النطاق
+            if min_width <= total_width + other.width <= max_width:
+                use_qty = min(other.qty, ref_used_qty)
+                group_items.append(
+                    UsedItem(
+                        rect_id=other.id,
+                        width=other.width,
+                        length=other.length,
+                        used_qty=use_qty,
+                        original_qty=other.qty
+                    )
+                )
+                total_width += other.width
+                remaining_width -= other.width
+                other.qty -= use_qty
+                used_indices.add(idx)
+
+            elif total_width + other.width < min_width:
+                # يمكن التكرار داخل نفس المجموعة
+                repeat_times = min((min_width - total_width) // other.width, other.qty)
+                if repeat_times > 0:
+                    group_items.append(
+                        UsedItem(
+                            rect_id=other.id,
+                            width=other.width,
+                            length=other.length,
+                            used_qty=repeat_times,
+                            original_qty=other.qty
+                        )
+                    )
+                    total_width += other.width * repeat_times
+                    remaining_width -= other.width * repeat_times
+                    other.qty -= repeat_times
+                    used_indices.add(idx)
+
+        # إذا لم نصل للنطاق المطلوب نحاول تكرار العنصر المرجعي نفسه
+        while total_width < min_width and ref_rect.qty > 0:
+            total_width += ref_rect.width
+            ref_rect.qty -= 1
+            group_items.append(
+                UsedItem(
+                    rect_id=ref_rect.id,
+                    width=ref_rect.width,
+                    length=ref_rect.length,
+                    used_qty=1,
+                    original_qty=ref_rect.qty + 1
+                )
+            )
+
+        # تحقق من كون المجموعة ضمن النطاق
+        if min_width <= total_width <= max_width:
+            signature = tuple(sorted((i.rect_id, i.used_qty) for i in group_items))
+            if signature not in seen_combinations:
+                seen_combinations.add(signature)
+                all_groups.append(Group(id=group_id, items=group_items))
+                group_id += 1
+        else:
+            # فشلنا في تكوين مجموعة مناسبة
+            break
+
+    leftovers = [r for r in current_remaining if r.qty > 0]
+    return all_groups, leftovers
+
+# def exhaustively_regroup(
+#     remaining: List[Rectangle],
+#     min_width: int,
+#     max_width: int,
+#     tolerance_length: int,
+#     start_group_id: int = 10000,
+#     max_rounds: int = 50
+# ) -> Tuple[List[Group], List[Rectangle]]:
+#     """
+#     استدعاء خوارزمية إعادة التجميع المتقدمة تكراراً حتى لا يبقى شيء قابل للتجميع.
+#     """
+#     current_remaining = [Rectangle(r.id, r.width, r.length, r.qty) for r in remaining if r.qty > 0]
+#     all_groups: List[Group] = []
+#     next_group_id = start_group_id
+#     rounds = 0
+
+#     while rounds < max_rounds:
+#         rounds += 1
+
+#         formed, leftover = regroup_residuals_full(
+#             current_remaining,
+#             min_width=min_width,
+#             max_width=max_width,
+#             tolerance=tolerance_length,
+#             start_group_id=next_group_id
+#         )
+
+#         if not formed:
+#             break
+
+#         all_groups.extend(formed)
+#         next_group_id = (all_groups[-1].id if all_groups else next_group_id) + 1
+#         current_remaining = [Rectangle(r.id, r.width, r.length, r.qty) for r in leftover if r.qty > 0]
+
+#         if not current_remaining:
+#             break
+
+#     final_remaining = [Rectangle(r.id, r.width, r.length, r.qty) for r in current_remaining if r.qty > 0]
+#     return all_groups, final_remaining
+
 def exhaustively_regroup(
-                            remaining: List[Rectangle],
-                            min_width: int,
-                            max_width: int,
-                            tolerance_length: int,
-                            start_group_id: int = 10000,
-                            max_rounds: int = 50
-                        ) -> Tuple[List[Group], List[Rectangle]]:
+    remaining: List[Rectangle],
+    min_width: int,
+    max_width: int,
+    tolerance_length: int,
+    start_group_id: int = 10000,
+    max_rounds: int = 50
+) -> Tuple[List[Group], List[Rectangle]]:
 
     """
     استدعاء متكرر لخوارزمية إعادة تجميع البواقي حتى لا يتبقى شيء قابل للتجميع.
