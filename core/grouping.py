@@ -25,6 +25,8 @@ def group_carpets_greedy(carpets: List[Rectangle],
     # Sort rectangles
     carpets_sorted = sorted(carpets, key=lambda r: r.width, reverse=start_with_largest)
     id_map = {r.id: r for r in carpets_sorted}
+    # احتفظ بنسخة ثابتة من الكميات الأصلية قبل أي تعديل
+    original_qty_map: Dict[int, int] = {r.id: r.qty for r in carpets_sorted}
     remaining_qty: Dict[int, int] = {r.id: r.qty for r in carpets_sorted}
 
     # Map widths
@@ -62,7 +64,7 @@ def group_carpets_greedy(carpets: List[Rectangle],
         # Try using as many primary pieces as possible
         for use_primary in range(primary_avail, 0, -1):
             ref_total_len = primary.length * use_primary
-            chosen_items = [UsedItem(primary.id, primary.width, primary.length, use_primary, remaining_qty[primary.id])]
+            chosen_items = [UsedItem(primary.id, primary.width, primary.length, use_primary, original_qty_map.get(primary.id, 0))]
             chosen_width = primary.width
 
             # Remaining width range
@@ -71,6 +73,8 @@ def group_carpets_greedy(carpets: List[Rectangle],
 
             # Work on temporary quantities
             temp_qty = dict(remaining_qty)
+            # احجز كمية الأساس مباشرة حتى لا يسمح بالتكرار فوق المتاح
+            temp_qty[primary.id] = max(0, temp_qty.get(primary.id, 0) - use_primary)
             candidate_widths = sorted(widths_map.keys(), reverse=True)
 
             # Try to add partners
@@ -95,7 +99,7 @@ def group_carpets_greedy(carpets: List[Rectangle],
                     diff = abs(cand_total_len - ref_total_len)
 
                     if diff <= tolerance_length and chosen_width + cand.width <= max_width:
-                        chosen_items.append(UsedItem(cid, cand.width, cand.length, take, remaining_qty[cid]))
+                        chosen_items.append(UsedItem(cid, cand.width, cand.length, take, original_qty_map.get(cid, 0)))
                         chosen_width += cand.width
                         temp_qty[cid] -= take
                         # mark as repeatable block if there is still capacity for another block of same qty
@@ -118,18 +122,17 @@ def group_carpets_greedy(carpets: List[Rectangle],
                         # ensure length block within tolerance
                         if abs(rlength * rqty_block - ref_total_len) > tolerance_length:
                             break
-                        chosen_items.append(UsedItem(rid, rwidth, rlength, rqty_block, remaining_qty[rid]))
+                        chosen_items.append(UsedItem(rid, rwidth, rlength, rqty_block, original_qty_map.get(rid, 0)))
                         chosen_width += rwidth
-                        temp_qty[rid] = temp_qty.get(rid, 0) - rqty_block
+                        temp_qty[rid] = max(0, temp_qty.get(rid, 0) - rqty_block)
                         if chosen_width >= min_width:
                             break
 
             # If valid group formed
             if min_width <= chosen_width <= max_width:
+                # طبّق الاستهلاك الفعلي على الكميات المتبقية (يشمل التكرارات داخل المجموعة)
                 for it in chosen_items:
-                    remaining_qty[it.rect_id] -= it.used_qty
-                    if remaining_qty[it.rect_id] < 0:
-                        remaining_qty[it.rect_id] = 0
+                    remaining_qty[it.rect_id] = max(0, remaining_qty.get(it.rect_id, 0) - it.used_qty)
                     id_map[it.rect_id].qty = remaining_qty[it.rect_id]
                 groups.append(Group(group_id, chosen_items))
                 group_id += 1
@@ -144,7 +147,7 @@ def group_carpets_greedy(carpets: List[Rectangle],
                 if remaining_qty[primary.id] < 0:
                     remaining_qty[primary.id] = 0
                 id_map[primary.id].qty = remaining_qty[primary.id]
-                groups.append(Group(group_id, [UsedItem(primary.id, primary.width, primary.length, use, primary.qty)]))
+                groups.append(Group(group_id, [UsedItem(primary.id, primary.width, primary.length, use, original_qty_map.get(primary.id, 0))]))
                 group_id += 1
             else:
                 skipped_ids.add(primary.id)
