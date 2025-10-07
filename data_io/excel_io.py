@@ -245,108 +245,139 @@ def generate_partner_suggestions(remaining: List[Rectangle],
                                  max_width: int,
                                  tolerance_length: int) -> List[Dict]:
     """
-    For each remaining rectangle type (primary), compute what partner widths/qtys
-    would be needed to form another group within [min_width, max_width] and
-    match total lengths within tolerance_length.
-
-    Returns list of dicts (rows) suitable for a DataFrame.
+    اقتراحات أذكى:
+    - تقترح أفضل توليفة سريعة لكل عنصر أساسي: شريك واحد أو أكثر (بتكرارات) لإكمال نطاق العرض.
+    - تراعي الكميات المتاحة وتقلّص المطلوب وفق المتاح.
+    - تحسب الفروقات القصوى في إجمالي الأطوال داخل التوليفة.
+    - تعرض توصية مختصرة وسجل تفصيلي للأصناف المقترحة بكمياتها.
     """
-    # build widths map (allow multiple entries per width)
-    widths_map: Dict[int, List[Rectangle]] = {}
+    # فهرس العناصر المتاحة حسب العرض ثم حسب id
+    by_width: Dict[int, List[Rectangle]] = {}
     for r in remaining:
-        widths_map.setdefault(r.width, []).append(r)
-
-    suggestions = []
-    for primary in remaining:
-        p_w = primary.width
-        p_l = primary.length
-        p_q = primary.qty
-        if p_q <= 0:
+        if r.qty <= 0:
             continue
-        primary_total_length = p_l * p_q
+        by_width.setdefault(r.width, []).append(r)
+    all_widths_desc = sorted(by_width.keys(), reverse=True)
+
+    def lengths_within(items: List[Tuple[int,int,int]], ref_total: int) -> Tuple[bool, int]:
+        # items: list of (length, used_qty_per_type_total, rect_id)
+        totals = [l * q for (l, q, _) in items]
+        if not totals:
+            return True, 0
+        mx = max(totals); mn = min(totals)
+        return (mx - mn) <= tolerance_length and all(abs(t - ref_total) <= tolerance_length for t in totals), mx - mn
+
+    suggestions: List[Dict] = []
+    for primary in remaining:
+        if primary.qty <= 0:
+            continue
+        p_w, p_l, p_q = primary.width, primary.length, primary.qty
+        ref_total = p_l * p_q
+
+        # حالة منفردة
+        best_rows: List[Dict] = []
+        if min_width <= p_w <= max_width:
+            best_rows.append({
+                'معرف الأساسي': primary.id,
+                'عرض الأساسي': p_w,
+                'طول الأساسي': p_l,
+                'كمية الأساسي المتبقية': p_q,
+                'توصية مختصرة': 'يمكن منفرداً',
+                'العرض المقترح الكلي': p_w,
+                'أقصى فرق أطوال داخل التوليفة': 0,
+                'تفصيل التوليفة': f"{primary.id}x1"
+            })
+
+        # شريك واحد مثالي
         min_rem = max(min_width - p_w, 0)
         max_rem = max_width - p_w
-
-        # if primary alone can form a group
-        alone_ok = (min_width <= p_w <= max_width)
-
-        # try to find candidate widths contained in remaining that fit width-range
-        found_candidate = False
-        for cand_w, cand_list in widths_map.items():
-            if cand_w < min_rem or cand_w > max_rem:
+        for w in all_widths_desc:
+            if w < min_rem or w > max_rem:
                 continue
-            # for each rectangle with that width
-            for cand in cand_list:
+            for cand in by_width[w]:
                 if cand.id == primary.id:
                     continue
-                # desired qty to roughly match total length
-                desired_qty = max(1, int(round(primary_total_length / cand.length)))
-                cand_total_len = cand.length * desired_qty
-                diff = abs(cand_total_len - primary_total_length)
-                can_match_length = (diff <= tolerance_length)
-                available_qty = cand.qty
-                shortage = max(0, desired_qty - available_qty)
-                suggestions.append({
-                    "معرف الأساسي": primary.id,
-                    "عرض الأساسي": p_w,
-                    "طول الأساسي": p_l,
-                    "كمية الأساسي المتبقية": p_q,
-                    "الطول الإجمالي الأساسي": primary_total_length,
-                    "نطاق العرض المطلوب (بقي)": f"{min_rem}..{max_rem}",
-                    "مرشح العرض": cand.width,
-                    "مرشح الطول": cand.length,
-                    "الكمية المطلوبة من المرشح (تقريب)": desired_qty,
-                    "كمية المرشح المتاحة": available_qty,
-                    "نقص بالقطع إن وجد": shortage,
-                    "فرق الطول (سم)": diff,
-                    "يناسب طولاً؟": "نعم" if can_match_length else "لا",
-                    "ملاحظة": "" if can_match_length and shortage == 0 else (
-                        "يناسب طولاً لكن غير كافٍ" if can_match_length and shortage>0 else
-                        ("لا يناسب طولا" if not can_match_length else "")
-                    )
+                desired = max(1, int(round(ref_total / cand.length)))
+                take = min(desired, cand.qty)
+                cand_total = cand.length * take
+                diff = abs(cand_total - ref_total)
+                if diff <= tolerance_length:
+                    ok, mx_span = lengths_within([(p_l, p_q, primary.id), (cand.length, take, cand.id)], ref_total)
+                    if ok:
+                        best_rows.append({
+                            'معرف الأساسي': primary.id,
+                            'عرض الأساسي': p_w,
+                            'طول الأساسي': p_l,
+                            'كمية الأساسي المتبقية': p_q,
+                            'توصية مختصرة': f"شريك {cand.id} بعدد {take}",
+                            'العرض المقترح الكلي': p_w + cand.width,
+                            'أقصى فرق أطوال داخل التوليفة': mx_span,
+                            'تفصيل التوليفة': f"{primary.id}x{p_q} + {cand.id}x{take}"
+                        })
+
+        # أكثر من شريك بطريقة جشعة: ابدأ من الأعـرض وانزل، واسمح بتكرار الشريك
+        # نبني التوليفة حتى نصل لأقرب عرض ≥ min_width دون تجاوز max_width
+        current_width = p_w
+        items_combo: List[Tuple[int,int,int,int,int]] = []  # (id,width,length,qty_used,available_after)
+        remaining_cap: Dict[int, int] = {r.id: r.qty for r in remaining}
+        # نحتاج مطابقة إجمالي الأطوال لكل نوع مع مرجع primary ضمن tolerance
+        for w in all_widths_desc:
+            if current_width >= min_width:
+                break
+            # لا تتجاوز الحافة العليا
+            if current_width + w > max_width:
+                continue
+            for cand in by_width[w]:
+                if cand.id == primary.id:
+                    continue
+                avail = remaining_cap.get(cand.id, 0)
+                if avail <= 0:
+                    continue
+                desired_per_block = max(1, int(round(ref_total / cand.length)))
+                # كم بلوك يمكن أخذه بدون تجاوز العرض والأعداد
+                while avail >= desired_per_block and current_width + w <= max_width and current_width < min_width:
+                    # تحقق الطول
+                    cand_total = cand.length * desired_per_block
+                    if abs(cand_total - ref_total) > tolerance_length:
+                        break
+                    items_combo.append((cand.id, cand.width, cand.length, desired_per_block, avail - desired_per_block))
+                    avail -= desired_per_block
+                    remaining_cap[cand.id] = avail
+                    current_width += w
+                    if current_width >= min_width:
+                        break
+        if current_width >= min_width and current_width <= max_width and items_combo:
+            ok, mx_span = lengths_within([(p_l, p_q, primary.id)] + [(l, q, _id) for (_id, w, l, q, _) in items_combo], ref_total)
+            if ok:
+                detail = "+ ".join([f"{primary.id}x{p_q}"] + [f"{_id}x{q}" for (_id, w, l, q, _) in items_combo])
+                best_rows.append({
+                    'معرف الأساسي': primary.id,
+                    'عرض الأساسي': p_w,
+                    'طول الأساسي': p_l,
+                    'كمية الأساسي المتبقية': p_q,
+                    'توصية مختصرة': 'توليفة متعددة الشركاء (جشعة)',
+                    'العرض المقترح الكلي': current_width,
+                    'أقصى فرق أطوال داخل التوليفة': mx_span,
+                    'تفصيل التوليفة': detail
                 })
-                found_candidate = True
 
-        # if no candidate widths found inside range, add suggestion about needed width range
-        if not found_candidate:
-            # In the simplest practical case, if we want partner pieces with the SAME length as primary,
-            # desired number of pieces would be equal to primary quantity (so that total lengths match exactly).
-            # So we recommend candidate with same length p_l and qty = p_q, and any width in [min_rem,max_rem].
-            suggestions.append({
-                "معرف الأساسي": primary.id,
-                "عرض الأساسي": p_w,
-                "طول الأساسي": p_l,
-                "كمية الأساسي المتبقية": p_q,
-                "الطول الإجمالي الأساسي": primary_total_length,
-                "نطاق العرض المطلوب (بقي)": f"{min_rem}..{max_rem}",
-                "مرشح العرض": None,
-                "مرشح الطول": p_l,
-                "الكمية المطلوبة من المرشح (تقريب)": p_q,
-                "كمية المرشح المتاحة": 0,
-                "نقص بالقطع إن وجد": p_q,
-                "فرق الطول (سم)": 0,
-                "يناسب طولاً؟": "نعم (إذا كان طول المرشح = طول الأساسي)",
-                "ملاحظة": "لا يوجد مرشح متاح بنفس نطاق العرض؛ تحتاج توفير عرض داخل النطاق أعلاه"
+        # إذا لم نجد أي توليفة، قدّم توصية افتراضية بما يلزم من عرض وكميات تقريبية
+        if not best_rows:
+            min_rem = max(min_width - p_w, 0)
+            max_rem = max_width - p_w
+            best_rows.append({
+                'معرف الأساسي': primary.id,
+                'عرض الأساسي': p_w,
+                'طول الأساسي': p_l,
+                'كمية الأساسي المتبقية': p_q,
+                'توصية مختصرة': f"وفّر عرض ضمن {min_rem}-{max_rem}",
+                'العرض المقترح الكلي': p_w,
+                'أقصى فرق أطوال داخل التوليفة': None,
+                'تفصيل التوليفة': f"مرشح بطول {p_l} وبعدد ≈ {p_q}"
             })
 
-        # also if primary alone fits, add a note row indicating it can be grouped by itself
-        if alone_ok:
-            suggestions.append({
-                "معرف الأساسي": primary.id,
-                "عرض الأساسي": p_w,
-                "طول الأساسي": p_l,
-                "كمية الأساسي المتبقية": p_q,
-                "الطول الإجمالي الأساسي": primary_total_length,
-                "نطاق العرض المطلوب (بقي)": "0",
-                "مرشح العرض": "يمكن تشكيل مجموعة منفردة",
-                "مرشح الطول": p_l,
-                "الكمية المطلوبة من المرشح (تقريب)": 1,
-                "كمية المرشح المتاحة": p_q,
-                "نقص بالقطع إن وجد": 0,
-                "فرق الطول (سم)": 0,
-                "يناسب طولاً؟": "نعم",
-                "ملاحظة": "العرض الأساسي وحده داخل النطاق؛ يمكن تشكيل مجموعة بدون شركاء"
-            })
+        # اجمع أفضل الصفوف لهذا الأساسي ضمن النتائج العامة
+        suggestions.extend(best_rows)
 
     return suggestions
 
