@@ -148,6 +148,12 @@ class RectPackApp(QWidget):
         
         self.log_append(f"قراءة الملف: {input_path}")
         carpets = read_input_excel(input_path)
+        # احتفظ بنسخة من الأصليات قبل أي تعديل
+        originals_copy = [
+            # نفس الهوية والأبعاد مع الكمية الأصلية
+            type(c)(c.id, c.width, c.length, c.qty) if hasattr(c, 'id') else c
+            for c in carpets
+        ]
         errs = validate_carpets(carpets)
         if errs:
             self.log_append("تحذيرات في البيانات:")
@@ -187,7 +193,7 @@ class RectPackApp(QWidget):
                 min_width=min_width,
                 max_width=max_width,
                 tolerance_length=tolerance_len,
-                originals=carpets
+                originals=originals_copy
             )
             self.log_append(f"حفظ ملف : {output_path}")
         except Exception as e:

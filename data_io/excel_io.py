@@ -55,18 +55,10 @@ def write_output_excel(path: str,
                        max_width: Optional[int] = None,
                        tolerance_length: Optional[int] = None,
                        originals: Optional[List[Rectangle]] = None):
-    # جهّز خريطة الأصليات لاستخدامها في كل الجداول
-    originals_map: Dict[tuple, int] = {}
-    if originals is not None:
-        for r in originals:
-            originals_map[(r.id, r.width, r.length)] = originals_map.get((r.id, r.width, r.length), 0) + int(r.qty)
-
-    # sheet1: group details (استخدم الكمية الأصلية الصحيحة من الإدخال إن وُجدت)
+    # sheet1: group details
     row = []
     for g in groups:
         for it in g.items:
-            key = (it.rect_id, it.width, it.length)
-            orig_qty = originals_map.get(key, it.original_qty)
             row.append({
                 'رقم المجموعة' : f'المجموعة_{g.id}',
                 'معرف السجاد' : it.rect_id,
@@ -74,7 +66,7 @@ def write_output_excel(path: str,
                 'الطول' : it.length,
                 'الكمية المستخدمة' : it.used_qty,
                 'الطول الاجمالي للسجادة' : it.length * it.used_qty,
-                'الكمية الأصلية' : orig_qty
+                'الكمية الأصلية' : it.original_qty
             })
     df1 = pd.DataFrame(row)
 
@@ -92,29 +84,11 @@ def write_output_excel(path: str,
         })
     df2 = pd.DataFrame(summary)
 
-    # sheet3: remaining (reconciled = الأصلية - المستخدم)
-    # 1) المستخدم من كل المجموعات (بما فيها remainder_groups)
-    used_totals_for_remaining: Dict[tuple, int] = {}
-    def _accumulate_used_for_remaining(from_groups: List[Group]):
-        for g in from_groups or []:
-            for it in g.items:
-                k = (it.rect_id, it.width, it.length)
-                used_totals_for_remaining[k] = used_totals_for_remaining.get(k, 0) + int(it.used_qty)
-    _accumulate_used_for_remaining(groups)
-    _accumulate_used_for_remaining(remainder_groups or [])
-
-    # 2) إن وُجدت الأصليات نستخدمها لحساب المتبقي بدقة؛ وإلا نسقط إلى قائمة remaining الممرّرة
-    aggregated: Dict[tuple, int] = {}
-    if originals_map:
-        for key, orig_q in originals_map.items():
-            used_q = used_totals_for_remaining.get(key, 0)
-            rem_q = max(0, int(orig_q) - int(used_q))
-            if rem_q > 0:
-                aggregated[key] = rem_q
-    else:
-        for r in remaining:
-            key = (r.id, r.width, r.length)
-            aggregated[key] = aggregated.get(key, 0) + int(r.qty)
+    # sheet3: remaining (deduplicated by id,width,length)
+    aggregated = {}
+    for r in remaining:
+        key = (r.id, r.width, r.length)
+        aggregated[key] = aggregated.get(key, 0) + int(r.qty)
     rem_rows = []
     for (rid, w, l), q in aggregated.items():
         rem_rows.append({
@@ -197,13 +171,32 @@ def write_output_excel(path: str,
     df_sugg = pd.DataFrame(suggestions)
 
     # تدقيق: تحقق أن (المستخدم + المتبقي) = الأصلي لكل عنصر
-    used_totals: Dict[tuple, int] = used_totals_for_remaining
-    remaining_totals: Dict[tuple, int] = dict(aggregated)
-    original_totals: Dict[tuple, int] = originals_map if originals_map else {
-        k: used_totals.get(k, 0) + remaining_totals.get(k, 0) for k in set(list(used_totals.keys()) + list(remaining_totals.keys()))
-    }
+    # 1) تجميع المستخدم من جميع المجموعات
+    used_totals: Dict[tuple, int] = {}
+    def _accumulate_used(from_groups: List[Group]):
+        for g in from_groups or []:
+            for it in g.items:
+                key = (it.rect_id, it.width, it.length)
+                used_totals[key] = used_totals.get(key, 0) + int(it.used_qty)
+    _accumulate_used(groups)
+    _accumulate_used(remainder_groups or [])
 
-    # بناء جدول التدقيق
+    # 2) تجميع المتبقي (افتراضيًا aggregated أعلاه)
+    remaining_totals: Dict[tuple, int] = dict(aggregated)
+
+    # 3) تجميع الأصلي من مدخلات caller إن وُجدت، وإلا نفترض الأصلي = المستخدم + المتبقي
+    original_totals: Dict[tuple, int] = {}
+    if originals is not None:
+        for r in originals:
+            key = (r.id, r.width, r.length)
+            original_totals[key] = original_totals.get(key, 0) + int(r.qty)
+    else:
+        # fallback: استنتاج الأصلي من المستخدم + المتبقي
+        all_keys = set(list(used_totals.keys()) + list(remaining_totals.keys()))
+        for k in all_keys:
+            original_totals[k] = used_totals.get(k, 0) + remaining_totals.get(k, 0)
+
+    # 4) بناء جدول التدقيق
     audit_rows = []
     all_keys = set(list(original_totals.keys()) + list(used_totals.keys()) + list(remaining_totals.keys()))
     for (rid, w, l) in sorted(all_keys, key=lambda x: (x[0] if x[0] is not None else -1, x[1], x[2])):

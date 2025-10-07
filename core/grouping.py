@@ -3,6 +3,7 @@ from collections import defaultdict
 from .models import Rectangle, UsedItem, Group
 import math
 
+
 def group_carpets_greedy(carpets: List[Rectangle],
                          min_width: int,
                          max_width: int,
@@ -25,7 +26,7 @@ def group_carpets_greedy(carpets: List[Rectangle],
     # Sort rectangles
     carpets_sorted = sorted(carpets, key=lambda r: r.width, reverse=start_with_largest)
     id_map = {r.id: r for r in carpets_sorted}
-    # احتفظ بنسخة ثابتة من الكميات الأصلية قبل أي تعديل
+    # ثابت: كميات أصلية كما جاءت من الإدخال
     original_qty_map: Dict[int, int] = {r.id: r.qty for r in carpets_sorted}
     remaining_qty: Dict[int, int] = {r.id: r.qty for r in carpets_sorted}
 
@@ -73,12 +74,11 @@ def group_carpets_greedy(carpets: List[Rectangle],
 
             # Work on temporary quantities
             temp_qty = dict(remaining_qty)
-            # احجز كمية الأساس مباشرة حتى لا يسمح بالتكرار فوق المتاح
+            # احجز كمية الأساس مبدئياً
             temp_qty[primary.id] = max(0, temp_qty.get(primary.id, 0) - use_primary)
             candidate_widths = sorted(widths_map.keys(), reverse=True)
 
             # Try to add partners
-            repeatable_blocks: list[tuple[int,int,int,int]] = []  # (id, width, length, used_qty_block)
             for w in candidate_widths:
                 if chosen_width + w > max_width:
                     continue
@@ -101,10 +101,7 @@ def group_carpets_greedy(carpets: List[Rectangle],
                     if diff <= tolerance_length and chosen_width + cand.width <= max_width:
                         chosen_items.append(UsedItem(cid, cand.width, cand.length, take, original_qty_map.get(cid, 0)))
                         chosen_width += cand.width
-                        temp_qty[cid] -= take
-                        # mark as repeatable block if there is still capacity for another block of same qty
-                        if temp_qty.get(cid, 0) >= desired_qty and cand.width + chosen_width <= max_width:
-                            repeatable_blocks.append((cid, cand.width, cand.length, desired_qty))
+                        temp_qty[cid] = max(0, temp_qty[cid] - take)
                         break
                 if chosen_width >= min_width:
                     break
@@ -112,25 +109,33 @@ def group_carpets_greedy(carpets: List[Rectangle],
             # If still below min_width, allow repeating blocks (including repeating primary) as separate entries
             if chosen_width < min_width:
                 # primary block repeat (if quantities allow)
+                repeatable_blocks: list[tuple[int,int,int,int]] = []
                 if temp_qty.get(primary.id, 0) >= use_primary and chosen_width + primary.width <= max_width:
-                    repeatable_blocks.insert(0, (primary.id, primary.width, primary.length, use_primary))
+                    repeatable_blocks.append((primary.id, primary.width, primary.length, use_primary))
 
-                # try to repeat highest width blocks first
+                # also allow repeating of any partner blocks with their desired block size if available
+                for rid in list(temp_qty.keys()):
+                    if rid == primary.id:
+                        continue
+                    cand = id_map[rid]
+                    desired_block = max(1, int(round(ref_total_len / cand.length)))
+                    if temp_qty[rid] >= desired_block and chosen_width + cand.width <= max_width:
+                        repeatable_blocks.append((rid, cand.width, cand.length, desired_block))
+
                 repeatable_blocks.sort(key=lambda t: t[1], reverse=True)
                 for rid, rwidth, rlength, rqty_block in repeatable_blocks:
                     while chosen_width < min_width and temp_qty.get(rid, 0) >= rqty_block and chosen_width + rwidth <= max_width:
-                        # ensure length block within tolerance
                         if abs(rlength * rqty_block - ref_total_len) > tolerance_length:
                             break
                         chosen_items.append(UsedItem(rid, rwidth, rlength, rqty_block, original_qty_map.get(rid, 0)))
                         chosen_width += rwidth
-                        temp_qty[rid] = max(0, temp_qty.get(rid, 0) - rqty_block)
+                        temp_qty[rid] = max(0, temp_qty[rid] - rqty_block)
                         if chosen_width >= min_width:
                             break
 
             # If valid group formed
             if min_width <= chosen_width <= max_width:
-                # طبّق الاستهلاك الفعلي على الكميات المتبقية (يشمل التكرارات داخل المجموعة)
+                # خصم نهائي من المخزون الفعلي
                 for it in chosen_items:
                     remaining_qty[it.rect_id] = max(0, remaining_qty.get(it.rect_id, 0) - it.used_qty)
                     id_map[it.rect_id].qty = remaining_qty[it.rect_id]
