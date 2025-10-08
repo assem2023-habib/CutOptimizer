@@ -39,22 +39,49 @@ def group_carpets_greedy(carpets: List[Rectangle],
     group_id = start_group_id
     skipped_ids = set()
 
-    # Safety counter to avoid infinite loops
+    # Safety counter to avoid infinite loops and performance tracking
     safety_counter = 0
-    max_iterations = 5000
+    max_iterations = 10000  # Increased limit for better results
+    progress_interval = 100  # Report progress every 100 iterations
 
     while True:
         safety_counter += 1
         if safety_counter > max_iterations:
-            print("⚠️ Safety break: exceeded max iterations, stopping loop")
+            print(f"⚠️ Safety break: exceeded max iterations ({max_iterations}), stopping loop")
             break
+        
+        # Progress reporting for better user experience
+        if safety_counter % progress_interval == 0:
+            remaining_items = sum(remaining_qty.values())
+            print(f"🔄 Iteration {safety_counter}: {len(groups)} groups created, {remaining_items} items remaining")
 
-        # Pick primary candidate
+        # Pick primary candidate with improved strategy
         primary = None
+        best_score = -1
+        
+        # Try to find the best candidate based on multiple criteria
         for r in carpets_sorted:
             if remaining_qty.get(r.id, 0) > 0 and r.width <= max_width and r.id not in skipped_ids:
-                primary = r
-                break
+                # Calculate a score based on:
+                # 1. Width utilization potential
+                # 2. Quantity available
+                # 3. Area efficiency
+                width_score = r.width / max_width  # Higher is better
+                qty_score = min(remaining_qty[r.id] / 100, 1.0)  # Normalize quantity
+                area_score = (r.width * r.length) / 100000  # Normalize area
+                
+                total_score = width_score * 0.5 + qty_score * 0.3 + area_score * 0.2
+                
+                if total_score > best_score:
+                    best_score = total_score
+                    primary = r
+        
+        # Fallback to first available if scoring didn't work
+        if primary is None:
+            for r in carpets_sorted:
+                if remaining_qty.get(r.id, 0) > 0 and r.width <= max_width and r.id not in skipped_ids:
+                    primary = r
+                    break
 
         if primary is None:
             break
@@ -78,7 +105,10 @@ def group_carpets_greedy(carpets: List[Rectangle],
             temp_qty[primary.id] = max(0, temp_qty.get(primary.id, 0) - use_primary)
             candidate_widths = sorted(widths_map.keys(), reverse=True)
 
-            # Try to add partners
+            # Try to add partners with improved selection
+            partner_candidates = []
+            
+            # First, collect all possible partners with their scores
             for w in candidate_widths:
                 if chosen_width + w > max_width:
                     continue
@@ -99,12 +129,26 @@ def group_carpets_greedy(carpets: List[Rectangle],
                     diff = abs(cand_total_len - ref_total_len)
 
                     if diff <= tolerance_length and chosen_width + cand.width <= max_width:
-                        chosen_items.append(UsedItem(cid, cand.width, cand.length, take, original_qty_map.get(cid, 0)))
-                        chosen_width += cand.width
-                        temp_qty[cid] = max(0, temp_qty[cid] - take)
+                        # Calculate partner score
+                        length_match_score = 1.0 - (diff / tolerance_length)  # Higher is better
+                        width_utilization = (chosen_width + cand.width) / max_width
+                        qty_efficiency = take / avail  # How much of available quantity we use
+                        
+                        partner_score = length_match_score * 0.6 + width_utilization * 0.3 + qty_efficiency * 0.1
+                        
+                        partner_candidates.append((cid, cand, take, partner_score))
+            
+            # Sort partners by score and add the best ones
+            partner_candidates.sort(key=lambda x: x[3], reverse=True)
+            
+            for cid, cand, take, score in partner_candidates:
+                if chosen_width + cand.width <= max_width:
+                    chosen_items.append(UsedItem(cid, cand.width, cand.length, take, original_qty_map.get(cid, 0)))
+                    chosen_width += cand.width
+                    temp_qty[cid] = max(0, temp_qty[cid] - take)
+                    
+                    if chosen_width >= min_width:
                         break
-                if chosen_width >= min_width:
-                    break
 
             # If still below min_width, allow repeating blocks (including repeating primary) as separate entries
             if chosen_width < min_width:
