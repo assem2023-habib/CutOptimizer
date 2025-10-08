@@ -215,10 +215,11 @@ class RectPackApp(QWidget):
         for g in groups:
             row = self.summary_table.rowCount()
             self.summary_table.insertRow(row)
-            self.summary_table.setItem(row, 0, QTableWidgetItem(f"المجموعة_{g.id}"))
-            self.summary_table.setItem(row, 1, QTableWidgetItem(str(len(g.items))))
+            # الأعمدة حسب العناوين: [عدد الأنواع, الطول المرجعي, العرض الإجمالي, رقم المجموعة]
+            self.summary_table.setItem(row, 0, QTableWidgetItem(str(len(g.items))))
+            self.summary_table.setItem(row, 1, QTableWidgetItem(str(g.ref_length())))
             self.summary_table.setItem(row, 2, QTableWidgetItem(str(g.total_width())))
-            self.summary_table.setItem(row, 3, QTableWidgetItem(str(g.ref_length())))
+            self.summary_table.setItem(row, 3, QTableWidgetItem(f"المجموعة_{g.id}"))
         
         # إضافة السجاد المتبقي
         if remaining:
