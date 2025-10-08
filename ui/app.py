@@ -189,11 +189,12 @@ class RectPackApp(QWidget):
                 output_path,
                 groups,
                 rem_final_remaining,
-                remainder_groups=rem_groups,
+                remainder_groups=None,
                 min_width=min_width,
                 max_width=max_width,
                 tolerance_length=tolerance_len,
-                originals=originals_copy
+                originals=originals_copy,
+                enhanced_remainder_groups=rem_groups
             )
             self.log_append(f"حفظ ملف : {output_path}")
         except Exception as e:
