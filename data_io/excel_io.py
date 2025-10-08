@@ -54,13 +54,17 @@ def write_output_excel(path: str,
                        min_width: Optional[int] = None,
                        max_width: Optional[int] = None,
                        tolerance_length: Optional[int] = None,
-                       originals: Optional[List[Rectangle]] = None):
-    # sheet1: group details
+                       originals: Optional[List[Rectangle]] = None,
+                       enhanced_remainder_groups: Optional[List[Group]] = None):
+    # sheet1: group details (original groups + remainder groups + enhanced remainder groups)
     row = []
+    
+    # المجموعات الأصلية
     for g in groups:
         for it in g.items:
             row.append({
                 'رقم المجموعة' : f'المجموعة_{g.id}',
+                'نوع المجموعة' : 'أصلية',
                 'معرف السجاد' : it.rect_id,
                 'العرض' : it.width,
                 'الطول' : it.length,
@@ -68,20 +72,83 @@ def write_output_excel(path: str,
                 'الطول الاجمالي للسجادة' : it.length * it.used_qty,
                 'الكمية الأصلية' : it.original_qty
             })
+    
+    # مجموعات البواقي العادية
+    if remainder_groups:
+        for g in remainder_groups:
+            for it in g.items:
+                row.append({
+                    'رقم المجموعة' : f'المجموعة_{g.id}',
+                    'نوع المجموعة' : 'بواقي عادية',
+                    'معرف السجاد' : it.rect_id,
+                    'العرض' : it.width,
+                    'الطول' : it.length,
+                    'الكمية المستخدمة' : it.used_qty,
+                    'الطول الاجمالي للسجادة' : it.length * it.used_qty,
+                    'الكمية الأصلية' : it.original_qty
+                })
+    
+    # المجموعات الإضافية المحسنة من البواقي
+    if enhanced_remainder_groups:
+        for g in enhanced_remainder_groups:
+            for it in g.items:
+                row.append({
+                    'رقم المجموعة' : f'المجموعة_{g.id}',
+                    'نوع المجموعة' : 'بواقي محسنة',
+                    'معرف السجاد' : it.rect_id,
+                    'العرض' : it.width,
+                    'الطول' : it.length,
+                    'الكمية المستخدمة' : it.used_qty,
+                    'الطول الاجمالي للسجادة' : it.length * it.used_qty,
+                    'الكمية الأصلية' : it.original_qty
+                })
+    
     df1 = pd.DataFrame(row)
 
-    # #sheet2: summary (detailed metrics)
+    # #sheet2: summary (detailed metrics) - includes all group types
     summary = []
+    
+    # المجموعات الأصلية
     for g in groups:
         types_count = len(g.items)
         area = sum(it.width * it.length * it.used_qty for it in g.items)
         summary.append({
             'رقم المجموعة' : f'المجموعة_{g.id}',
+            'نوع المجموعة' : 'أصلية',
             'العرض الإجمالي' : g.total_width(),
             'الطول الإجمالي المرجعي (التقريبي)'  : g.ref_length(),
             'المساحة الإجمالية' : area,
             'عدد أنواع السجاد' : types_count,
         })
+    
+    # مجموعات البواقي العادية
+    if remainder_groups:
+        for g in remainder_groups:
+            types_count = len(g.items)
+            area = sum(it.width * it.length * it.used_qty for it in g.items)
+            summary.append({
+                'رقم المجموعة' : f'المجموعة_{g.id}',
+                'نوع المجموعة' : 'بواقي عادية',
+                'العرض الإجمالي' : g.total_width(),
+                'الطول الإجمالي المرجعي (التقريبي)'  : g.ref_length(),
+                'المساحة الإجمالية' : area,
+                'عدد أنواع السجاد' : types_count,
+            })
+    
+    # المجموعات الإضافية المحسنة
+    if enhanced_remainder_groups:
+        for g in enhanced_remainder_groups:
+            types_count = len(g.items)
+            area = sum(it.width * it.length * it.used_qty for it in g.items)
+            summary.append({
+                'رقم المجموعة' : f'المجموعة_{g.id}',
+                'نوع المجموعة' : 'بواقي محسنة',
+                'العرض الإجمالي' : g.total_width(),
+                'الطول الإجمالي المرجعي (التقريبي)'  : g.ref_length(),
+                'المساحة الإجمالية' : area,
+                'عدد أنواع السجاد' : types_count,
+            })
+    
     df2 = pd.DataFrame(summary)
 
     # sheet3: remaining (deduplicated by id,width,length)
@@ -109,15 +176,41 @@ def write_output_excel(path: str,
     if 'ملاحظة' not in df3.columns:
         df3['ملاحظة'] = ''
 
-    # sheet4: UI-like summary (mirrors the on-screen table order and labels)
+    # sheet4: UI-like summary (mirrors the on-screen table order and labels) - includes all group types
     ui_rows = []
+    
+    # المجموعات الأصلية
     for g in groups:
         ui_rows.append({
             'عدد الأنواع': len(g.items),
             'الطول المرجعي': g.ref_length(),
             'العرض الإجمالي': g.total_width(),
             'رقم المجموعة': f'المجموعة_{g.id}',
+            'نوع المجموعة': 'أصلية'
         })
+    
+    # مجموعات البواقي العادية
+    if remainder_groups:
+        for g in remainder_groups:
+            ui_rows.append({
+                'عدد الأنواع': len(g.items),
+                'الطول المرجعي': g.ref_length(),
+                'العرض الإجمالي': g.total_width(),
+                'رقم المجموعة': f'المجموعة_{g.id}',
+                'نوع المجموعة': 'بواقي عادية'
+            })
+    
+    # المجموعات الإضافية المحسنة
+    if enhanced_remainder_groups:
+        for g in enhanced_remainder_groups:
+            ui_rows.append({
+                'عدد الأنواع': len(g.items),
+                'الطول المرجعي': g.ref_length(),
+                'العرض الإجمالي': g.total_width(),
+                'رقم المجموعة': f'المجموعة_{g.id}',
+                'نوع المجموعة': 'بواقي محسنة'
+            })
+    
     df4 = pd.DataFrame(ui_rows)
 
     def _append_totals_row(writer, sheet_name: str, df: pd.DataFrame):
@@ -180,6 +273,7 @@ def write_output_excel(path: str,
                 used_totals[key] = used_totals.get(key, 0) + int(it.used_qty)
     _accumulate_used(groups)
     _accumulate_used(remainder_groups or [])
+    _accumulate_used(enhanced_remainder_groups or [])
 
     # 2) تجميع المتبقي (افتراضيًا aggregated أعلاه)
     remaining_totals: Dict[tuple, int] = dict(aggregated)
@@ -233,6 +327,23 @@ def write_output_excel(path: str,
         
         # الشيت الجديد: اقتراحات تشكيل مجموعات
         df_sugg.to_excel(writer, sheet_name='اقتراحات تشكيل مجموعات', index=False)
+        
+        # شيت إحصائيات المجموعات الإضافية
+        if enhanced_remainder_groups:
+            enhanced_stats = []
+            for g in enhanced_remainder_groups:
+                enhanced_stats.append({
+                    'رقم المجموعة': f'المجموعة_{g.id}',
+                    'عدد العناصر': len(g.items),
+                    'العرض الإجمالي': g.total_width(),
+                    'الطول المرجعي': g.ref_length(),
+                    'المساحة الإجمالية': sum(it.width * it.length * it.used_qty for it in g.items),
+                    'نوع المجموعة': 'بواقي محسنة'
+                })
+            df_enhanced_stats = pd.DataFrame(enhanced_stats)
+            df_enhanced_stats.to_excel(writer, sheet_name='إحصائيات المجموعات الإضافية', index=False)
+            _append_totals_row(writer, 'إحصائيات المجموعات الإضافية', df_enhanced_stats)
+        
         # شيت التدقيق
         if not df_audit.empty:
             df_audit.to_excel(writer, sheet_name='تدقيق الكميات', index=False)
@@ -813,6 +924,170 @@ def regroup_residuals_full(
 #     final_remaining = [Rectangle(r.id, r.width, r.length, r.qty) for r in current_remaining if r.qty > 0]
 #     return all_groups, final_remaining
 
+def create_enhanced_remainder_groups(
+    remaining: List[Rectangle],
+    min_width: int,
+    max_width: int,
+    tolerance_length: int,
+    start_group_id: int = 10000,
+    max_rounds: int = 50
+) -> Tuple[List[Group], List[Rectangle]]:
+    """
+    خوارزمية محسنة لتشكيل مجموعات إضافية من البواقي مع إمكانية تكرار العناصر.
+    تهدف إلى استغلال أقصى قدر ممكن من البواقي مع مراعاة الشروط المطلوبة.
+    """
+    
+    current_remaining = [Rectangle(r.id, r.width, r.length, r.qty) for r in remaining if r.qty > 0]
+    all_groups: List[Group] = []
+    next_group_id = start_group_id
+    rounds = 0
+
+    def can_tolerate(len_a, qty_a, len_b, qty_b) -> bool:
+        """فحص ما إذا كان الفرق في الطول ضمن حدود السماحية"""
+        return abs(len_a * qty_a - len_b * qty_b) <= tolerance_length
+
+    def find_best_combination(items, target_width, ref_length, ref_qty):
+        """البحث عن أفضل توليفة من العناصر المتاحة"""
+        from itertools import combinations, product
+        
+        best_combination = None
+        best_score = float('inf')
+        
+        # نجرب جميع التوليفات الممكنة
+        for r in range(1, min(len(items) + 1, 5)):  # حد أقصى 4 عناصر في المجموعة
+            for combo in combinations(items, r):
+                # نجرب كميات مختلفة لكل عنصر
+                quantities = []
+                for item in combo:
+                    max_qty = min(item.qty, max_width // item.width)
+                    quantities.append(list(range(1, max_qty + 1)))
+                
+                for qty_combo in product(*quantities):
+                    total_width = sum(item.width * qty for item, qty in zip(combo, qty_combo))
+                    
+                    if not (min_width <= total_width <= max_width):
+                        continue
+                    
+                    # فحص شرط السماحية
+                    all_valid = True
+                    for item, qty in zip(combo, qty_combo):
+                        if not can_tolerate(ref_length, ref_qty, item.length, qty):
+                            all_valid = False
+                            break
+                    
+                    if all_valid:
+                        # حساب النقاط (نفضل المجموعات الأقرب للعرض المثالي)
+                        ideal_width = (min_width + max_width) / 2
+                        score = abs(total_width - ideal_width)
+                        
+                        if score < best_score:
+                            best_score = score
+                            best_combination = list(zip(combo, qty_combo))
+        
+        return best_combination
+
+    while rounds < max_rounds and current_remaining:
+        rounds += 1
+        progress_made = False
+        
+        # ترتيب العناصر تنازلياً حسب العرض
+        current_remaining.sort(key=lambda r: r.width, reverse=True)
+        
+        # محاولة تشكيل مجموعات جديدة
+        for i, base_item in enumerate(current_remaining):
+            if base_item.qty <= 0:
+                continue
+            
+            # إذا كان العنصر أكبر من الحد الأقصى، نتخطاه
+            if base_item.width > max_width:
+                continue
+            
+            # نجرب كميات مختلفة من العنصر الأساسي
+            max_base_qty = min(base_item.qty, max_width // base_item.width)
+            
+            for base_qty in range(1, max_base_qty + 1):
+                # فحص ما إذا كان العنصر وحده يكفي
+                if min_width <= base_item.width * base_qty <= max_width:
+                    # تشكيل مجموعة من عنصر واحد
+                    group_items = [
+                        UsedItem(
+                            rect_id=base_item.id,
+                            width=base_item.width,
+                            length=base_item.length,
+                            used_qty=base_qty,
+                            original_qty=base_item.qty
+                        )
+                    ]
+                    
+                    # إنشاء المجموعة
+                    new_group = Group(id=next_group_id, items=group_items)
+                    all_groups.append(new_group)
+                    next_group_id += 1
+                    
+                    # تحديث الكمية
+                    base_item.qty -= base_qty
+                    progress_made = True
+                    break
+                
+                # البحث عن شركاء
+                other_items = [item for j, item in enumerate(current_remaining) 
+                              if j != i and item.qty > 0 and item.width < base_item.width]
+                
+                if other_items:
+                    best_combo = find_best_combination(
+                        other_items, 
+                        max_width - base_item.width * base_qty,
+                        base_item.length,
+                        base_qty
+                    )
+                    
+                    if best_combo:
+                        # تشكيل المجموعة
+                        group_items = [
+                            UsedItem(
+                                rect_id=base_item.id,
+                                width=base_item.width,
+                                length=base_item.length,
+                                used_qty=base_qty,
+                                original_qty=base_item.qty
+                            )
+                        ]
+                        
+                        for partner, partner_qty in best_combo:
+                            group_items.append(
+                                UsedItem(
+                                    rect_id=partner.id,
+                                    width=partner.width,
+                                    length=partner.length,
+                                    used_qty=partner_qty,
+                                    original_qty=partner.qty
+                                )
+                            )
+                            partner.qty -= partner_qty
+                        
+                        # إنشاء المجموعة
+                        new_group = Group(id=next_group_id, items=group_items)
+                        all_groups.append(new_group)
+                        next_group_id += 1
+                        
+                        # تحديث كمية العنصر الأساسي
+                        base_item.qty -= base_qty
+                        progress_made = True
+                        break
+            
+            if progress_made:
+                break
+        
+        # إزالة العناصر التي نفدت كميتها
+        current_remaining = [r for r in current_remaining if r.qty > 0]
+        
+        if not progress_made:
+            break
+
+    final_remaining = [r for r in current_remaining if r.qty > 0]
+    return all_groups, final_remaining
+
+
 def exhaustively_regroup(
     remaining: List[Rectangle],
     min_width: int,
@@ -821,66 +1096,39 @@ def exhaustively_regroup(
     start_group_id: int = 10000,
     max_rounds: int = 50
 ) -> Tuple[List[Group], List[Rectangle]]:
-
     """
     استدعاء متكرر لخوارزمية إعادة تجميع البواقي حتى لا يتبقى شيء قابل للتجميع.
+    يستخدم الخوارزمية المحسنة مع إمكانية تكرار العناصر.
     """
+    
+    # استخدام الخوارزمية المحسنة
+    return create_enhanced_remainder_groups(
+        remaining, min_width, max_width, tolerance_length, start_group_id, max_rounds
+    )
 
-    current_remaining = [Rectangle(r.id, r.width, r.length, r.qty) for r in remaining if r.qty > 0]
-    all_groups: List[Group] = []
-    next_group_id = start_group_id
-    rounds = 0
 
-    while rounds < max_rounds:
-        rounds += 1
-
-        # نحول إلى dicts لأن regroup_residuals_advanced تعتمد هذه البنية
-        dicts = [
-            {'id': r.id, 'width': r.width, 'length': r.length, 'remaining': r.qty}
-            for r in current_remaining
-        ]
-
-        # استدعاء التجميع المتقدم
-        formed, leftover = regroup_residuals_advanced(
-            dicts,
-            min_width=min_width,
-            max_width=max_width,
-            tolerance=tolerance_length
-        )
-
-        # إذا لم تتكون أي مجموعة جديدة، نتوقف
-        if not formed:
-            break
-
-        # تحويل المجموعات الناتجة إلى كائنات Group
-        for g_id, g in enumerate(formed, start=next_group_id):
-            items = [
-                UsedItem(
-                    rect_id=it['id'],
-                    width=it['width'],
-                    length=it['length'],
-                    used_qty=it['used'],
-                    original_qty=it.get('used', 0)
-                )
-                for it in g['items']
-            ]
-            all_groups.append(Group(id=g_id, items=items))
-
-        # زيادة رقم المجموعات التالية
-        next_group_id = all_groups[-1].id + 1
-
-        # تحديث البواقي
-        current_remaining = [
-            Rectangle(r['id'], r['width'], r['length'], r['remaining'])
-            for r in leftover if r['remaining'] > 0
-        ]
-
-        if not current_remaining:
-            break
-
-    final_remaining = [
-        Rectangle(r.id, r.width, r.length, r.qty)
-        for r in current_remaining if r.qty > 0
-    ]
-
-    return all_groups, final_remaining
+def create_enhanced_remainder_groups_from_rectangles(
+    remaining_rectangles: List[Rectangle],
+    min_width: int,
+    max_width: int,
+    tolerance_length: int,
+    start_group_id: int = 10000
+) -> Tuple[List[Group], List[Rectangle]]:
+    """
+    دالة مساعدة لإنشاء مجموعات إضافية محسنة من قائمة Rectangle.
+    هذه الدالة يمكن استخدامها مباشرة من التطبيق الرئيسي.
+    
+    المعاملات:
+    - remaining_rectangles: قائمة العناصر المتبقية
+    - min_width: الحد الأدنى للعرض
+    - max_width: الحد الأقصى للعرض  
+    - tolerance_length: حدود السماحية للطول
+    - start_group_id: رقم المجموعة الأولى (افتراضي: 10000)
+    
+    الإرجاع:
+    - قائمة المجموعات الجديدة
+    - قائمة العناصر المتبقية بعد التجميع
+    """
+    return create_enhanced_remainder_groups(
+        remaining_rectangles, min_width, max_width, tolerance_length, start_group_id
+    )
