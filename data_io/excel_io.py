@@ -524,22 +524,3 @@ def regroup_residuals_advanced(
         })
     
     return result_groups, result_remaining
-
-
-# =============================================================================
-# MAIN EXECUTION (for testing)
-# =============================================================================
-
-if __name__ == '__main__':
-    """
-    مثال على استخدام الوحدة (لأغراض الاختبار فقط).
-    """
-    print("وحدة معالجة ملفات Excel - نظام تحسين القطع")
-    print("الإصدار: 2.0")
-    print("المؤلف: نظام تحسين القطع")
-    print("التاريخ: 2024")
-    print("\nالوحدات المتاحة:")
-    print("- excel_reader: قراءة ملفات Excel")
-    print("- excel_writer: كتابة ملفات Excel")
-    print("- remainder_optimizer: تحسين تجميع البواقي")
-    print("- suggestion_generator: توليد الاقتراحات")
