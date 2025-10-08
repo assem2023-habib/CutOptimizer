@@ -1,4 +1,4 @@
-from typing import List, Tuple, Dict, Optional
+from typing import List, Tuple, Dict, Optional, Set
 from collections import defaultdict
 from .models import Rectangle, UsedItem, Group
 import math
@@ -11,7 +11,7 @@ def group_carpets_greedy(carpets: List[Rectangle],
                          start_with_largest: bool = True,
                          allow_split_rows: bool = True,
                          start_group_id: int = 1
-                         ) -> Tuple[list[Group], list[Rectangle]]:
+                         ) -> Tuple[List[Group], List[Rectangle]]:
     """
     Greedy grouping algorithm:
     - Start with largest width (if start_with_largest = True)
@@ -35,9 +35,9 @@ def group_carpets_greedy(carpets: List[Rectangle],
     for r in carpets_sorted:
         widths_map[r.width].append(r.id)
 
-    groups: list[Group] = []
+    groups: List[Group] = []
     group_id = start_group_id
-    skipped_ids = set()
+    skipped_ids: Set[int] = set()
 
     # Safety counter to avoid infinite loops
     safety_counter = 0
@@ -109,7 +109,7 @@ def group_carpets_greedy(carpets: List[Rectangle],
             # If still below min_width, allow repeating blocks (including repeating primary) as separate entries
             if chosen_width < min_width:
                 # primary block repeat (if quantities allow)
-                repeatable_blocks: list[tuple[int,int,int,int]] = []
+                repeatable_blocks: List[Tuple[int, int, int, int]] = []
                 if temp_qty.get(primary.id, 0) >= use_primary and chosen_width + primary.width <= max_width:
                     repeatable_blocks.append((primary.id, primary.width, primary.length, use_primary))
 
