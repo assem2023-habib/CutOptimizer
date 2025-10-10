@@ -137,15 +137,16 @@ def create_enhanced_remainder_groups(
             for base_qty in range(1, max_base_qty + 1):
                 # فحص ما إذا كان العنصر وحده يكفي
                 if min_width <= base_item.width * base_qty <= max_width:
-                    # تشكيل مجموعة من عنصر واحد
+                  # تشكيل مجموعة من نفس العنصر مكررة base_qty مرات
                     group_items = [
                         UsedItem(
                             rect_id=base_item.id,
                             width=base_item.width,
                             length=base_item.length,
-                            used_qty=base_qty,
+                            used_qty=1,
                             original_qty=base_item.qty
                         )
+                        for _ in range(base_qty)
                     ]
                     
                     # إنشاء المجموعة
