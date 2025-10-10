@@ -9,6 +9,7 @@ from data_io.pdf_report import SimplePDFReport
 # from core.grouping import group_carpets_greedy, generate_groups_from_remaining
 from core.grouping import group_carpets_greedy, group_carpets_optimized
 from core.validation import validate_config, validate_carpets
+from data_io.remainder_optimizer import process_remainder_complete
 
 class RectPackApp(QWidget):
     def __init__(self, config_path='config/config.json'):
@@ -172,14 +173,15 @@ class RectPackApp(QWidget):
         self.log_append(f"تم تشكيل {len(groups)} مجموعة . المتبقي: {len(remaining)} أنواع (مع كميات).")
 
         # محاولة إعادة تجميع البواقي إلى مجموعات إضافية مع السماح بالتكرار داخل المجموعة
-        rem_groups, rem_final_remaining = exhaustively_regroup(
-            remaining,
-            min_width=min_width,
-            max_width=max_width,
-            tolerance_length=tolerance_len,
-            start_group_id=max([g.id for g in groups] + [0]) + 1,
-            max_rounds=100
-        )
+        rem_groups, rem_final_remaining = process_remainder_complete(
+                                            remaining,
+                                            min_width=min_width,
+                                            max_width=max_width,
+                                            tolerance_length=tolerance_len,
+                                            start_group_id=max([g.id for g in groups] + [0]) + 1,
+                                            merge_after=True,  # دمج تلقائي
+                                            verbose=True       # طباعة التفاصيل
+                                        )
         self.log_append(f"تم تشكيل {len(rem_groups)} مجموعة إضافية من البواقي. تبقّى بعد ذلك: {len(rem_final_remaining)} أنواع.")
 
         # write excel
