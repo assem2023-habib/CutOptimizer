@@ -87,7 +87,6 @@ def read_input_excel(path: str, sheet_name: int = 0) -> List[Rectangle]:
             
         except (ValueError, TypeError) as e:
             # تجاهل الصفوف التي تحتوي على بيانات غير صحيحة
-            print(f"تحذير: تم تجاهل الصف {idx + 1} بسبب بيانات غير صحيحة: {e}")
             continue
             
     return carpets

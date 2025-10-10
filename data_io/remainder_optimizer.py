@@ -13,7 +13,7 @@ import copy
 from typing import List, Dict, Optional, Tuple
 from core.models import Rectangle, Group, UsedItem
 from itertools import combinations, product
-
+import statistics
 
 def create_enhanced_remainder_groups(
     remaining: List[Rectangle],
@@ -213,6 +213,35 @@ def create_enhanced_remainder_groups(
         
         if not progress_made:
             break
+    # ✅ دمج المجموعات المتكررة قبل الإرجاع النهائي
+    def normalize_group_signature(group: Group) -> Tuple:
+        """توليد بصمة موحدة لكل مجموعة لتحديد المجموعات المتطابقة."""
+        sig = tuple(sorted([
+            (item.rect_id, item.width, item.length, item.used_qty)
+            for item in group.items
+        ]))
+        return sig
+
+    merged_groups = []
+    signature_map = {}
+    for g in all_groups:
+        sig = normalize_group_signature(g)
+        if sig in signature_map:
+            # دمج الكميات في نفس المجموعة
+            existing_group = signature_map[sig]
+            for item in g.items:
+                # نحاول زيادة الكمية في العناصر المتطابقة
+                for e_item in existing_group.items:
+                    if (e_item.rect_id == item.rect_id and 
+                        e_item.width == item.width and 
+                        e_item.length == item.length):
+                        e_item.used_qty += item.used_qty
+                        break
+        else:
+            signature_map[sig] = g
+            merged_groups.append(g)
+
+    all_groups = merged_groups
 
     final_remaining = [r for r in current_remaining if r.qty > 0]
     return all_groups, final_remaining

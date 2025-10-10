@@ -7,7 +7,7 @@ from PySide6.QtCore import Qt
 from data_io.excel_io import read_input_excel, write_output_excel, exhaustively_regroup
 from data_io.pdf_report import SimplePDFReport
 # from core.grouping import group_carpets_greedy, generate_groups_from_remaining
-from core.grouping import group_carpets_greedy
+from core.grouping import group_carpets_greedy, group_carpets_optimized
 from core.validation import validate_config, validate_carpets
 
 class RectPackApp(QWidget):
@@ -139,7 +139,7 @@ class RectPackApp(QWidget):
             QMessageBox.warning(self, "خطأ في القيم", "يرجى إدخال أرقام صحيحة للعرض الأدنى والأقصى وهامش التسامح")
             return
         
-        # read config validation
+       # read config validation
         cfg = self.config
         ok, err = validate_config(min_width, max_width, tolerance_len)
         if not ok:
