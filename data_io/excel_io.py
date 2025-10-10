@@ -428,7 +428,8 @@ def calculate_group_efficiency(group: Group) -> Dict[str, float]:
     from .remainder_optimizer import calculate_group_efficiency as _calculate_group_efficiency
     return _calculate_group_efficiency(group)
 
-
+    # tolerance_length: int,
+    # start_group_id: int = 10000
 def optimize_group_formation(
     remaining: List[Rectangle],
     min_width: int,

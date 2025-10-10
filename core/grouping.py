@@ -1,9 +1,6 @@
 from typing import List, Tuple, Dict, Optional
 from collections import defaultdict
 from .models import Rectangle, UsedItem, Group
-import math
-import itertools
-import heapq
 import time
 
 def group_carpets_greedy(carpets: List[Rectangle],
