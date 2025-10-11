@@ -33,7 +33,9 @@ from .remainder_optimizer import (
     create_enhanced_remainder_groups_from_rectangles,
     exhaustively_regroup,
     calculate_group_efficiency,
-    optimize_group_formation
+    process_remainder_complete,
+    generate_size_suggestions,
+    analyze_remaining_for_optimization
 )
 from .suggestion_generator import (
     generate_partner_suggestions,

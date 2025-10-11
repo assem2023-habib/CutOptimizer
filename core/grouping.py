@@ -470,8 +470,8 @@ def regroup_residuals(residuals, min_width, max_width, tolerance):
                     total_width += item['width']
                     residuals[i]['remaining'] = 0
 
-        # إذا تشكّلت مجموعة فعالة
-        if len(group) > 1:
+        # إذا تشكّلت مجموعة فعالة وتحقق الشروط
+        if len(group) > 1 and min_width <= total_width <= max_width:
             new_groups.append({
                 'items': group,
                 'total_width': total_width,

@@ -24,6 +24,11 @@ class SimplePDFReport:
         # Set the default font for the content
         pdf.set_font("Arial", size=10)
 
+        # Variables to calculate totals
+        total_width = 0
+        total_length = 0
+        total_quantity = 0
+
         # Loop through each group and write its details
         for g in groups:
             # Print group header in bold: group id, total width, and reference length
@@ -40,8 +45,25 @@ class SimplePDFReport:
                 line = f"ID:{it.rect_id} W:{it.width} L:{it.length} Q:{it.used_qty}"
                 # Use cell instead of multi_cell to avoid spacing issues
                 pdf.cell(0, 5, line, ln=True)
+                
+                # Add to totals
+                total_width += it.width * it.used_qty
+                total_length += it.length * it.used_qty
+                total_quantity += it.used_qty
 
             pdf.ln(2)  # Small vertical space between groups
+
+        # Add empty line before totals
+        pdf.ln(5)
+        
+        # Add totals section
+        pdf.set_font("Arial", style='B', size=11)
+        pdf.cell(0, 8, "Totals:", ln=True)
+        
+        pdf.set_font("Arial", size=10)
+        pdf.cell(0, 5, f"Total Width: {total_width}", ln=True)
+        pdf.cell(0, 5, f"Total Length: {total_length}", ln=True)
+        pdf.cell(0, 5, f"Total Quantity: {total_quantity}", ln=True)
 
         # Finally, save the PDF file to the given path
         pdf.output(path)

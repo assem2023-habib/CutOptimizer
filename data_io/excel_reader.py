@@ -113,7 +113,6 @@ def validate_excel_data(carpets: List[Rectangle]) -> bool:
     >>>     print("البيانات صحيحة")
     """
     if not carpets:
-        print("تحذير: لا توجد بيانات في الملف")
         return False
         
     # فحص القيم السالبة أو الصفرية
@@ -123,10 +122,8 @@ def validate_excel_data(carpets: List[Rectangle]) -> bool:
             invalid_items.append(carpet.id)
     
     if invalid_items:
-        print(f"تحذير: العناصر التالية تحتوي على قيم غير صحيحة: {invalid_items}")
         return False
         
-    print(f"تم التحقق من {len(carpets)} عنصر بنجاح")
     return True
 
 

@@ -49,7 +49,9 @@ from .remainder_optimizer import (
     create_enhanced_remainder_groups_from_rectangles as create_groups_from_rectangles,
     exhaustively_regroup as regroup,
     calculate_group_efficiency as calculate_efficiency,
-    optimize_group_formation as optimize_formation
+    process_remainder_complete as process_remainder,
+    generate_size_suggestions as generate_suggestions,
+    analyze_remaining_for_optimization as analyze_optimization
 )
 
 from .suggestion_generator import (
@@ -77,7 +79,9 @@ __all__ = [
     'analyze_remaining_items',
     'get_optimization_recommendations',
     'calculate_group_efficiency',
-    'optimize_group_formation',
+    'process_remainder_complete',
+    'generate_size_suggestions',
+    'analyze_remaining_for_optimization',
     
     # الدوال البديلة
     'read_excel',

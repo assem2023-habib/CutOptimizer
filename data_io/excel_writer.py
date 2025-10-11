@@ -13,7 +13,6 @@ import pandas as pd
 from typing import List, Dict, Optional, Tuple
 from core.models import Rectangle, Group, UsedItem
 from pandas.api.types import is_numeric_dtype
-from xlsxwriter.utility import xl_col_to_name
 
 
 def write_output_excel(
@@ -94,9 +93,12 @@ def write_output_excel(
     # إنشاء ورقة التدقيق
     df_audit = _create_audit_sheet(groups, remaining, remainder_groups, enhanced_remainder_groups, originals)
     
+    # إنشاء ورقة اقتراحات المقاسات المطلوبة
+    df_size_suggestions = _create_size_suggestions_sheet(remaining, min_width, max_width, tolerance_length)
+    
     # كتابة جميع الأوراق إلى الملف
     _write_all_sheets_to_excel(
-        path, df1, df2, df3, df4, totals_df, df_sugg, df_enhanced_stats, df_audit
+        path, df1, df2, df3, df4, totals_df, df_sugg, df_enhanced_stats, df_audit, df_size_suggestions
     )
 
 
@@ -152,7 +154,28 @@ def _create_group_details_sheet(
                     'الكمية الأصلية': it.original_qty
                 })
     
-    return pd.DataFrame(rows)
+    # إنشاء DataFrame
+    df = pd.DataFrame(rows)
+    
+    # إضافة سطر فارغ ثم سطر المجموع
+    if not df.empty:
+        # سطر فارغ
+        empty_row = {col: '' for col in df.columns}
+        df = pd.concat([df, pd.DataFrame([empty_row])], ignore_index=True)
+        
+        # سطر المجموع
+        totals_row = {}
+        for col in df.columns:
+            if col in ['العرض', 'الطول', 'الكمية المستخدمة', 'الطول الاجمالي للسجادة', 'الكمية الأصلية']:
+                # حساب المجموع للأعمدة الرقمية فقط
+                numeric_data = pd.to_numeric(df[col], errors='coerce')
+                totals_row[col] = numeric_data.sum()
+            else:
+                totals_row[col] = 'المجموع'
+        
+        df = pd.concat([df, pd.DataFrame([totals_row])], ignore_index=True)
+    
+    return df
 
 
 def _create_group_summary_sheet(
@@ -204,7 +227,28 @@ def _create_group_summary_sheet(
                 'عدد أنواع السجاد': types_count,
             })
     
-    return pd.DataFrame(summary)
+    # إنشاء DataFrame
+    df = pd.DataFrame(summary)
+    
+    # إضافة سطر فارغ ثم سطر المجموع
+    if not df.empty:
+        # سطر فارغ
+        empty_row = {col: '' for col in df.columns}
+        df = pd.concat([df, pd.DataFrame([empty_row])], ignore_index=True)
+        
+        # سطر المجموع
+        totals_row = {}
+        for col in df.columns:
+            if col in ['العرض الإجمالي', 'الطول الإجمالي المرجعي (التقريبي)', 'المساحة الإجمالية', 'عدد أنواع السجاد']:
+                # حساب المجموع للأعمدة الرقمية فقط
+                numeric_data = pd.to_numeric(df[col], errors='coerce')
+                totals_row[col] = numeric_data.sum()
+            else:
+                totals_row[col] = 'المجموع'
+        
+        df = pd.concat([df, pd.DataFrame([totals_row])], ignore_index=True)
+    
+    return df
 
 
 def _create_remaining_sheet(remaining: List[Rectangle]) -> pd.DataFrame:
@@ -239,6 +283,24 @@ def _create_remaining_sheet(remaining: List[Rectangle]) -> pd.DataFrame:
     # إضافة عمود الملاحظات
     if 'ملاحظة' not in df.columns:
         df['ملاحظة'] = ''
+    
+    # إضافة سطر فارغ ثم سطر المجموع
+    if not df.empty:
+        # سطر فارغ
+        empty_row = {col: '' for col in df.columns}
+        df = pd.concat([df, pd.DataFrame([empty_row])], ignore_index=True)
+        
+        # سطر المجموع
+        totals_row = {}
+        for col in df.columns:
+            if col in ['العرض', 'الطول', 'الكمية المتبقية']:
+                # حساب المجموع للأعمدة الرقمية فقط
+                numeric_data = pd.to_numeric(df[col], errors='coerce')
+                totals_row[col] = numeric_data.sum()
+            else:
+                totals_row[col] = 'المجموع'
+        
+        df = pd.concat([df, pd.DataFrame([totals_row])], ignore_index=True)
     
     return df
 
@@ -283,7 +345,28 @@ def _create_ui_summary_sheet(
                 'نوع المجموعة': 'بواقي محسنة'
             })
     
-    return pd.DataFrame(ui_rows)
+    # إنشاء DataFrame
+    df = pd.DataFrame(ui_rows)
+    
+    # إضافة سطر فارغ ثم سطر المجموع
+    if not df.empty:
+        # سطر فارغ
+        empty_row = {col: '' for col in df.columns}
+        df = pd.concat([df, pd.DataFrame([empty_row])], ignore_index=True)
+        
+        # سطر المجموع
+        totals_row = {}
+        for col in df.columns:
+            if col in ['عدد الأنواع', 'الطول المرجعي', 'العرض الإجمالي']:
+                # حساب المجموع للأعمدة الرقمية فقط
+                numeric_data = pd.to_numeric(df[col], errors='coerce')
+                totals_row[col] = numeric_data.sum()
+            else:
+                totals_row[col] = 'المجموع'
+        
+        df = pd.concat([df, pd.DataFrame([totals_row])], ignore_index=True)
+    
+    return df
 
 
 def _create_totals_sheet(
@@ -346,7 +429,28 @@ def _create_enhanced_stats_sheet(enhanced_remainder_groups: Optional[List[Group]
             'نوع المجموعة': 'بواقي محسنة'
         })
     
-    return pd.DataFrame(enhanced_stats)
+    # إنشاء DataFrame
+    df = pd.DataFrame(enhanced_stats)
+    
+    # إضافة سطر فارغ ثم سطر المجموع
+    if not df.empty:
+        # سطر فارغ
+        empty_row = {col: '' for col in df.columns}
+        df = pd.concat([df, pd.DataFrame([empty_row])], ignore_index=True)
+        
+        # سطر المجموع
+        totals_row = {}
+        for col in df.columns:
+            if col in ['عدد العناصر', 'العرض الإجمالي', 'الطول المرجعي', 'المساحة الإجمالية']:
+                # حساب المجموع للأعمدة الرقمية فقط
+                numeric_data = pd.to_numeric(df[col], errors='coerce')
+                totals_row[col] = numeric_data.sum()
+            else:
+                totals_row[col] = 'المجموع'
+        
+        df = pd.concat([df, pd.DataFrame([totals_row])], ignore_index=True)
+    
+    return df
 
 
 def _create_audit_sheet(
@@ -407,7 +511,92 @@ def _create_audit_sheet(
             'مطابق؟': 'نعم' if diff == 0 else 'لا'
         })
     
-    return pd.DataFrame(audit_rows)
+    # إنشاء DataFrame
+    df = pd.DataFrame(audit_rows)
+    
+    # إضافة سطر فارغ ثم سطر المجموع
+    if not df.empty:
+        # سطر فارغ
+        empty_row = {col: '' for col in df.columns}
+        df = pd.concat([df, pd.DataFrame([empty_row])], ignore_index=True)
+        
+        # سطر المجموع
+        totals_row = {}
+        for col in df.columns:
+            if col in ['العرض', 'الطول', 'الكمية الأصلية', 'الكمية المستخدمة', 'الكمية المتبقية', 'فارق (المستخدم+المتبقي-الأصلي)']:
+                # حساب المجموع للأعمدة الرقمية فقط
+                numeric_data = pd.to_numeric(df[col], errors='coerce')
+                totals_row[col] = numeric_data.sum()
+            else:
+                totals_row[col] = 'المجموع'
+        
+        df = pd.concat([df, pd.DataFrame([totals_row])], ignore_index=True)
+    
+    return df
+
+
+def _create_size_suggestions_sheet(
+    remaining: List[Rectangle],
+    min_width: Optional[int],
+    max_width: Optional[int],
+    tolerance_length: Optional[int]
+) -> pd.DataFrame:
+    """
+    إنشاء ورقة اقتراحات المقاسات المطلوبة للبواقي
+    
+    هذه الورقة تحتوي على اقتراحات للمقاسات المطلوبة لتشكيل مجموعات جديدة
+    من البواقي وفقاً للشروط المحددة
+    """
+    # إنشاء DataFrame بسيط وآمن
+    data = []
+    
+    if remaining and min_width and max_width and tolerance_length:
+        for rect in remaining:
+            if rect.qty > 0:
+                data.append({
+                    'المقاس الحالي': f"{rect.width}x{rect.length}",
+                    'الكمية': rect.qty,
+                    'الطول الإجمالي': rect.length * rect.qty,
+                    'نوع الاقتراح': 'تحليل',
+                    'العرض المطلوب': f"{min_width}-{max_width}",
+                    'الاقتراح': f"مقاس متاح للتحليل",
+                    'الكفاءة': 'متوسطة'
+                })
+    
+    # إذا لم توجد بيانات، إنشاء صف واحد فقط
+    if not data:
+        data.append({
+            'المقاس الحالي': 'لا توجد بيانات',
+            'الكمية': 0,
+            'الطول الإجمالي': 0,
+            'نوع الاقتراح': 'غير متاح',
+            'العرض المطلوب': 'غير متاح',
+            'الاقتراح': 'لا توجد اقتراحات',
+            'الكفاءة': 'غير متاح'
+        })
+    
+    # إنشاء DataFrame
+    df = pd.DataFrame(data)
+    
+    # إضافة سطر فارغ ثم سطر المجموع
+    if not df.empty:
+        # سطر فارغ
+        empty_row = {col: '' for col in df.columns}
+        df = pd.concat([df, pd.DataFrame([empty_row])], ignore_index=True)
+        
+        # سطر المجموع
+        totals_row = {}
+        for col in df.columns:
+            if col in ['الكمية', 'الطول الإجمالي']:
+                # حساب المجموع للأعمدة الرقمية فقط
+                numeric_data = pd.to_numeric(df[col], errors='coerce')
+                totals_row[col] = numeric_data.sum()
+            else:
+                totals_row[col] = 'المجموع'
+        
+        df = pd.concat([df, pd.DataFrame([totals_row])], ignore_index=True)
+    
+    return df
 
 
 def _write_all_sheets_to_excel(
@@ -419,69 +608,63 @@ def _write_all_sheets_to_excel(
     totals_df: pd.DataFrame,
     df_sugg: pd.DataFrame,
     df_enhanced_stats: pd.DataFrame,
-    df_audit: pd.DataFrame
+    df_audit: pd.DataFrame,
+    df_size_suggestions: pd.DataFrame
 ) -> None:
     """كتابة جميع الأوراق إلى ملف Excel."""
-    with pd.ExcelWriter(path, engine='xlsxwriter') as writer:
-        # ورقة تفاصيل المجموعات
-        df1.to_excel(writer, sheet_name='تفاصيل المجموعات', index=False)
-        _append_totals_row(writer, 'تفاصيل المجموعات', df1)
-        
-        # ورقة ملخص المجموعات
-        df2.to_excel(writer, sheet_name='ملخص المجموعات', index=False)
-        _append_totals_row(writer, 'ملخص المجموعات', df2)
-        
-        # ورقة السجاد المتبقي
-        df3.to_excel(writer, sheet_name='السجاد المتبقي', index=False)
-        _append_totals_row(writer, 'السجاد المتبقي', df3)
-        
-        # ورقة ملخص الواجهة
-        df4.to_excel(writer, sheet_name='ملخص الواجهة', index=False)
-        _append_totals_row(writer, 'ملخص الواجهة', df4)
-        
-        # ورقة الإجماليات
-        totals_df.to_excel(writer, sheet_name='الإجماليات', index=False)
-        
-        # ورقة اقتراحات تشكيل المجموعات
-        df_sugg.to_excel(writer, sheet_name='اقتراحات تشكيل مجموعات', index=False)
-        
-        # ورقة إحصائيات المجموعات الإضافية
-        if not df_enhanced_stats.empty:
-            df_enhanced_stats.to_excel(writer, sheet_name='إحصائيات المجموعات الإضافية', index=False)
-            _append_totals_row(writer, 'إحصائيات المجموعات الإضافية', df_enhanced_stats)
-        
-        # ورقة التدقيق
-        if not df_audit.empty:
-            df_audit.to_excel(writer, sheet_name='تدقيق الكميات', index=False)
-            _append_totals_row(writer, 'تدقيق الكميات', df_audit)
-
-
-def _append_totals_row(writer, sheet_name: str, df: pd.DataFrame) -> None:
-    """
-    إضافة صف الإجماليات في نهاية الورقة.
-    
-    هذه الدالة تضيف صف "المجموع" في نهاية الورقة مع حساب مجموع
-    الأعمدة الرقمية فقط.
-    """
-    ws = writer.sheets[sheet_name]
-    nrows, ncols = df.shape
-    totals_row_idx = nrows + 1  # فهرس الصف التالي للبيانات
-    
-    # كتابة تسمية "المجموع" في العمود الأول
-    ws.write(totals_row_idx, 0, 'المجموع')
-    
-    # محاولة وضع التسمية في عمود "ملاحظة" إن وُجد
     try:
-        if 'ملاحظة' in df.columns:
-            note_col_idx = df.columns.get_loc('ملاحظة')
-            ws.write(totals_row_idx, note_col_idx, 'المجموع')
-    except Exception:
-        pass
-    
-    # حساب المجموع للأعمدة الرقمية
-    for col_idx, col_name in enumerate(df.columns):
-        if is_numeric_dtype(df[col_name]):
-            col_letter = xl_col_to_name(col_idx)
-            # نطاق البيانات من الصف 2 إلى الصف nrows+1 في Excel (1-based)
-            formula = f"=SUM({col_letter}2:{col_letter}{nrows+1})"
-            ws.write_formula(totals_row_idx, col_idx, formula)
+        with pd.ExcelWriter(path, engine='xlsxwriter') as writer:
+            # كتابة الأوراق الأساسية فقط لتجنب المشاكل
+            if not df1.empty:
+                df1.to_excel(writer, sheet_name='تفاصيل المجموعات', index=False)
+            
+            if not df2.empty:
+                df2.to_excel(writer, sheet_name='ملخص المجموعات', index=False)
+            
+            if not df3.empty:
+                df3.to_excel(writer, sheet_name='السجاد المتبقي', index=False)
+            
+            if not df4.empty:
+                df4.to_excel(writer, sheet_name='ملخص الواجهة', index=False)
+            
+            if not totals_df.empty:
+                totals_df.to_excel(writer, sheet_name='الإجماليات', index=False)
+            
+            # كتابة الأوراق الإضافية بحذر
+            try:
+                if not df_sugg.empty:
+                    df_sugg.to_excel(writer, sheet_name='اقتراحات تشكيل مجموعات', index=False)
+            except Exception as e:
+                print(f"تحذير: فشل في كتابة ورقة اقتراحات التشكيل: {e}")
+            
+            try:
+                if not df_enhanced_stats.empty:
+                    df_enhanced_stats.to_excel(writer, sheet_name='إحصائيات المجموعات الإضافية', index=False)
+            except Exception as e:
+                print(f"تحذير: فشل في كتابة ورقة إحصائيات المجموعات الإضافية: {e}")
+            
+            try:
+                if not df_audit.empty:
+                    df_audit.to_excel(writer, sheet_name='تدقيق الكميات', index=False)
+            except Exception as e:
+                print(f"تحذير: فشل في كتابة ورقة التدقيق: {e}")
+            
+            try:
+                if not df_size_suggestions.empty:
+                    df_size_suggestions.to_excel(writer, sheet_name='اقتراحات المقاسات المطلوبة', index=False)
+            except Exception as e:
+                print(f"تحذير: فشل في كتابة ورقة اقتراحات المقاسات: {e}")
+                
+    except Exception as e:
+        print(f"خطأ في كتابة ملف Excel: {e}")
+        # محاولة كتابة ملف مبسط جداً في حالة الخطأ
+        try:
+            with pd.ExcelWriter(path, engine='xlsxwriter') as writer:
+                df1.to_excel(writer, sheet_name='تفاصيل المجموعات', index=False)
+                df2.to_excel(writer, sheet_name='ملخص المجموعات', index=False)
+                df3.to_excel(writer, sheet_name='السجاد المتبقي', index=False)
+        except Exception as e2:
+            raise e2
+
+
+# تم حذف دالة _append_totals_row لأنها تسبب مشاكل في صيغ Excel

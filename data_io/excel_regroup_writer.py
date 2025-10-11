@@ -46,7 +46,29 @@ def _create_regroup_details_sheet(groups: List[Group]) -> pd.DataFrame:
                 "الكمية المستخدمة": it.used_qty,
                 "الكمية الأصلية": it.original_qty,
             })
-    return pd.DataFrame(rows)
+    
+    # إنشاء DataFrame
+    df = pd.DataFrame(rows)
+    
+    # إضافة سطر فارغ ثم سطر المجموع
+    if not df.empty:
+        # سطر فارغ
+        empty_row = {col: '' for col in df.columns}
+        df = pd.concat([df, pd.DataFrame([empty_row])], ignore_index=True)
+        
+        # سطر المجموع
+        totals_row = {}
+        for col in df.columns:
+            if col in ['العرض', 'الطول', 'الكمية المستخدمة', 'الكمية الأصلية']:
+                # حساب المجموع للأعمدة الرقمية فقط
+                numeric_data = pd.to_numeric(df[col], errors='coerce')
+                totals_row[col] = numeric_data.sum()
+            else:
+                totals_row[col] = 'المجموع'
+        
+        df = pd.concat([df, pd.DataFrame([totals_row])], ignore_index=True)
+    
+    return df
 
 
 def _create_regroup_summary_sheet(groups: List[Group]) -> pd.DataFrame:
@@ -60,7 +82,29 @@ def _create_regroup_summary_sheet(groups: List[Group]) -> pd.DataFrame:
             "الطول المرجعي": g.ref_length(),
             "المساحة الإجمالية": g.total_area()
         })
-    return pd.DataFrame(summary)
+    
+    # إنشاء DataFrame
+    df = pd.DataFrame(summary)
+    
+    # إضافة سطر فارغ ثم سطر المجموع
+    if not df.empty:
+        # سطر فارغ
+        empty_row = {col: '' for col in df.columns}
+        df = pd.concat([df, pd.DataFrame([empty_row])], ignore_index=True)
+        
+        # سطر المجموع
+        totals_row = {}
+        for col in df.columns:
+            if col in ['عدد العناصر', 'العرض الإجمالي', 'الطول المرجعي', 'المساحة الإجمالية']:
+                # حساب المجموع للأعمدة الرقمية فقط
+                numeric_data = pd.to_numeric(df[col], errors='coerce')
+                totals_row[col] = numeric_data.sum()
+            else:
+                totals_row[col] = 'المجموع'
+        
+        df = pd.concat([df, pd.DataFrame([totals_row])], ignore_index=True)
+    
+    return df
 
 
 def _create_leftover_sheet(remaining: List[Rectangle]) -> pd.DataFrame:
@@ -73,7 +117,29 @@ def _create_leftover_sheet(remaining: List[Rectangle]) -> pd.DataFrame:
             "الطول": r.length,
             "الكمية المتبقية": r.qty
         })
-    return pd.DataFrame(rows)
+    
+    # إنشاء DataFrame
+    df = pd.DataFrame(rows)
+    
+    # إضافة سطر فارغ ثم سطر المجموع
+    if not df.empty:
+        # سطر فارغ
+        empty_row = {col: '' for col in df.columns}
+        df = pd.concat([df, pd.DataFrame([empty_row])], ignore_index=True)
+        
+        # سطر المجموع
+        totals_row = {}
+        for col in df.columns:
+            if col in ['العرض', 'الطول', 'الكمية المتبقية']:
+                # حساب المجموع للأعمدة الرقمية فقط
+                numeric_data = pd.to_numeric(df[col], errors='coerce')
+                totals_row[col] = numeric_data.sum()
+            else:
+                totals_row[col] = 'المجموع'
+        
+        df = pd.concat([df, pd.DataFrame([totals_row])], ignore_index=True)
+    
+    return df
 
 
 def _create_settings_sheet(iter_count: int, min_width: int, max_width: int, tol: int) -> pd.DataFrame:
@@ -84,7 +150,29 @@ def _create_settings_sheet(iter_count: int, min_width: int, max_width: int, tol:
         "الحد الأقصى للعرض": [max_width],
         "سماحية الطول": [tol],
     }
-    return pd.DataFrame(data)
+    
+    # إنشاء DataFrame
+    df = pd.DataFrame(data)
+    
+    # إضافة سطر فارغ ثم سطر المجموع
+    if not df.empty:
+        # سطر فارغ
+        empty_row = {col: '' for col in df.columns}
+        df = pd.concat([df, pd.DataFrame([empty_row])], ignore_index=True)
+        
+        # سطر المجموع
+        totals_row = {}
+        for col in df.columns:
+            if col in ['عدد الجولات', 'الحد الأدنى للعرض', 'الحد الأقصى للعرض', 'سماحية الطول']:
+                # حساب المجموع للأعمدة الرقمية فقط
+                numeric_data = pd.to_numeric(df[col], errors='coerce')
+                totals_row[col] = numeric_data.sum()
+            else:
+                totals_row[col] = 'المجموع'
+        
+        df = pd.concat([df, pd.DataFrame([totals_row])], ignore_index=True)
+    
+    return df
 
 
 def _write_all_sheets_to_excel(path, df1, df2, df3, df4):

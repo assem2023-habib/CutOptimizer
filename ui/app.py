@@ -63,6 +63,19 @@ class RectPackApp(QWidget):
         h2_5.addWidget(self.tolerance_edit)
         layout.addLayout(h2_5)
 
+        # quantity limits inputs
+        h2_6 = QHBoxLayout()
+        self.min_quantity_edit = QLineEdit()
+        self.min_quantity_edit.setPlaceholderText("الحد الأدنى لكمية المجموعة (اختياري)")
+        h2_6.addWidget(QLabel("الحد الأدنى للكمية:"))
+        h2_6.addWidget(self.min_quantity_edit)
+        
+        self.max_quantity_edit = QLineEdit()
+        self.max_quantity_edit.setPlaceholderText("الحد الأقصى لكمية المجموعة (اختياري)")
+        h2_6.addWidget(QLabel("الحد الأقصى للكمية:"))
+        h2_6.addWidget(self.max_quantity_edit)
+        layout.addLayout(h2_6)
+
         # run & config info
         h3 = QHBoxLayout()
         self.run_btn = QPushButton("تشغيل التجميع")
@@ -127,6 +140,15 @@ class RectPackApp(QWidget):
             min_width = int(self.min_width_edit.text().strip())
             max_width = int(self.max_width_edit.text().strip())
             tolerance_len = int(self.tolerance_edit.text().strip())
+            
+            # Get quantity limits (optional)
+            min_quantity = None
+            max_quantity = None
+            if self.min_quantity_edit.text().strip():
+                min_quantity = int(self.min_quantity_edit.text().strip())
+            if self.max_quantity_edit.text().strip():
+                max_quantity = int(self.max_quantity_edit.text().strip())
+            
             if min_width <= 0 or max_width <= 0:
                 QMessageBox.warning(self, "خطأ في القيم", "العرض الأدنى والأقصى يجب أن يكونا أكبر من 0")
                 return
@@ -136,8 +158,11 @@ class RectPackApp(QWidget):
             if tolerance_len < 0:
                 QMessageBox.warning(self, "خطأ في القيم", "هامش التسامح يجب أن يكون صفراً أو رقماً موجباً")
                 return
+            if min_quantity is not None and max_quantity is not None and min_quantity >= max_quantity:
+                QMessageBox.warning(self, "خطأ في القيم", "الحد الأدنى للكمية يجب أن يكون أقل من الحد الأقصى")
+                return
         except ValueError:
-            QMessageBox.warning(self, "خطأ في القيم", "يرجى إدخال أرقام صحيحة للعرض الأدنى والأقصى وهامش التسامح")
+            QMessageBox.warning(self, "خطأ في القيم", "يرجى إدخال أرقام صحيحة للعرض الأدنى والأقصى وهامش التسامح وحدود الكمية")
             return
         
        # read config validation
@@ -173,16 +198,19 @@ class RectPackApp(QWidget):
         self.log_append(f"تم تشكيل {len(groups)} مجموعة . المتبقي: {len(remaining)} أنواع (مع كميات).")
 
         # محاولة إعادة تجميع البواقي إلى مجموعات إضافية مع السماح بالتكرار داخل المجموعة
-        rem_groups, rem_final_remaining = process_remainder_complete(
+        rem_groups, rem_final_remaining, quantity_stats = process_remainder_complete(
                                             remaining,
                                             min_width=min_width,
                                             max_width=max_width,
                                             tolerance_length=tolerance_len,
                                             start_group_id=max([g.id for g in groups] + [0]) + 1,
                                             merge_after=True,  # دمج تلقائي
-                                            verbose=True       # طباعة التفاصيل
+                                            verbose=True,      # طباعة التفاصيل
+                                            min_group_quantity=min_quantity,
+                                            max_group_quantity=max_quantity
                                         )
         self.log_append(f"تم تشكيل {len(rem_groups)} مجموعة إضافية من البواقي. تبقّى بعد ذلك: {len(rem_final_remaining)} أنواع.")
+        self.log_append(f"إحصائيات الكميات: استغلال {quantity_stats['utilization_percentage']:.2f}% من الكمية الإجمالية")
 
         # write excel
         try:
