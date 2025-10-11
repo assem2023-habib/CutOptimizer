@@ -635,28 +635,32 @@ def _write_all_sheets_to_excel(
                 if not df_sugg.empty:
                     df_sugg.to_excel(writer, sheet_name='اقتراحات تشكيل مجموعات', index=False)
             except Exception as e:
-                print(f"تحذير: فشل في كتابة ورقة اقتراحات التشكيل: {e}")
+                # Silent error handling for production
+                pass
             
             try:
                 if not df_enhanced_stats.empty:
                     df_enhanced_stats.to_excel(writer, sheet_name='إحصائيات المجموعات الإضافية', index=False)
             except Exception as e:
-                print(f"تحذير: فشل في كتابة ورقة إحصائيات المجموعات الإضافية: {e}")
+                # Silent error handling for production
+                pass
             
             try:
                 if not df_audit.empty:
                     df_audit.to_excel(writer, sheet_name='تدقيق الكميات', index=False)
             except Exception as e:
-                print(f"تحذير: فشل في كتابة ورقة التدقيق: {e}")
+                # Silent error handling for production
+                pass
             
             try:
                 if not df_size_suggestions.empty:
                     df_size_suggestions.to_excel(writer, sheet_name='اقتراحات المقاسات المطلوبة', index=False)
             except Exception as e:
-                print(f"تحذير: فشل في كتابة ورقة اقتراحات المقاسات: {e}")
+                # Silent error handling for production
+                pass
                 
     except Exception as e:
-        print(f"خطأ في كتابة ملف Excel: {e}")
+        # Silent error handling for production - attempt simplified file creation
         # محاولة كتابة ملف مبسط جداً في حالة الخطأ
         try:
             with pd.ExcelWriter(path, engine='xlsxwriter') as writer:
@@ -665,6 +669,3 @@ def _write_all_sheets_to_excel(
                 df3.to_excel(writer, sheet_name='السجاد المتبقي', index=False)
         except Exception as e2:
             raise e2
-
-
-# تم حذف دالة _append_totals_row لأنها تسبب مشاكل في صيغ Excel
