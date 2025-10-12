@@ -1,12 +1,10 @@
 import json
 import os
-from PySide6.QtWidgets import (QApplication, QWidget, QPushButton, QVBoxLayout, QFileDialog,
-                               QLabel, QLineEdit, QTextEdit, QHBoxLayout, QMessageBox, QTableWidget, QTableWidgetItem, QComboBox)
+from PySide6.QtWidgets import ( QWidget, QPushButton, QVBoxLayout, QFileDialog,
+                               QLabel, QLineEdit, QTextEdit, QHBoxLayout, QMessageBox, QTableWidget, QTableWidgetItem)
 
-from PySide6.QtCore import Qt
 from data_io.excel_io import read_input_excel, write_output_excel, exhaustively_regroup
 from data_io.pdf_report import SimplePDFReport
-# from core.grouping import group_carpets_greedy, generate_groups_from_remaining
 from core.grouping import group_carpets_greedy, group_carpets_optimized
 from core.validation import validate_config, validate_carpets
 from data_io.remainder_optimizer import process_remainder_complete

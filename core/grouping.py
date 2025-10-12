@@ -88,6 +88,9 @@ def group_carpets_greedy(carpets: List[Rectangle],
                         continue
                     cand = id_map[cid]
 
+                    # تجنب القسمة على الصفر: تجاهل المرشح بطول غير موجب
+                    if cand.length <= 0:
+                        continue
                     desired_qty = max(1, int(round(ref_total_len / cand.length)))
                     take = min(desired_qty, avail)
                     if take <= 0:
@@ -116,6 +119,9 @@ def group_carpets_greedy(carpets: List[Rectangle],
                     if rid == primary.id:
                         continue
                     cand = id_map[rid]
+                    # تجنب القسمة على الصفر: تجاهل المرشح بطول غير موجب
+                    if cand.length <= 0:
+                        continue
                     desired_block = max(1, int(round(ref_total_len / cand.length)))
                     if temp_qty[rid] >= desired_block and chosen_width + cand.width <= max_width:
                         repeatable_blocks.append((rid, cand.width, cand.length, desired_block))
