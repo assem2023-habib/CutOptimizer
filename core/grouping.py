@@ -133,14 +133,41 @@ def group_carpets_greedy(carpets: List[Rectangle],
 
             # If valid group formed
             if min_width <= chosen_width <= max_width:
-                # خصم نهائي من المخزون الفعلي
-                for it in chosen_items:
-                    remaining_qty[it.rect_id] = max(0, remaining_qty.get(it.rect_id, 0) - it.used_qty)
-                    id_map[it.rect_id].qty = remaining_qty[it.rect_id]
-                groups.append(Group(group_id, chosen_items))
-                group_id += 1
-                group_created = True
-                break
+                # Check if this exact group already exists (same rectangle IDs and quantities)
+                is_duplicate = False
+                for existing_group in groups:
+                    if len(existing_group.items) != len(chosen_items):
+                        continue
+                    
+                    # Create dictionaries to compare quantities
+                    existing_quantities = {}
+                    for item in existing_group.items:
+                        existing_quantities[item.rect_id] = item.used_qty
+                    
+                    # Check if all items in chosen_items match existing group
+                    all_match = True
+                    for item in chosen_items:
+                        if existing_quantities.get(item.rect_id) != item.used_qty:
+                            all_match = False
+                            break
+                    
+                    if all_match:
+                        is_duplicate = True
+                        break
+                
+                # If not a duplicate, add the group
+                if not is_duplicate:
+                    # خصم نهائي من المخزون الفعلي
+                    for it in chosen_items:
+                        remaining_qty[it.rect_id] = max(0, remaining_qty.get(it.rect_id, 0) - it.used_qty)
+                        id_map[it.rect_id].qty = remaining_qty[it.rect_id]
+                    groups.append(Group(group_id, chosen_items))
+                    group_id += 1
+                    group_created = True
+                    break
+                else:
+                    # Skip this group and try with different quantities
+                    continue
 
         # If no group formed
         if not group_created:
@@ -382,37 +409,64 @@ def group_carpets_optimized(
                 # explode into units of 1 for representation (keeps original_qty in each)
                 for _ in range(it.used_qty):
                     exploded.append(UsedItem(it.rect_id, it.width, it.length, 1, original_qty_map.get(it.rect_id, 0)))
-            groups.append(Group(group_id, exploded))
-            group_id += 1
-            # continue main loop
-            continue
 
-        # if no group formed from any primary -> try fallback: small single-block groups (to use stock)
-        # pick the widest remaining that fits alone into [min_width, max_width] by repeating it if possible
-        fallback_done = False
-        for r in carpets_sorted:
-            avail = remaining_qty.get(r.id, 0)
-            if avail <= 0 or r.width <= 0:
-                continue
-            max_repeat = min(avail, max_width // r.width)
-            # find repeat count that fits range
-            for repeat in range(max_repeat, 0, -1):
+    # if no group formed from any primary -> try fallback: use maximum quantity of the same rectangle
+    fallback_done = False
+    for r in carpets_sorted:
+        avail = remaining_qty.get(r.id, 0)
+        if avail <= 0 or r.width <= 0:
+            continue
+            
+        # Calculate maximum possible repeats within width constraints
+        max_repeats_by_width = max_width // r.width
+        max_possible = min(avail, max_repeats_by_width)
+        
+        if max_possible == 0:
+            continue
+            
+        # Calculate how many full groups we can make with max_possible repeats
+        if max_possible * r.width >= min_width:
+            # We can make at least one valid group with max_possible repeats
+            group_size = max_possible
+            groups_to_make = avail // group_size
+            
+            for _ in range(groups_to_make):
+                if group_size * r.width > max_width or group_size * r.width < min_width:
+                    break
+                    
+                # Create the group with maximum possible quantity
+                remaining_qty[r.id] = max(0, remaining_qty.get(r.id, 0) - group_size)
+                id_map[r.id].qty = remaining_qty.get(r.id, 0)
+                
+                # Create a single UsedItem with the actual quantity instead of exploding
+                groups.append(Group(
+                    group_id, 
+                    [UsedItem(r.id, r.width, r.length, group_size, original_qty_map.get(r.id, 0))]
+                ))
+                group_id += 1
+                fallback_done = True
+            
+            if fallback_done:
+                break
+        
+        # If we couldn't make full groups, try with smaller quantities
+        if not fallback_done and max_possible > 1:
+            for repeat in range(max_possible, 0, -1):
                 total_w = r.width * repeat
-                if min_width <= total_w <= max_width:
-                    # consume repeat pieces and form group
+                if min_width <= total_w <= max_width and avail >= repeat:
                     remaining_qty[r.id] = max(0, remaining_qty.get(r.id, 0) - repeat)
                     id_map[r.id].qty = remaining_qty.get(r.id, 0)
-                    # explode into units
-                    exploded = [UsedItem(r.id, r.width, r.length, 1, original_qty_map.get(r.id,0)) for _ in range(repeat)]
-                    groups.append(Group(group_id, exploded))
+                    groups.append(Group(
+                        group_id,
+                        [UsedItem(r.id, r.width, r.length, repeat, original_qty_map.get(r.id, 0))]
+                    ))
                     group_id += 1
                     fallback_done = True
                     break
-            if fallback_done:
-                break
+            
         if fallback_done:
-            continue
-
+            break
+        
         # If we reach here, nothing more can be done -> break
         break
 

@@ -68,26 +68,20 @@ def create_enhanced_remainder_groups(
         if not group_items:
             return False
         
-        # حساب العرض الإجمالي (مجموع العرض لكل نوع مرة واحدة)
-        # تجميع العناصر حسب النوع
-        unique_items = {}
+        # حساب العرض الإجمالي (مجموع العرض × الكمية لكل عنصر)
+        total_width = 0
         for rect, qty in group_items:
-            key = (rect.id, rect.width, rect.length)
-            if key not in unique_items:
-                unique_items[key] = rect
-            # لا نحتاج للكمية هنا لأن العرض يحسب مرة واحدة لكل نوع
-        
-        total_width = sum(rect.width for rect in unique_items.values())
+            total_width += rect.width * qty
         
         # التحقق من نطاق العرض - هذا هو الشرط الأساسي
         if not (min_width <= total_width <= max_width):
             return False
         
         # التحقق من وجود عنصرين على الأقل (إلا إذا كان العنصر الواحد يحقق النطاق)
-        if len(unique_items) == 1:
-            rect = list(unique_items.values())[0]
+        if len(group_items) == 1:
+            rect, qty = group_items[0]
             # للعنصر الواحد، يجب أن يحقق النطاق بالضبط
-            return min_width <= rect.width <= max_width
+            return min_width <= rect.width * qty <= max_width
         
         # للمجموعات المتعددة، يجب أن يكون العرض في النطاق
         return min_width <= total_width <= max_width
@@ -105,12 +99,10 @@ def create_enhanced_remainder_groups(
         max_width: int
     ) -> Optional[Tuple[int, int]]:
         """محاولة تكوين مجموعة من عنصر واحد مكرر مع مراعاة حدود الكمية"""
-        # في المنطق الجديد، العرض يحسب مرة واحدة لكل نوع
-        # لذلك نحتاج لتكرار نفس العنصر حتى يحقق النطاق
         
         # التحقق من أن العنصر يمكن أن يحقق النطاق
         if rect.width < min_width:
-            # نحتاج لتكرار العنصر
+            # نحتاج لتكرار العنصر حتى يحقق النطاق
             min_repeats = (min_width + rect.width - 1) // rect.width  # تقريب لأعلى
             max_repeats = min(rect.qty, max_width // rect.width)
             
@@ -119,7 +111,7 @@ def create_enhanced_remainder_groups(
                 
             # اختر أكبر عدد ممكن من التكرارات
             qty = max_repeats
-            total_w = rect.width  # العرض يحسب مرة واحدة فقط
+            total_w = rect.width * qty  # العرض الإجمالي = العرض × العدد
             
             group_quantity = calculate_group_quantity([(rect, qty)])
             
@@ -179,7 +171,7 @@ def create_enhanced_remainder_groups(
             current_width = base_total_width
             
             for candidate in sorted_items:
-                if candidate.qty <= 0:
+                if candidate.qty <= 0 or candidate.id == base_rect.id:
                     continue
                 
                 # حساب أقصى كمية يمكن استخدامها من هذا العنصر
@@ -224,8 +216,9 @@ def create_enhanced_remainder_groups(
     
     # معالجة كل نطاق عرض
     for min_width, max_width in width_ranges:
-        max_rounds = 200  # زيادة عدد المحاولات لاستغلال أفضل للكميات
+        max_rounds = 50  # تقليل عدد المحاولات لتجنب التكرار
         round_count = 0
+        processed_combinations = set()  # لتجنب تكرار نفس التركيبة
         
         while round_count < max_rounds and current_remaining:
             round_count += 1
@@ -245,6 +238,11 @@ def create_enhanced_remainder_groups(
                 if base_rect.qty <= 0:
                     continue
                 
+                # إنشاء بصمة للتركيبة لتجنب التكرار
+                combination_signature = f"{base_rect.id}_{base_rect.width}_{base_rect.length}_{min_width}_{max_width}"
+                if combination_signature in processed_combinations:
+                    continue
+                
                 # محاولة تكوين مجموعة من عنصر واحد مكرر
                 result = try_single_repeated_item(
                     base_rect, min_width, max_width
@@ -255,32 +253,31 @@ def create_enhanced_remainder_groups(
                     
                     # إنشاء المجموعة مع تكرار نفس العنصر
                     actual_used = min(qty_used, base_rect.qty)
-                    base_rect.qty -= actual_used
-                    
-                    # إنشاء عناصر منفصلة لكل تكرار
-                    group_items = []
-                    for _ in range(actual_used):
-                        group_items.append(
-                            UsedItem(
-                                rect_id=base_rect.id,
-                                width=base_rect.width,
-                                length=base_rect.length,
-                                used_qty=1,  # كل عنصر بكمية 1
-                                original_qty=base_rect.qty + actual_used
-                            )
-                        )
                     
                     # التحقق من صحة المجموعة قبل إنشائها
                     group_rects = [(base_rect, actual_used)]
                     if validate_group(group_rects, min_width, max_width):
+                        base_rect.qty -= actual_used
+                        
+                        # إنشاء عناصر منفصلة لكل تكرار
+                        group_items = []
+                        for _ in range(actual_used):
+                            group_items.append(
+                                UsedItem(
+                                    rect_id=base_rect.id,
+                                    width=base_rect.width,
+                                    length=base_rect.length,
+                                    used_qty=1,  # كل عنصر بكمية 1
+                                    original_qty=base_rect.qty + actual_used
+                                )
+                            )
+                        
                         new_group = Group(id=next_group_id, items=group_items)
                         all_groups.append(new_group)
                         next_group_id += 1
                         created_group = True
+                        processed_combinations.add(combination_signature)
                         break
-                    else:
-                        # إرجاع الكمية إذا لم تكن المجموعة صالحة
-                        base_rect.qty += actual_used
                 
                 # إذا فشلت المحاولة الأولى، جرب تركيبة معقدة
                 else:
@@ -294,9 +291,20 @@ def create_enhanced_remainder_groups(
                     )
                     
                     if combination:
+                        # إنشاء بصمة للتركيبة المعقدة
+                        complex_signature = "|".join([f"{rect.id}_{rect.width}_{rect.length}_{qty}" for rect, qty in combination])
+                        if complex_signature in processed_combinations:
+                            continue
+                        
                         # إنشاء المجموعة من التركيبة
                         group_items = []
+                        temp_quantities = {}  # لحفظ الكميات المؤقتة
                         
+                        # احتفظ بالكميات الأصلية
+                        for rect, qty in combination:
+                            temp_quantities[rect.id] = rect.qty
+                        
+                        # خصم الكميات
                         for rect, qty in combination:
                             actual_used = min(rect.qty, qty)
                             if actual_used > 0:
@@ -307,7 +315,7 @@ def create_enhanced_remainder_groups(
                                         width=rect.width,
                                         length=rect.length,
                                         used_qty=actual_used,
-                                        original_qty=rect.qty + actual_used
+                                        original_qty=temp_quantities[rect.id]
                                     )
                                 )
                         
@@ -325,6 +333,7 @@ def create_enhanced_remainder_groups(
                                 all_groups.append(new_group)
                                 next_group_id += 1
                                 created_group = True
+                                processed_combinations.add(complex_signature)
                                 break
                             else:
                                 # إرجاع الكميات إذا لم تكن المجموعة صالحة
@@ -332,6 +341,7 @@ def create_enhanced_remainder_groups(
                                     for rect in current_remaining:
                                         if rect.id == item.rect_id:
                                             rect.qty += item.used_qty
+                                        break
             
             if not created_group:
                 break
@@ -580,6 +590,12 @@ def process_remainder_complete(
     # المرحلة 2: الدمج
     if merge_after and len(groups) > 0:
         groups = merge_identical_groups(groups, tolerance_length, verbose)
+    
+    # إضافة معلومات إضافية للإحصائيات
+    if verbose:
+        print(f"تم إنشاء {len(groups)} مجموعة من البواقي")
+        print(f"تبقى {len(final_remaining)} عنصر بعد التجميع")
+        print(f"نسبة الاستغلال: {quantity_stats.get('utilization_percentage', 0):.2f}%")
     
     return groups, final_remaining, quantity_stats
 
