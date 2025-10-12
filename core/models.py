@@ -15,6 +15,9 @@ class UsedItem:
     length: int
     used_qty: int
     original_qty: int
+    
+    def tolerance_ref(self)->int:
+        return self.length * self.used_qty
 
 @dataclass
 class Group:

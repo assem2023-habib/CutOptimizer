@@ -133,29 +133,28 @@ def group_carpets_greedy(carpets: List[Rectangle],
 
             # If valid group formed
             if min_width <= chosen_width <= max_width:
-                # Check if this exact group already exists (same rectangle IDs and quantities)
+                # قيد 1: التحقق من أن المجموعة ليست مكونة من عنصر واحد مكرر
+                unique_rect_ids = set(item.rect_id for item in chosen_items)
+                is_single_element_repeated = len(unique_rect_ids) == 1
+                
+                if is_single_element_repeated:
+                    # مجموعة من عنصر واحد مكرر - تجاهلها ولا نخصم الكميات
+                    continue
+                
+                # قيد 2: التحقق من وجود مجموعة بنفس المعرفات (بغض النظر عن الكميات)
                 is_duplicate = False
                 for existing_group in groups:
-                    if len(existing_group.items) != len(chosen_items):
-                        continue
+                    # الحصول على معرفات المجموعة الموجودة
+                    existing_rect_ids = sorted(set(item.rect_id for item in existing_group.items))
+                    # الحصول على معرفات المجموعة الجديدة
+                    new_rect_ids = sorted(unique_rect_ids)
                     
-                    # Create dictionaries to compare quantities
-                    existing_quantities = {}
-                    for item in existing_group.items:
-                        existing_quantities[item.rect_id] = item.used_qty
-                    
-                    # Check if all items in chosen_items match existing group
-                    all_match = True
-                    for item in chosen_items:
-                        if existing_quantities.get(item.rect_id) != item.used_qty:
-                            all_match = False
-                            break
-                    
-                    if all_match:
+                    # إذا تطابقت المعرفات، هذه مجموعة مكررة
+                    if existing_rect_ids == new_rect_ids:
                         is_duplicate = True
                         break
                 
-                # If not a duplicate, add the group
+                # إذا لم تكن مكررة، أضف المجموعة
                 if not is_duplicate:
                     # خصم نهائي من المخزون الفعلي
                     for it in chosen_items:
@@ -166,7 +165,8 @@ def group_carpets_greedy(carpets: List[Rectangle],
                     group_created = True
                     break
                 else:
-                    # Skip this group and try with different quantities
+                    # مجموعة مكررة - لا نخصم الكميات، الكميات تبقى كما هي
+                    # لأننا لم نخصمها بعد (كنا نعمل على temp_qty)
                     continue
 
         # If no group formed
@@ -466,9 +466,6 @@ def group_carpets_optimized(
             
         if fallback_done:
             break
-        
-        # If we reach here, nothing more can be done -> break
-        break
 
     # prepare remaining rectangles
     remaining = []
@@ -477,8 +474,70 @@ def group_carpets_optimized(
         if q > 0:
             remaining.append(Rectangle(r.id, r.width, r.length, q))
 
-    return groups, remaining
+    # Try to combine similar groups if possible
+    if groups:
+        combined = combine_similar_groups(groups, min_width, max_width, tolerance_length)
+    
+    return combined, remaining
 
+def combine_similar_groups(groups: List[Group], min_width: int, max_width: int, tolerance: int) -> List[Group]:
+    """
+    دمج المجموعات المتشابهة في معرفات العناصر وعددها (بغض النظر عن الكميات).
+    يتم دمج الكميات والتحقق من شرط السماحية والعرض.
+    """
+    if not groups:
+        return []
+
+    # المرحلة الأولى: تجميع حسب معرفات العناصر فقط (تجاهل الكميات)
+    groups_by_rects = {}
+    
+    for group in groups:
+        # ترتيب العناصر حسب المعرف للمقارنة المتسقة
+        sorted_items = sorted(group.items, key=lambda x: x.rect_id)
+        rect_ids = tuple(item.rect_id for item in sorted_items)
+        
+        if rect_ids not in groups_by_rects:
+            groups_by_rects[rect_ids] = []
+            
+        groups_by_rects[rect_ids].append({
+            'group': group,
+            'items': sorted_items,
+            'total_width': sum(item.width for item in sorted_items),  # العرض = مجموع عرض كل نوع
+            'total_lengths': [item.length * item.used_qty for item in sorted_items]
+        })
+    
+    # المرحلة الثانية: دمج المجموعات المتشابهة
+    combined_groups = []
+    
+    for rect_ids, group_list in groups_by_rects.items():
+        if len(group_list) <= 1:
+            # مجموعة واحدة فقط، لا حاجة للدمج
+            combined_groups.append(group_list[0]['group'])
+            continue
+        
+        # دمج جميع المجموعات المتشابهة في مجموعة واحدة
+        # الشرط الوحيد: نفس معرفات العناصر ونفس عدد العناصر
+        base_group = group_list[0]
+        
+        # جمع الكميات من جميع المجموعات المتشابهة
+        for other_group in group_list[1:]:
+            # دمج الكميات مباشرة بدون شرط السماحية
+            for base_item, other_item in zip(base_group['items'], other_group['items']):
+                base_item.used_qty += other_item.used_qty
+            
+            # تحديث الأطوال الإجمالية
+            combined_lengths = [bl + ol for bl, ol in 
+                              zip(base_group['total_lengths'], other_group['total_lengths'])]
+            base_group['total_lengths'] = combined_lengths
+        
+        # إضافة المجموعة المدمجة
+        combined_groups.append(base_group['group'])
+    
+    # تحديث معرفات المجموعات
+    for i, group_data in enumerate(combined_groups, 1):
+        group_data.id = i
+    
+    return combined_groups
 
 def regroup_residuals(residuals, min_width, max_width, tolerance):
     """

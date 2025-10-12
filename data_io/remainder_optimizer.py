@@ -5,6 +5,13 @@
 هذه الوحدة تحتوي على الخوارزميات المتقدمة لتجميع البواقي
 وإنشاء مجموعات إضافية من العناصر المتبقية.
 
+الاستراتيجية الجديدة (محدّثة):
+---------------------------------
+1. الترتيب: يتم ترتيب العناصر حسب العرض (width) من الأكبر للأصغر
+2. البحث عن شركاء: الأولوية للبحث عن عناصر مختلفة لتكوين مجموعات متنوعة
+3. التكرار عند الضرورة: إذا لم تتحقق شروط العرض، يتم تكرار عنصر أو أكثر
+4. الحفاظ على السماحية: يتم التحقق من شرط السماحية في جميع الحالات
+
 المؤلف: نظام تحسين القطع
 التاريخ: 2024
 """
@@ -68,22 +75,10 @@ def create_enhanced_remainder_groups(
         if not group_items:
             return False
         
-        # حساب العرض الإجمالي (مجموع العرض × الكمية لكل عنصر)
-        total_width = 0
-        for rect, qty in group_items:
-            total_width += rect.width * qty
+        # حساب العرض الإجمالي (مجموع عرض كل نوع مرة واحدة - بدون ضرب في الكمية)
+        total_width = sum(rect.width for rect, qty in group_items)
         
         # التحقق من نطاق العرض - هذا هو الشرط الأساسي
-        if not (min_width <= total_width <= max_width):
-            return False
-        
-        # التحقق من وجود عنصرين على الأقل (إلا إذا كان العنصر الواحد يحقق النطاق)
-        if len(group_items) == 1:
-            rect, qty = group_items[0]
-            # للعنصر الواحد، يجب أن يحقق النطاق بالضبط
-            return min_width <= rect.width * qty <= max_width
-        
-        # للمجموعات المتعددة، يجب أن يكون العرض في النطاق
         return min_width <= total_width <= max_width
     
     def calculate_group_quantity(group_items: List[Tuple[Rectangle, int]]) -> int:
@@ -98,34 +93,18 @@ def create_enhanced_remainder_groups(
         min_width: int, 
         max_width: int
     ) -> Optional[Tuple[int, int]]:
-        """محاولة تكوين مجموعة من عنصر واحد مكرر مع مراعاة حدود الكمية"""
+        """
+        محاولة تكوين مجموعة من عنصر واحد مكرر مع مراعاة حدود الكمية
+        ملاحظة: العرض الكلي = width (مرة واحدة) بغض النظر عن الكمية
+        """
+        
+        # العرض الكلي هو عرض العنصر فقط (حسب models.py)
+        total_w = rect.width
         
         # التحقق من أن العنصر يمكن أن يحقق النطاق
-        if rect.width < min_width:
-            # نحتاج لتكرار العنصر حتى يحقق النطاق
-            min_repeats = (min_width + rect.width - 1) // rect.width  # تقريب لأعلى
-            max_repeats = min(rect.qty, max_width // rect.width)
-            
-            if min_repeats > max_repeats:
-                return None
-                
-            # اختر أكبر عدد ممكن من التكرارات
-            qty = max_repeats
-            total_w = rect.width * qty  # العرض الإجمالي = العرض × العدد
-            
-            group_quantity = calculate_group_quantity([(rect, qty)])
-            
-            # التحقق من حدود الكمية إذا كانت محددة
-            if min_group_quantity and group_quantity < min_group_quantity:
-                return None
-            if max_group_quantity and group_quantity > max_group_quantity:
-                return None
-            return (qty, total_w)
-        
-        elif min_width <= rect.width <= max_width:
-            # العنصر يحقق النطاق بمفرده
-            qty = 1
-            total_w = rect.width
+        if min_width <= total_w <= max_width:
+            # العنصر يحقق النطاق - استخدم أكبر كمية ممكنة
+            qty = rect.qty
             
             group_quantity = calculate_group_quantity([(rect, qty)])
             
@@ -139,78 +118,176 @@ def create_enhanced_remainder_groups(
         
         return None
     
-    def find_optimal_combination(
+    def find_partners_combination(
         base_rect: Rectangle,
         remaining_items: List[Rectangle],
         min_width: int,
         max_width: int,
         tolerance: int
     ) -> Optional[List[Tuple[Rectangle, int]]]:
-        """البحث عن أفضل تركيبة من العناصر لإكمال المجموعة مع السماح بالتكرار"""
+        """
+        البحث عن شركاء لتشكيل مجموعة - أولوية للتنويع قبل التكرار
         
-        # ترتيب العناصر حسب العرض (الأكبر أولاً)
+        الاستراتيجية:
+        -------------
+        1. محاولة تشكيل مجموعة بدون تكرار (كل عنصر مرة واحدة)
+        2. البحث عن شركاء من عناصر مختلفة مع زيادة الكميات
+        3. إذا لم يتحقق النطاق، اللجوء للتكرار
+        """
+        
+        # ترتيب العناصر حسب العرض من الأكبر للأصغر
         sorted_items = sorted(
-            remaining_items, 
-            key=lambda r: r.width, 
+            [r for r in remaining_items if r.qty > 0],
+            key=lambda r: r.width,
             reverse=True
         )
         
         best_combination = None
-        best_efficiency = 0
+        best_score = 0
         
-        # محاولة كل عنصر كعنصر أساسي
-        for base_qty in range(1, min(base_rect.qty, max_width // base_rect.width) + 1):
-            base_total_width = base_rect.width * base_qty
+        # جرب كميات مختلفة من العنصر الأساسي (محاولة استخدام أكبر كمية ممكنة)
+        max_base_qty = base_rect.qty  # أقصى كمية متاحة
+        
+        for base_qty in range(max_base_qty, 0, -1):
+            base_total_width = base_rect.width  # العرض هو عرض العنصر فقط (بدون ضرب في الكمية)
             ref_length = base_rect.length * base_qty
             
-            if base_total_width > max_width:
-                continue
+            # إذا كان العنصر الأساسي يحقق النطاق بمفرده
+            if min_width <= base_total_width <= max_width:
+                combination = [(base_rect, base_qty)]
+                group_quantity = calculate_group_quantity(combination)
+                
+                # التحقق من حدود الكمية
+                if (not min_group_quantity or group_quantity >= min_group_quantity) and \
+                   (not max_group_quantity or group_quantity <= max_group_quantity):
+                    score = group_quantity
+                    if score > best_score:
+                        best_score = score
+                        best_combination = combination.copy()
             
-            # محاولة إضافة عناصر أخرى
+            # الخطوة 2: البحث عن شركاء (عناصر مختلفة)
+            combination = [(base_rect, base_qty)]
+            current_width = base_total_width
+            used_ids = {base_rect.id}
+            
+            for candidate in sorted_items:
+                if candidate.id in used_ids or candidate.qty <= 0:
+                    continue
+                
+                # التحقق من إمكانية إضافة هذا العنصر
+                if current_width + candidate.width > max_width:
+                    continue
+                
+                # أقصى كمية متاحة من العنصر
+                max_candidate_qty = candidate.qty
+                
+                # جرب كميات مختلفة من الأكبر للأصغر
+                for candidate_qty in range(max_candidate_qty, 0, -1):
+                    new_width = current_width + candidate.width  # العرض = مجموع عرض كل نوع
+                    candidate_total_length = candidate.length * candidate_qty
+                    
+                    # التحقق من نطاق العرض
+                    if new_width > max_width:
+                        continue
+                    
+                    # التحقق من السماحية في الطول
+                    if check_length_tolerance(ref_length, candidate_total_length):
+                        test_combination = combination + [(candidate, candidate_qty)]
+                        test_width = sum(r.width for r, q in test_combination)  # مجموع عرض كل نوع
+                        
+                        # إذا وصلنا للنطاق المطلوب
+                        if min_width <= test_width <= max_width:
+                            group_quantity = calculate_group_quantity(test_combination)
+                            
+                            # التحقق من حدود الكمية
+                            if (not min_group_quantity or group_quantity >= min_group_quantity) and \
+                               (not max_group_quantity or group_quantity <= max_group_quantity):
+                                diversity_score = len(test_combination)
+                                score = group_quantity * diversity_score
+                                
+                                if score > best_score:
+                                    best_score = score
+                                    best_combination = test_combination.copy()
+                        break
+        
+        # إذا وجدنا تركيبة جيدة، أرجعها
+        if best_combination:
+            return best_combination
+        
+        # الخطوة 3: إذا لم نحقق النطاق، جرب التكرار
+        return find_combination_with_repetition(
+            base_rect, remaining_items, min_width, max_width, tolerance
+        )
+    
+    def find_combination_with_repetition(
+        base_rect: Rectangle,
+        remaining_items: List[Rectangle],
+        min_width: int,
+        max_width: int,
+        tolerance: int
+    ) -> Optional[List[Tuple[Rectangle, int]]]:
+        """البحث عن تركيبة مع السماح بالتكرار عند الضرورة"""
+        
+        sorted_items = sorted(
+            [r for r in remaining_items if r.qty > 0],
+            key=lambda r: r.width,
+            reverse=True
+        )
+        
+        best_combination = None
+        best_score = 0
+        
+        # جرب كميات مختلفة من العنصر الأساسي (من الأكبر للأصغر لزيادة الاستفادة)
+        max_base_qty = base_rect.qty
+        for base_qty in range(max_base_qty, 0, -1):
+            base_total_width = base_rect.width  # العرض هو عرض العنصر فقط
+            ref_length = base_rect.length * base_qty
+            
+            # إذا حقق النطاق بالتكرار
+            if min_width <= base_total_width <= max_width:
+                combination = [(base_rect, base_qty)]
+                group_quantity = calculate_group_quantity(combination)
+                
+                if (not min_group_quantity or group_quantity >= min_group_quantity) and \
+                   (not max_group_quantity or group_quantity <= max_group_quantity):
+                    score = group_quantity
+                    if score > best_score:
+                        best_score = score
+                        best_combination = combination.copy()
+            
+            # حاول إضافة عناصر أخرى (قد تكون مكررة)
             combination = [(base_rect, base_qty)]
             current_width = base_total_width
             
             for candidate in sorted_items:
-                if candidate.qty <= 0 or candidate.id == base_rect.id:
+                if candidate.qty <= 0:
                     continue
                 
-                # حساب أقصى كمية يمكن استخدامها من هذا العنصر
-                max_candidate_qty = min(
-                    candidate.qty,
-                    (max_width - current_width) // candidate.width
-                )
+                # حساب أقصى كمية ممكنة
+                remaining_width = max_width - current_width
+                max_candidate_qty = min(candidate.qty, remaining_width // candidate.width)
                 
                 if max_candidate_qty <= 0:
                     continue
                 
-                # محاولة كميات مختلفة من العنصر المرشح
+                # جرب كميات مختلفة من الأكبر للأصغر
                 for candidate_qty in range(max_candidate_qty, 0, -1):
                     candidate_total_length = candidate.length * candidate_qty
                     
                     if check_length_tolerance(ref_length, candidate_total_length):
-                        new_width = current_width + candidate.width * candidate_qty
+                        new_width = current_width + candidate.width  # العرض = مجموع عرض كل نوع
                         
                         if min_width <= new_width <= max_width:
-                            # إضافة العنصر إلى التركيبة
-                            combination.append((candidate, candidate_qty))
-                            current_width = new_width
+                            test_combination = combination + [(candidate, candidate_qty)]
+                            group_quantity = calculate_group_quantity(test_combination)
                             
-                            # حساب كفاءة هذه التركيبة
-                            group_quantity = calculate_group_quantity(combination)
-                            efficiency = group_quantity / (current_width * ref_length)
-                            
-                            if efficiency > best_efficiency:
-                                best_efficiency = efficiency
-                                best_combination = combination.copy()
+                            if (not min_group_quantity or group_quantity >= min_group_quantity) and \
+                               (not max_group_quantity or group_quantity <= max_group_quantity):
+                                score = group_quantity
+                                if score > best_score:
+                                    best_score = score
+                                    best_combination = test_combination.copy()
                             break
-            
-            # التحقق من حدود الكمية للتركيبة الحالية
-            if best_combination:
-                group_quantity = calculate_group_quantity(best_combination)
-                if min_group_quantity and group_quantity < min_group_quantity:
-                    continue
-                if max_group_quantity and group_quantity > max_group_quantity:
-                    continue
         
         return best_combination
     
@@ -228,12 +305,15 @@ def create_enhanced_remainder_groups(
             if not current_remaining:
                 break
             
-            # ترتيب العناصر حسب العرض (الأكبر أولاً) ثم حسب الكمية
-            current_remaining.sort(key=lambda r: (r.width, r.qty), reverse=True)
+            # ترتيب العناصر حسب العرض (الأكبر أولاً)
+            current_remaining.sort(
+                key=lambda r: r.width, 
+                reverse=True
+            )
             
             created_group = False
             
-            # محاولة تكوين مجموعة من كل عنصر متاح
+            # محاولة تكوين مجموعة من كل عنصر متاح (البدء من الأكبر)
             for base_rect in current_remaining:
                 if base_rect.qty <= 0:
                     continue
@@ -243,104 +323,71 @@ def create_enhanced_remainder_groups(
                 if combination_signature in processed_combinations:
                     continue
                 
-                # محاولة تكوين مجموعة من عنصر واحد مكرر
-                result = try_single_repeated_item(
-                    base_rect, min_width, max_width
+                # الخطوة 1: البحث عن شركاء أولاً (التنويع قبل التكرار)
+                combination = find_partners_combination(
+                    base_rect,
+                    current_remaining,
+                    min_width,
+                    max_width,
+                    tolerance_length
                 )
                 
-                if result:
-                    qty_used, total_w = result
+                if combination:
+                    # إنشاء بصمة للتركيبة
+                    complex_signature = "|".join([f"{rect.id}_{rect.width}_{rect.length}_{qty}" for rect, qty in combination])
+                    if complex_signature in processed_combinations:
+                        continue
                     
-                    # إنشاء المجموعة مع تكرار نفس العنصر
-                    actual_used = min(qty_used, base_rect.qty)
+                    # إنشاء المجموعة من التركيبة
+                    group_items = []
+                    temp_quantities = {}  # لحفظ الكميات المؤقتة
                     
-                    # التحقق من صحة المجموعة قبل إنشائها
-                    group_rects = [(base_rect, actual_used)]
-                    if validate_group(group_rects, min_width, max_width):
-                        base_rect.qty -= actual_used
-                        
-                        # إنشاء عناصر منفصلة لكل تكرار
-                        group_items = []
-                        for _ in range(actual_used):
-                            group_items.append(
-                                UsedItem(
-                                    rect_id=base_rect.id,
-                                    width=base_rect.width,
-                                    length=base_rect.length,
-                                    used_qty=1,  # كل عنصر بكمية 1
-                                    original_qty=base_rect.qty + actual_used
-                                )
-                            )
-                        
-                        new_group = Group(id=next_group_id, items=group_items)
-                        all_groups.append(new_group)
-                        next_group_id += 1
-                        created_group = True
-                        processed_combinations.add(combination_signature)
-                        break
-                
-                # إذا فشلت المحاولة الأولى، جرب تركيبة معقدة
-                else:
-                    # البحث عن أفضل تركيبة
-                    combination = find_optimal_combination(
-                        base_rect,
-                        current_remaining,
-                        min_width,
-                        max_width,
-                        tolerance_length
-                    )
+                    # احتفظ بالكميات الأصلية
+                    for rect, qty in combination:
+                        temp_quantities[rect.id] = rect.qty
                     
-                    if combination:
-                        # إنشاء بصمة للتركيبة المعقدة
-                        complex_signature = "|".join([f"{rect.id}_{rect.width}_{rect.length}_{qty}" for rect, qty in combination])
-                        if complex_signature in processed_combinations:
-                            continue
-                        
-                        # إنشاء المجموعة من التركيبة
-                        group_items = []
-                        temp_quantities = {}  # لحفظ الكميات المؤقتة
-                        
-                        # احتفظ بالكميات الأصلية
-                        for rect, qty in combination:
-                            temp_quantities[rect.id] = rect.qty
-                        
-                        # خصم الكميات
-                        for rect, qty in combination:
-                            actual_used = min(rect.qty, qty)
-                            if actual_used > 0:
-                                rect.qty -= actual_used
-                                group_items.append(
-                                    UsedItem(
-                                        rect_id=rect.id,
-                                        width=rect.width,
-                                        length=rect.length,
-                                        used_qty=actual_used,
-                                        original_qty=temp_quantities[rect.id]
+                    # خصم الكميات
+                    for rect, qty in combination:
+                        actual_used = min(rect.qty, qty)
+                        if actual_used > 0:
+                            # البحث عن العنصر في القائمة الحالية
+                            for current_rect in current_remaining:
+                                if current_rect.id == rect.id:
+                                    current_rect.qty -= actual_used
+                                    
+                                    # إذا كانت الكمية > 1، نضيف عنصراً واحداً بالكمية الكاملة
+                                    # بدلاً من تكرار العنصر عدة مرات
+                                    group_items.append(
+                                        UsedItem(
+                                            rect_id=rect.id,
+                                            width=rect.width,
+                                            length=rect.length,
+                                            used_qty=actual_used,
+                                            original_qty=temp_quantities[rect.id]
+                                        )
                                     )
-                                )
+                                    break
+                    
+                    if group_items:
+                        # إنشاء المجموعة للتحقق من صحتها
+                        new_group = Group(id=next_group_id, items=group_items)
                         
-                        if group_items:
-                            # التحقق من صحة المجموعة قبل إنشائها
-                            group_rects = []
+                        # استخدام دالة total_width() من models
+                        total_width = new_group.total_width()
+                        
+                        if min_width <= total_width <= max_width:
+                            all_groups.append(new_group)
+                            next_group_id += 1
+                            created_group = True
+                            processed_combinations.add(combination_signature)
+                            processed_combinations.add(complex_signature)
+                            break
+                        else:
+                            # إرجاع الكميات إذا لم تكن المجموعة صالحة
                             for item in group_items:
                                 for rect in current_remaining:
                                     if rect.id == item.rect_id:
-                                        group_rects.append((rect, item.used_qty))
-                                        break
-                            
-                            if validate_group(group_rects, min_width, max_width):
-                                new_group = Group(id=next_group_id, items=group_items)
-                                all_groups.append(new_group)
-                                next_group_id += 1
-                                created_group = True
-                                processed_combinations.add(complex_signature)
-                                break
-                            else:
-                                # إرجاع الكميات إذا لم تكن المجموعة صالحة
-                                for item in group_items:
-                                    for rect in current_remaining:
-                                        if rect.id == item.rect_id:
-                                            rect.qty += item.used_qty
+                                        rect.qty += item.used_qty
                                         break
             
             if not created_group:
