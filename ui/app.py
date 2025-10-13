@@ -61,19 +61,6 @@ class RectPackApp(QWidget):
         h2_5.addWidget(self.tolerance_edit)
         layout.addLayout(h2_5)
 
-        # quantity limits inputs
-        h2_6 = QHBoxLayout()
-        self.min_quantity_edit = QLineEdit()
-        self.min_quantity_edit.setPlaceholderText("الحد الأدنى لكمية المجموعة (اختياري)")
-        h2_6.addWidget(QLabel("الحد الأدنى للكمية:"))
-        h2_6.addWidget(self.min_quantity_edit)
-        
-        self.max_quantity_edit = QLineEdit()
-        self.max_quantity_edit.setPlaceholderText("الحد الأقصى لكمية المجموعة (اختياري)")
-        h2_6.addWidget(QLabel("الحد الأقصى للكمية:"))
-        h2_6.addWidget(self.max_quantity_edit)
-        layout.addLayout(h2_6)
-
         # run & config info
         h3 = QHBoxLayout()
         self.run_btn = QPushButton("تشغيل التجميع")
@@ -142,10 +129,6 @@ class RectPackApp(QWidget):
             # Get quantity limits (optional)
             min_quantity = None
             max_quantity = None
-            if self.min_quantity_edit.text().strip():
-                min_quantity = int(self.min_quantity_edit.text().strip())
-            if self.max_quantity_edit.text().strip():
-                max_quantity = int(self.max_quantity_edit.text().strip())
             
             if min_width <= 0 or max_width <= 0:
                 QMessageBox.warning(self, "خطأ في القيم", "العرض الأدنى والأقصى يجب أن يكونا أكبر من 0")
@@ -156,11 +139,8 @@ class RectPackApp(QWidget):
             if tolerance_len < 0:
                 QMessageBox.warning(self, "خطأ في القيم", "هامش التسامح يجب أن يكون صفراً أو رقماً موجباً")
                 return
-            if min_quantity is not None and max_quantity is not None and min_quantity >= max_quantity:
-                QMessageBox.warning(self, "خطأ في القيم", "الحد الأدنى للكمية يجب أن يكون أقل من الحد الأقصى")
-                return
         except ValueError:
-            QMessageBox.warning(self, "خطأ في القيم", "يرجى إدخال أرقام صحيحة للعرض الأدنى والأقصى وهامش التسامح وحدود الكمية")
+            QMessageBox.warning(self, "خطأ في القيم", "يرجى إدخال أرقام صحيحة للعرض الأدنى والأقصى وهامش التسامح")
             return
         
        # read config validation
