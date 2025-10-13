@@ -770,11 +770,6 @@ def process_remainder_complete(
     if merge_after and len(groups) > 0:
         groups = merge_identical_groups(groups, tolerance_length, verbose)
     
-    # إضافة معلومات إضافية للإحصائيات
-    if verbose:
-        print(f"تم إنشاء {len(groups)} مجموعة من البواقي")
-        print(f"تبقى {len(final_remaining)} عنصر بعد التجميع")
-        print(f"نسبة الاستغلال: {quantity_stats.get('utilization_percentage', 0):.2f}%")
     
     return groups, final_remaining, quantity_stats
 
