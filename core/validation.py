@@ -1,5 +1,5 @@
 from typing import Tuple, Optional
-from .models import Rectangle 
+from core.models import Rectangle 
 
 def validate_config(min_w: int, max_w: int, tol: int) ->Tuple[bool, Optional[str]]:
     """
@@ -34,4 +34,4 @@ def validate_carpets(carpets: list[Rectangle])->list[str]:
             errors.append(f"Carpet id {c.id}: length <= 0")
         if c.qty < 0:
             errors.append(f"Carpet id {c.id}: qty < 0")
-        return errors
+    return errors
