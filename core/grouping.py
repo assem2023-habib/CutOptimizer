@@ -9,7 +9,6 @@ def group_carpets_greedy(carpets: List[Rectangle],
                          max_width: int,
                          tolerance_length: int,  # قيمة السماحية المطلقة (مثلاً 20 سم)
                          start_with_largest: bool = True,
-                         allow_split_rows: bool = True,
                          start_group_id: int = 1
                          ) -> Tuple[List[Group], List[Rectangle]]:
     """
@@ -272,9 +271,9 @@ def group_carpets_greedy(carpets: List[Rectangle],
                     temp_qty[best_partner] -= best_partner_qty
                     partners_added = True
             
-            # تقييم التركيبة
+            # تقييم التركيبة - يجب أن تحتوي على عنصرين مختلفين على الأقل
             unique_ids = set(it.rect_id for it in current_items)
-            if min_width <= current_width <= max_width and len(unique_ids) > 1:
+            if min_width <= current_width <= max_width and len(unique_ids) >= 2:
                 width_utilization = current_width / max_width
                 if width_utilization > best_width_utilization:
                     best_width_utilization = width_utilization
@@ -376,6 +375,7 @@ def group_carpets_greedy(carpets: List[Rectangle],
             remaining.append(Rectangle(r.id, r.width, r.length, q))
     
     return groups, remaining
+
 
 def group_carpets_optimized(
     carpets: List[Rectangle],

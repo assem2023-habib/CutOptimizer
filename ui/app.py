@@ -58,7 +58,6 @@ class GroupingWorker(QThread):
                 max_width=self.max_width,
                 tolerance_length=self.tolerance_len,
                 start_with_largest=self.cfg.get('start_with_largest', True),
-                allow_split_rows=self.cfg.get('allow_split_rows', True)
             )
             self.signals.log.emit(f"✅ تم تشكيل {len(groups)} مجموعة أولية")
 
