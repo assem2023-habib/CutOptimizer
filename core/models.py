@@ -40,3 +40,7 @@ class Group:
     def total_area(self)->int:
         # total area = sum(length * used_qty * width)
         return sum(item.length * item.used_qty * item.width for item in self.items)
+
+    def total_used_qty(self)->int:
+        # total used qty = sum(used_qty)
+        return sum(item.used_qty for item in self.items)

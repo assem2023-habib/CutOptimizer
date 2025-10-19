@@ -14,6 +14,12 @@ from typing import List, Dict, Optional, Tuple
 from core.models import Rectangle, Group, UsedItem
 from pandas.api.types import is_numeric_dtype
 
+# استيراد دوال الفلاتر من الملف المنفصل
+from .excel_filters import (
+    add_filters_to_details_sheet,
+    add_conditional_formatting
+)
+
 
 # =============================================================================
 # MAIN FUNCTION - الدالة الرئيسية
@@ -182,6 +188,7 @@ def _create_group_summary_sheet(
             'العرض الإجمالي': g.total_width(),
             'الطول الإجمالي المرجعي (التقريبي)': g.ref_length(),
             'المساحة الإجمالية': area,
+            'الكمية المستخدمة الكلية': g.total_used_qty(),
             'عدد أنواع السجاد': types_count,
         })
 
@@ -196,6 +203,7 @@ def _create_group_summary_sheet(
                 'العرض الإجمالي': g.total_width(),
                 'الطول الإجمالي المرجعي (التقريبي)': g.ref_length(),
                 'المساحة الإجمالية': area,
+                'الكمية المستخدمة الكلية': g.total_used_qty(),
                 'عدد أنواع السجاد': types_count,
             })
 
@@ -210,6 +218,7 @@ def _create_group_summary_sheet(
                 'العرض الإجمالي': g.total_width(),
                 'الطول الإجمالي المرجعي (التقريبي)': g.ref_length(),
                 'المساحة الإجمالية': area,
+                'الكمية المستخدمة الكلية': g.total_used_qty(),
                 'عدد أنواع السجاد': types_count,
             })
 
@@ -884,12 +893,6 @@ def _auto_adjust_column_width(writer, df1, df2, df3, totals_df, df_audit):
                     number_format
                 )
 
-                # إضافة التنسيقات الشرطية
-                _add_conditional_formatting(worksheet, df)
-
-                # إضافة معلومات الرأس
-                # _add_sheet_header_info(writer, sheet_name, df)  # تم تعطيل إضافة التاريخ
-
                 # ضبط عرض الأعمدة تلقائياً
                 for i, col in enumerate(df.columns):
                     try:
@@ -1084,10 +1087,7 @@ def _apply_advanced_formatting(writer, sheet_name, df, header_format, total_form
                         worksheet.write(row_num, col_num, cell_value, border_format)
 
         # إضافة تنسيقات شرطية لتحسين المظهر
-        _add_conditional_formatting(worksheet, df)
-
-        # إضافة معلومات إضافية في أعلى الورقة
-        # _add_sheet_header_info(writer, sheet_name, df)  # تم تعطيل إضافة التاريخ
+        add_conditional_formatting(writer, worksheet, df)
 
     except Exception as e:
         import traceback
@@ -1259,51 +1259,6 @@ def _apply_total_row_formatting(worksheet, df, row_num, total_format, total_rows
                 worksheet.write(excel_row, col_num, str(cell_value), total_format)
             except:
                 worksheet.write(excel_row, col_num, '', total_format)
-
-
-def _add_conditional_formatting(worksheet, df):
-    """إضافة تنسيقات شرطية لتمييز البيانات."""
-    # تنسيق شرطي للكفاءة العالية (أكبر من 80%)
-    try:
-        efficiency_col = None
-        for col_num, col_name in enumerate(df.columns):
-            if 'كفاءة' in col_name or 'كفاءة' in str(col_name):
-                efficiency_col = col_num
-                break
-
-        if efficiency_col is not None:
-            worksheet.conditional_format(2, efficiency_col, len(df) + 1, efficiency_col, {
-                'type': 'cell',
-                'criteria': '>',
-                'value': 80,
-                'format': worksheet.book.add_format({
-                    'bg_color': '#C6EFCE',  # أخضر فاتح للكفاءة العالية
-                    'font_color': '#006100'
-                })
-            })
-    except:
-        pass
-
-    # تنسيق شرطي للكميات الكبيرة
-    try:
-        qty_cols = []
-        for col_num, col_name in enumerate(df.columns):
-            if 'كمية' in col_name or 'كمية' in str(col_name):
-                qty_cols.append(col_num)
-
-        for col_num in qty_cols:
-            worksheet.conditional_format(2, col_num, len(df) + 1, col_num, {
-                'type': 'cell',
-                'criteria': '>',
-                'value': 100,
-                'format': worksheet.book.add_format({
-                    'bg_color': '#FFE4B5',  # أصفر فاتح للكميات الكبيرة
-                    'font_color': '#8B4513'
-                })
-            })
-    except:
-        pass
-
 
 def _add_sheet_header_info(writer, sheet_name, df):
     """إضافة معلومات إضافية في أعلى الورقة."""

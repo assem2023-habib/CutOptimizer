@@ -114,6 +114,9 @@ class RectPackApp(QWidget):
         # متغير لحفظ حالة السمة (داكن/فاتح)
         self.is_dark_theme = True
 
+        # متغير لحفظ حالة التشغيل
+        self.is_running = False
+
         # إنشاء منطقة التمرير للمحتوى الرئيسي
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
@@ -258,6 +261,14 @@ class RectPackApp(QWidget):
         self.run_btn.clicked.connect(self.run_grouping)
         buttons_layout.addWidget(self.run_btn)
 
+        # زر إلغاء العملية
+        self.cancel_btn = QPushButton("⏹️ إلغاء")
+        self.cancel_btn.setFont(QFont("Segoe UI", 10, QFont.Bold))
+        self.cancel_btn.setMinimumHeight(35)
+        self.cancel_btn.clicked.connect(self.cancel_operation)
+        self.cancel_btn.setEnabled(False)  # معطل في البداية
+        buttons_layout.addWidget(self.cancel_btn)
+
         # شريط التقدم
         progress_layout = QVBoxLayout()
         progress_label = QLabel("حالة المعالجة:")
@@ -318,6 +329,21 @@ class RectPackApp(QWidget):
         self.summary_table.setEditTriggers(QTableWidget.NoEditTriggers)
         self.summary_table.setMinimumHeight(300)  # حد أدنى للارتفاع لعرض أفضل
         results_layout.addWidget(self.summary_table)
+
+        # زر فتح ملف Excel
+        open_excel_layout = QHBoxLayout()
+        open_excel_layout.addStretch()
+
+        self.open_excel_btn = QPushButton("📊 فتح ملف Excel")
+        self.open_excel_btn.setFont(QFont("Segoe UI", 10, QFont.Bold))
+        self.open_excel_btn.setMinimumHeight(35)
+        self.open_excel_btn.setMinimumWidth(150)
+        self.open_excel_btn.clicked.connect(self.open_excel_file)
+        self.open_excel_btn.setVisible(False)  # مخفي في البداية
+        open_excel_layout.addWidget(self.open_excel_btn)
+
+        open_excel_layout.addStretch()
+        results_layout.addLayout(open_excel_layout)
 
         content_layout.addWidget(results_section)
 
@@ -882,6 +908,14 @@ class RectPackApp(QWidget):
         self.run_animation = QPropertyAnimation(self.run_btn, b"geometry")
         self.run_animation.setDuration(300)
 
+        # رسم متحرك لزر فتح ملف Excel
+        self.open_excel_animation = QPropertyAnimation(self.open_excel_btn, b"geometry")
+        self.open_excel_animation.setDuration(300)
+
+        # رسم متحرك لزر إلغاء العملية
+        self.cancel_animation = QPropertyAnimation(self.cancel_btn, b"geometry")
+        self.cancel_animation.setDuration(300)
+
         # ربط إشارات الماوس بالرسوم المتحركة
         self.input_btn.enterEvent = lambda event: self.animate_button_up(self.input_btn, self.input_animation)
         self.input_btn.leaveEvent = lambda event: self.animate_button_down(self.input_btn, self.input_animation)
@@ -891,6 +925,12 @@ class RectPackApp(QWidget):
 
         self.run_btn.enterEvent = lambda event: self.animate_button_up(self.run_btn, self.run_animation)
         self.run_btn.leaveEvent = lambda event: self.animate_button_down(self.run_btn, self.run_animation)
+
+        self.cancel_btn.enterEvent = lambda event: self.animate_button_up(self.cancel_btn, self.cancel_animation)
+        self.cancel_btn.leaveEvent = lambda event: self.animate_button_down(self.cancel_btn, self.cancel_animation)
+
+        self.open_excel_btn.enterEvent = lambda event: self.animate_button_up(self.open_excel_btn, self.open_excel_animation)
+        self.open_excel_btn.leaveEvent = lambda event: self.animate_button_down(self.open_excel_btn, self.open_excel_animation)
 
     def animate_button_up(self, button, animation):
         """تحريك الزر لأعلى عند دخول الماوس"""
@@ -1005,6 +1045,12 @@ class RectPackApp(QWidget):
         self.log.append(text)
 
     def run_grouping(self):
+        # التحقق من عدم وجود عملية قيد التشغيل
+        if self.is_running:
+            QMessageBox.information(self, "عملية قيد التشغيل",
+                                  "هناك عملية معالجة قيد التشغيل حالياً.\nيرجى انتظار انتهائها أو إلغاؤها أولاً.")
+            return
+
         input_path = self.input_edit.text().strip()
         output_path = self.output_edit.text().strip()
         if not input_path or not output_path:
@@ -1046,6 +1092,9 @@ class RectPackApp(QWidget):
         self.progress_bar.setValue(0)
         self.status_label.setText("🔄 بدء المعالجة...")
         self.run_btn.setEnabled(False)
+        self.cancel_btn.setEnabled(True)  # تفعيل زر الإلغاء
+        self.open_excel_btn.setVisible(False)  # إخفاء زر فتح Excel
+        self.is_running = True  # تعيين حالة التشغيل
 
         # تشغيل المعالجة في ثريد منفصل
         self.worker = GroupingWorker(input_path, output_path, min_width, max_width, tolerance_len, cfg)
@@ -1060,6 +1109,9 @@ class RectPackApp(QWidget):
         """معالجة انتهاء الـ worker بنجاح"""
         self.status_label.setText("✅ اكتملت المعالجة بنجاح!")
         self.run_btn.setEnabled(True)
+        self.cancel_btn.setEnabled(False)  # تعطيل زر الإلغاء
+        self.open_excel_btn.setVisible(True)  # إظهار زر فتح Excel
+        self.is_running = False  # إعادة تعيين حالة التشغيل
         QTimer.singleShot(2000, lambda: self.progress_bar.setVisible(False))
 
     def on_worker_error(self, tb_str):
@@ -1067,7 +1119,9 @@ class RectPackApp(QWidget):
         self.log_append("❌ خطأ في المعالجة:\n" + tb_str)
         self.status_label.setText("❌ حدث خطأ في المعالجة")
         self.run_btn.setEnabled(True)
+        self.cancel_btn.setEnabled(False)  # تعطيل زر الإلغاء
         self.progress_bar.setVisible(False)
+        self.is_running = False  # إعادة تعيين حالة التشغيل
 
     def update_summary_table(self, groups, remaining, stats):
         """تحديث جدول النتائج بالبيانات المُعالجة"""
@@ -1099,3 +1153,59 @@ class RectPackApp(QWidget):
 
         except Exception as e:
             self.log_append(f"❌ خطأ في تحديث الجدول: {str(e)}")
+
+    def cancel_operation(self):
+        """إلغاء العملية الحالية"""
+        if not self.is_running or not hasattr(self, 'worker'):
+            return
+
+        try:
+            # إيقاف الـ worker
+            if hasattr(self.worker, '_is_interrupted'):
+                self.worker._is_interrupted = True
+
+            # تحديث واجهة المستخدم
+            self.status_label.setText("⏹️ تم إلغاء العملية")
+            self.run_btn.setEnabled(True)
+            self.cancel_btn.setEnabled(False)
+            self.progress_bar.setVisible(False)
+            self.is_running = False
+
+            # تسجيل الإلغاء في السجل
+            self.log_append("⏹️ تم إلغاء العملية بواسطة المستخدم")
+
+            # إخفاء زر فتح Excel إذا كان مرئياً
+            self.open_excel_btn.setVisible(False)
+
+        except Exception as e:
+            self.log_append(f"❌ خطأ أثناء إلغاء العملية: {str(e)}")
+
+    def open_excel_file(self):
+        """فتح ملف Excel المُنشأ"""
+        try:
+            import subprocess
+            import platform
+
+            output_path = self.output_edit.text().strip()
+            if not output_path:
+                QMessageBox.warning(self, "مسار غير محدد", "لم يتم تحديد مسار ملف الإخراج بعد.")
+                return
+
+            if not os.path.exists(output_path):
+                QMessageBox.warning(self, "ملف غير موجود", f"لم يتم العثور على ملف الإخراج في المسار:\n{output_path}")
+                return
+
+            # فتح الملف حسب نظام التشغيل
+            if platform.system() == "Windows":
+                os.startfile(output_path)
+            elif platform.system() == "Darwin":  # macOS
+                subprocess.run(["open", output_path])
+            else:  # Linux وغيرها
+                subprocess.run(["xdg-open", output_path])
+
+            self.log_append(f"✅ تم فتح ملف Excel: {output_path}")
+
+        except Exception as e:
+            QMessageBox.critical(self, "خطأ في فتح الملف",
+                               f"حدث خطأ أثناء محاولة فتح ملف Excel:\n{str(e)}")
+            self.log_append(f"❌ خطأ في فتح ملف Excel: {str(e)}")
