@@ -3,378 +3,217 @@ from collections import defaultdict
 from .models import Rectangle, UsedItem, Group
 import time
 
+from typing import List, Tuple, Dict, Set
+from collections import defaultdict
+
 
 def group_carpets_greedy(carpets: List[Rectangle],
                          min_width: int,
                          max_width: int,
-                         tolerance_length: int,  # قيمة السماحية المطلقة (مثلاً 20 سم)
+                         tolerance_length: int,
                          start_with_largest: bool = True,
+                         allow_split_rows: bool = True,
                          start_group_id: int = 1
-                         ) -> Tuple[List[Group], List[Rectangle]]:
+                         ) -> Tuple[list[Group], list[Rectangle]]:
     """
-    خوارزمية جشعة محسّنة لتجميع السجاد:
-    
-    الاستراتيجية:
-    1. تشكيل مجموعات ثنائية (عنصرين مختلفين) مع أعظم كمية ممكنة
-    2. استغلال العرض للعناصر المتبقية
-    3. زيادة عدد العناصر (3، 4، ...) عند الحاجة
-    4. التكرار الذكي لملء العرض (نفس العنصر عدة مرات)
-    5. منع تكرار المجموعات المتطابقة
-    
-    الأولوية: العرض أولاً، ثم الكمية
-    
-    ملاحظة: الطول المرجعي يُحسب ديناميكياً لكل مجموعة من العنصر الأول
-              السماحية هي قيمة مطلقة ثابتة لجميع المجموعات
+    Greedy grouping algorithm:
+    - Start with largest width (if start_with_largest = True)
+    - For each primary rectangle type, try using quantities from max->1 to find a pairing (or alone)
+      that yields total_width in [min_width, max_width] and partner total_length close to primary_total_length
+      within tolerance_length.
+    - If found, deduct used quantities and create a Group.
+    - Continue until no more usable rectangles.
+    Returns: (groups, remaining_rectangles_with_remaining_qty)
     """
-    
-    # ترتيب حسب العرض والطول
+
+    # Sort rectangles
+    # carpets_sorted = sorted(carpets, key=lambda r: r.width, reverse=start_with_largest)
     carpets_sorted = sorted(carpets, key=lambda r: (r.width, r.length), reverse=start_with_largest)
     id_map = {r.id: r for r in carpets_sorted}
+    # ثابت: كميات أصلية كما جاءت من الإدخال
     original_qty_map: Dict[int, int] = {r.id: r.qty for r in carpets_sorted}
     remaining_qty: Dict[int, int] = {r.id: r.qty for r in carpets_sorted}
-    
-    # خريطة العروض
+
+    # Map widths
     widths_map = defaultdict(list)
     for r in carpets_sorted:
         widths_map[r.width].append(r.id)
-    
-    groups: List[Group] = []
+
+    groups: list[Group] = []
     group_id = start_group_id
-    
-    # لتتبع المجموعات المستخدمة (منع التكرار)
-    used_group_signatures: Set[str] = set()
-    
-    def get_group_signature(items: List[UsedItem]) -> str:
-        """إنشاء توقيع فريد للمجموعة لمنع التكرار"""
-        sorted_items = sorted(items, key=lambda x: (x.rect_id, x.width, x.length, x.used_qty))
-        return "|".join([f"{it.rect_id}:{it.width}:{it.length}:{it.used_qty}" for it in sorted_items])
-    
-    def calculate_tolerance(ref_length_value: int) -> int:
-        """إرجاع السماحية المطلقة الثابتة"""
-        return tolerance_length
-    
-    def find_best_qty_pair(rect1: Rectangle, rect2: Rectangle, 
-                          avail1: int, avail2: int) -> Tuple[int, int]:
-        """
-        إيجاد أعظم كمية ممكنة للزوج تحقق شرط tolerance
-        الطول المرجعي = length1 * qty1
-        الشرط: abs((length1 * qty1) - (length2 * qty2)) <= tolerance
-        """
-        best_qty1, best_qty2 = 0, 0
-        best_total_qty = 0
-        
-        # نبدأ من أعظم كمية ممكنة
-        max_qty1 = min(avail1, max_width // rect1.width) if rect1.width > 0 else avail1
-        
-        for qty1 in range(max_qty1, 0, -1):
-            ref_length_value = rect1.length * qty1  # الطول المرجعي
-            tolerance = calculate_tolerance(ref_length_value)
-            
-            # حساب الكمية المثالية للشريك
-            if rect2.length > 0:
-                ideal_qty2 = ref_length_value / rect2.length
-                
-                # تجربة كميات حول القيمة المثالية
-                search_range = max(3, int(ideal_qty2 * 0.2))  # نطاق بحث 20%
-                for qty2 in range(max(1, int(ideal_qty2 - search_range)), 
-                                 min(avail2, int(ideal_qty2 + search_range) + 1)):
-                    if qty2 <= 0 or qty2 > avail2:
-                        continue
-                    
-                    tolerance_ref2 = rect2.length * qty2
-                    diff = abs(ref_length_value - tolerance_ref2)
-                    
-                    if diff <= tolerance:
-                        # تحقق من العرض
-                        total_w = rect1.width + rect2.width
-                        if min_width <= total_w <= max_width:
-                            total_qty = qty1 + qty2
-                            if total_qty > best_total_qty:
-                                best_qty1, best_qty2 = qty1, qty2
-                                best_total_qty = total_qty
-        
-        return best_qty1, best_qty2
-    
-    # ============================================
-    # المرحلة 1: تشكيل مجموعات ثنائية
-    # ============================================
-    print("المرحلة 1: تشكيل مجموعات ثنائية...")
-    
+    skipped_ids = set()
+
+    # Safety counter to avoid infinite loops
     safety_counter = 0
     max_iterations = 5000
-    
-    while safety_counter < max_iterations:
+
+    while True:
         safety_counter += 1
-        group_created = False
-        
-        # اختيار عنصر أساسي
+        if safety_counter > max_iterations:
+            break
+
+        # Pick primary candidate
         primary = None
         for r in carpets_sorted:
-            if remaining_qty.get(r.id, 0) > 0 and r.width <= max_width:
+            if remaining_qty.get(r.id, 0) > 0 and r.width <= max_width and r.id not in skipped_ids:
                 primary = r
                 break
-        
+
         if primary is None:
             break
-        
+
         primary_avail = remaining_qty[primary.id]
-        
-        # البحث عن شريك من الأعرض
-        candidate_widths = sorted([w for w in widths_map.keys() 
-                                  if w <= max_width - primary.width], reverse=True)
-        
-        best_partner = None
-        best_qty_primary, best_qty_cand = 0, 0
-        
-        for cand_width in candidate_widths:
-            for cand_id in widths_map[cand_width]:
-                if cand_id == primary.id:
-                    continue
-                
-                cand_avail = remaining_qty.get(cand_id, 0)
-                if cand_avail <= 0:
-                    continue
-                
-                cand = id_map[cand_id]
-                
-                # إيجاد أعظم كمية ممكنة
-                qty_primary, qty_cand = find_best_qty_pair(
-                    primary, cand, primary_avail, cand_avail
-                )
-                
-                if qty_primary > 0 and qty_cand > 0:
-                    if qty_primary + qty_cand > best_qty_primary + best_qty_cand:
-                        best_partner = cand_id
-                        best_qty_primary = qty_primary
-                        best_qty_cand = qty_cand
-        
-        if best_partner is not None:
-            cand = id_map[best_partner]
-            
-            # إنشاء المجموعة
-            items = [
-                UsedItem(primary.id, primary.width, primary.length, best_qty_primary, original_qty_map[primary.id]),
-                UsedItem(best_partner, cand.width, cand.length, best_qty_cand, original_qty_map[best_partner])
-            ]
-            
-            signature = get_group_signature(items)
-            if signature not in used_group_signatures:
-                # خصم الكميات
-                remaining_qty[primary.id] -= best_qty_primary
-                remaining_qty[best_partner] -= best_qty_cand
-                
-                groups.append(Group(group_id, items))
-                used_group_signatures.add(signature)
-                group_id += 1
-                group_created = True
-        
-        if not group_created:
-            # لم نجد شريكاً، نزيل العنصر مؤقتاً
-            remaining_qty[primary.id] = 0
-    
-    # إعادة الكميات المتبقية الفعلية
-    remaining_qty = {r.id: r.qty for r in carpets_sorted}
-    for group in groups:
-        for item in group.items:
-            remaining_qty[item.rect_id] -= item.used_qty
-    
-    print(f"تم تشكيل {len(groups)} مجموعة ثنائية")
-    
-    # ============================================
-    # المرحلة 2: استغلال العرض للمتبقيات
-    # ============================================
-    print("المرحلة 2: استغلال العرض للمتبقيات...")
-    
-    iteration = 0
-    max_iterations_phase2 = 1000
-    
-    while iteration < max_iterations_phase2:
-        iteration += 1
         group_created = False
-        
-        # اختيار عنصر أساسي
-        primary = None
-        for r in carpets_sorted:
-            if remaining_qty.get(r.id, 0) > 0 and r.width <= max_width:
-                primary = r
-                break
-        
-        if primary is None:
-            break
-        
-        primary_avail = remaining_qty[primary.id]
-        best_combination = None
-        best_width_utilization = 0
-        
-        # محاولة بناء مجموعة تستغل العرض الأقصى
-        max_primary_qty = min(primary_avail, max_width // primary.width) if primary.width > 0 else primary_avail
-        
-        for use_primary in range(max_primary_qty, 0, -1):
-            ref_length_value = primary.length * use_primary  # الطول المرجعي للمجموعة
-            tolerance = calculate_tolerance(ref_length_value)
-            
-            current_items = [UsedItem(primary.id, primary.width, primary.length, use_primary, original_qty_map[primary.id])]
-            current_width = primary.width
+
+        # Try using as many primary pieces as possible
+        for use_primary in range(primary_avail, 0, -1):
+            ref_total_len = primary.length * use_primary
+            chosen_items = [UsedItem(primary.id, primary.width, primary.length, use_primary, original_qty_map.get(primary.id, 0))]
+            chosen_width = primary.width
+
+            # Remaining width range
+            min_rem = max(min_width - chosen_width, 0)
+            max_rem = max_width - chosen_width
+
+            # Work on temporary quantities
             temp_qty = dict(remaining_qty)
-            temp_qty[primary.id] -= use_primary
-            
-            # البحث عن شركاء لملء العرض
-            partners_added = True
-            max_partners = 10  # حد أقصى للشركاء
-            
-            while partners_added and current_width < max_width and len(current_items) < max_partners:
-                partners_added = False
-                
-                # البحث عن أفضل شريك
-                best_partner = None
-                best_partner_width_gain = 0
-                best_partner_qty = 0
-                
-                for cand_id, cand_qty in temp_qty.items():
-                    if cand_qty <= 0:
+            # احجز كمية الأساس مبدئياً
+            temp_qty[primary.id] = max(0, temp_qty.get(primary.id, 0) - use_primary)
+            candidate_widths = sorted(widths_map.keys(), reverse=True)
+
+            # Try to add partners
+            for w in candidate_widths:
+                if chosen_width + w > max_width:
+                    continue
+                for cid in widths_map[w]:
+                    if cid == primary.id:
                         continue
-                    
-                    cand = id_map[cand_id]
-                    
-                    if cand.width > max_width - current_width:
+                    avail = temp_qty.get(cid, 0)
+                    if avail <= 0:
                         continue
-                    
-                    # حساب الكمية المثالية
+                    cand = id_map[cid]
+
+                    # تجنب القسمة على الصفر: تجاهل المرشح بطول غير موجب
                     if cand.length <= 0:
                         continue
-                    
-                    ideal_qty = ref_length_value / cand.length
-                    search_range = max(3, int(ideal_qty * 0.2))
-                    
-                    for qty in range(max(1, int(ideal_qty - search_range)), 
-                                    min(int(ideal_qty + search_range) + 1, cand_qty + 1)):
-                        if qty <= 0 or qty > cand_qty:
-                            continue
-                        
-                        tolerance_ref_cand = cand.length * qty
-                        diff = abs(tolerance_ref_cand - ref_length_value)
-                        
-                        if diff <= tolerance:
-                            new_width = current_width + cand.width
-                            if new_width <= max_width:
-                                width_gain = cand.width
-                                if width_gain > best_partner_width_gain:
-                                    best_partner = cand_id
-                                    best_partner_width_gain = width_gain
-                                    best_partner_qty = qty
-                                break
-                
-                if best_partner:
-                    cand = id_map[best_partner]
-                    current_items.append(UsedItem(best_partner, cand.width, cand.length, best_partner_qty, original_qty_map[best_partner]))
-                    current_width += cand.width
-                    temp_qty[best_partner] -= best_partner_qty
-                    partners_added = True
-            
-            # تقييم التركيبة - يجب أن تحتوي على عنصرين مختلفين على الأقل
-            unique_ids = set(it.rect_id for it in current_items)
-            if min_width <= current_width <= max_width and len(unique_ids) >= 2:
-                width_utilization = current_width / max_width
-                if width_utilization > best_width_utilization:
-                    best_width_utilization = width_utilization
-                    best_combination = (current_items, temp_qty)
-        
-        # إضافة أفضل مجموعة
-        if best_combination:
-            items, temp_qty = best_combination
-            signature = get_group_signature(items)
-            
-            if signature not in used_group_signatures:
-                for item in items:
-                    remaining_qty[item.rect_id] -= item.used_qty
-                
-                groups.append(Group(group_id, items))
-                used_group_signatures.add(signature)
-                group_id += 1
-                group_created = True
-        
-        if not group_created:
-            # لم نستطع تشكيل مجموعة
-            remaining_qty[primary.id] = 0
-    
-    # إعادة حساب الكميات المتبقية
-    remaining_qty = {r.id: r.qty for r in carpets_sorted}
-    for group in groups:
-        for item in group.items:
-            remaining_qty[item.rect_id] -= item.used_qty
-    
-    print(f"إجمالي المجموعات بعد المرحلة 2: {len(groups)}")
-    
-    # ============================================
-    # المرحلة 3: التكرار الذكي لملء العرض
-    # ============================================
-    print("المرحلة 3: التكرار الذكي...")
-    
-    for r in carpets_sorted:
-        avail = remaining_qty.get(r.id, 0)
-        if avail <= 0 or r.width <= 0:
-            continue
-        
-        # محاولة تكرار العنصر لملء العرض
-        max_repeats = min(avail, max_width // r.width)
-        
-        for num_repeats in range(max_repeats, 1, -1):
-            total_w = r.width * num_repeats
-            
-            if min_width <= total_w <= max_width:
-                # توزيع الكمية على التكرارات بشكل متساوٍ قدر الإمكان
-                items = []
-                remaining_for_repeat = avail
-                qty_per_repeat = max(1, avail // num_repeats)
-                
-                # الطول المرجعي = length * qty_per_repeat
-                ref_length_value = r.length * qty_per_repeat
-                tolerance = calculate_tolerance(ref_length_value)
-                
-                valid_repeat = True
-                for i in range(num_repeats):
-                    if remaining_for_repeat <= 0:
-                        valid_repeat = False
+                    desired_qty = max(1, int(round(ref_total_len / cand.length)))
+                    take = min(desired_qty, avail)
+                    if take <= 0:
+                        continue
+
+                    cand_total_len = cand.length * take
+                    diff = abs(cand_total_len - ref_total_len)
+
+                    if diff <= tolerance_length and chosen_width + cand.width <= max_width:
+                        chosen_items.append(UsedItem(cid, cand.width, cand.length, take, original_qty_map.get(cid, 0)))
+                        chosen_width += cand.width
+                        temp_qty[cid] = max(0, temp_qty[cid] - take)
                         break
-                    
-                    qty_this_repeat = min(qty_per_repeat, remaining_for_repeat)
-                    
-                    # التحقق من tolerance بين التكرارات
-                    tolerance_ref_this = r.length * qty_this_repeat
-                    if abs(tolerance_ref_this - ref_length_value) > tolerance:
-                        # نحاول تعديل الكمية
-                        ideal_qty = ref_length_value / r.length if r.length > 0 else qty_this_repeat
-                        qty_this_repeat = max(1, min(int(round(ideal_qty)), remaining_for_repeat))
-                        tolerance_ref_this = r.length * qty_this_repeat
-                        
-                        if abs(tolerance_ref_this - ref_length_value) > tolerance:
-                            valid_repeat = False
+                if chosen_width >= min_width:
+                    break
+
+            # If still below min_width, allow repeating blocks (including repeating primary) as separate entries
+            if chosen_width < min_width:
+                # primary block repeat (if quantities allow)
+                repeatable_blocks: list[tuple[int,int,int,int]] = []
+                if temp_qty.get(primary.id, 0) >= use_primary and chosen_width + primary.width <= max_width:
+                    repeatable_blocks.append((primary.id, primary.width, primary.length, use_primary))
+
+                # also allow repeating of any partner blocks with their desired block size if available
+                for rid in list(temp_qty.keys()):
+                    if rid == primary.id:
+                        continue
+                    cand = id_map[rid]
+                    # تجنب القسمة على الصفر: تجاهل المرشح بطول غير موجب
+                    if cand.length <= 0:
+                        continue
+                    desired_block = max(1, int(round(ref_total_len / cand.length)))
+                    if temp_qty[rid] >= desired_block and chosen_width + cand.width <= max_width:
+                        repeatable_blocks.append((rid, cand.width, cand.length, desired_block))
+
+                repeatable_blocks.sort(key=lambda t: t[1], reverse=True)
+                for rid, rwidth, rlength, rqty_block in repeatable_blocks:
+                    while chosen_width < min_width and temp_qty.get(rid, 0) >= rqty_block and chosen_width + rwidth <= max_width:
+                        if abs(rlength * rqty_block - ref_total_len) > tolerance_length:
                             break
-                    
-                    items.append(UsedItem(r.id, r.width, r.length, qty_this_repeat, original_qty_map[r.id]))
-                    remaining_for_repeat -= qty_this_repeat
+                        chosen_items.append(UsedItem(rid, rwidth, rlength, rqty_block, original_qty_map.get(rid, 0)))
+                        chosen_width += rwidth
+                        temp_qty[rid] = max(0, temp_qty[rid] - rqty_block)
+                        if chosen_width >= min_width:
+                            break
+
+            # If valid group formed
+            if min_width <= chosen_width <= max_width:
+                # قيد 1: التحقق من أن المجموعة ليست مكونة من عنصر واحد مكرر
+                unique_rect_ids = set(item.rect_id for item in chosen_items)
+                is_single_element_repeated = len(unique_rect_ids) == 1
                 
-                if valid_repeat and len(items) == num_repeats:
-                    signature = get_group_signature(items)
-                    if signature not in used_group_signatures:
-                        total_used = sum(item.used_qty for item in items)
-                        remaining_qty[r.id] -= total_used
-                        
-                        groups.append(Group(group_id, items))
-                        used_group_signatures.add(signature)
-                        group_id += 1
+                if is_single_element_repeated:
+                    # مجموعة من عنصر واحد مكرر - تجاهلها ولا نخصم الكميات
+                    continue
+                
+                # قيد 2: التحقق من وجود مجموعة بنفس المعرفات والأطوال (مع مراعاة الترتيب)
+                is_duplicate = False
+                for existing_group in groups:
+                    # الحصول على معرفات وأطوال المجموعة الموجودة مرتبة حسب المعرف
+                    existing_items = sorted(existing_group.items, key=lambda x: (x.rect_id, x.length))
+                    existing_signatures = [(item.rect_id, item.length) for item in existing_items]
+
+                    # الحصول على معرفات وأطوال المجموعة الجديدة مرتبة حسب المعرف
+                    new_items = sorted(chosen_items, key=lambda x: (x.rect_id, x.length))
+                    new_signatures = [(item.rect_id, item.length) for item in new_items]
+                    
+                    # إذا تطابقت المعرفات والأطوال بنفس الترتيب، هذه مجموعة مكررة
+                    if existing_signatures == new_signatures:
+                        is_duplicate = True
                         break
-    
-    print(f"إجمالي المجموعات النهائية: {len(groups)}")
-    
-    # إعداد القائمة المتبقية
+                
+                # إذا لم تكن مكررة، أضف المجموعة
+                if not is_duplicate:
+                    # خصم نهائي من المخزون الفعلي
+                    for it in chosen_items:
+                        remaining_qty[it.rect_id] = max(0, remaining_qty.get(it.rect_id, 0) - it.used_qty)
+                        id_map[it.rect_id].qty = remaining_qty[it.rect_id]
+                    groups.append(Group(group_id, chosen_items))
+                    group_id += 1
+                    group_created = True
+                    break
+                else:
+                    # مجموعة مكررة - لا نخصم الكميات، الكميات تبقى كما هي
+                    # لأننا لم نخصمها بعد (كنا نعمل على temp_qty)
+                    continue
+
+        # If no group formed
+        if not group_created:
+            if min_width <= primary.width <= max_width:
+                use = 1
+                remaining_qty[primary.id] -= use
+                if remaining_qty[primary.id] < 0:
+                    remaining_qty[primary.id] = 0
+                id_map[primary.id].qty = remaining_qty[primary.id]
+                groups.append(Group(group_id, [UsedItem(primary.id, primary.width, primary.length, use, original_qty_map.get(primary.id, 0))]))
+                group_id += 1
+            else:
+                skipped_ids.add(primary.id)
+
+        # Clean up zero-quantity items
+        for k in list(remaining_qty.keys()):
+            if remaining_qty[k] <= 0:
+                del remaining_qty[k]
+
+        # Progress log every 10 groups
+        if group_id % 10 == 0:
+            pass
+
+    # Prepare remaining rectangles
     remaining = []
     for r in carpets_sorted:
         q = remaining_qty.get(r.id, 0)
         if q > 0:
             remaining.append(Rectangle(r.id, r.width, r.length, q))
-    
+
     return groups, remaining
+
 
 
 def group_carpets_optimized(
