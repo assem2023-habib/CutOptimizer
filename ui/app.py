@@ -3,17 +3,16 @@ import traceback
 import copy
 import os
 from PySide6.QtWidgets import (QWidget, QPushButton, QVBoxLayout, QFileDialog,
-                               QLabel, QLineEdit, QTextEdit, QHBoxLayout, QMessageBox, QTableWidget, QTableWidgetItem, QProgressBar, QFrame, QHeaderView, QScrollArea)
-from PySide6.QtCore import Qt, QThread, Signal, QObject, QTimer, QPropertyAnimation, QRect
-from PySide6.QtGui import QFont, QIntValidator, QPixmap, QBrush, QPalette
-from data_io.excel_io import read_input_excel, write_output_excel, exhaustively_regroup
-from data_io.pdf_report import SimplePDFReport
-from core.grouping import group_carpets_greedy, group_carpets_optimized
+                               QLabel, QLineEdit, QTextEdit, QHBoxLayout, QMessageBox, QTableWidget, QTableWidgetItem, QProgressBar, QHeaderView, QScrollArea)
+from PySide6.QtCore import Qt, QThread, Signal, QObject, QTimer
+from PySide6.QtGui import QFont, QIntValidator
+from data_io.excel_io import read_input_excel, write_output_excel
+from core.grouping import group_carpets_greedy
 from core.validation import validate_config, validate_carpets
 from data_io.remainder_optimizer import process_remainder_complete
-from .ui_utils import (create_window_controls, toggle_theme, apply_dark_theme, apply_light_theme,
-                      save_theme_preference, setup_button_animations, animate_button_up, animate_button_down,
-                      _create_primary_button, _create_section_card, load_theme_preference, toggle_maximize_restore)
+from .ui_utils import ( setup_button_animations,
+                       _create_section_card, toggle_maximize_restore)
+from .theme_manager import  apply_dark_theme, apply_light_theme, save_theme_preference, load_theme_preference
 
 class WorkerSignals(QObject):
     progress = Signal(int)              # 0-100
