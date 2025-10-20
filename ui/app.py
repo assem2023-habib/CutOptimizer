@@ -85,11 +85,7 @@ class GroupingWorker(QThread):
                                min_width=self.min_width, max_width=self.max_width,
                                tolerance_length=self.tolerance_len,
                                originals=originals_copy)
-            # pdf_path = os.path.splitext(self.output_path)[0] + "_report.pdf"
-            # pdf = SimplePDFReport(title="تقرير مجموعات السجاد")
-            # pdf.groups_to_pdf(groups, pdf_path)
-            # self.signals.log.emit(f"✅ حفظ Excel وPDF")
-
+                               
             # انتهى
             self.signals.progress.emit(100)
             self.signals.data_ready.emit(groups, remaining, quantity_stats)
