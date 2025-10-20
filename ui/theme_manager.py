@@ -194,12 +194,15 @@ def apply_dark_theme(self):
     self.setStyleSheet(dark_stylesheet)
 
     # تحديث ألوان شريط الأدوات
-    self.toolbar.setStyleSheet("""
-        QWidget {
-            background-color: #2C2C2C;
-            border-bottom: 2px solid #007bff;
-        }
-    """)
+    if hasattr(self, 'toolbar'):
+        self.toolbar.setStyleSheet("""
+            QWidget {
+                background-color: #2C2C2C;
+                border-bottom: 2px solid #007bff;
+                border-radius: 8px;
+                margin: 5px;
+            }
+        """)
 
 def apply_light_theme(self):
     """تطبيق السمة الفاتحة"""
@@ -377,12 +380,15 @@ def apply_light_theme(self):
     self.setStyleSheet(light_stylesheet)
 
     # تحديث ألوان شريط الأدوات
-    self.toolbar.setStyleSheet("""
-        QWidget {
-            background-color: #F8F9FA;
-            border-bottom: 2px solid #007bff;
-        }
-    """)
+    if hasattr(self, 'toolbar'):
+        self.toolbar.setStyleSheet("""
+            QWidget {
+                background-color: #F8F9FA;
+                border-bottom: 2px solid #007bff;
+                border-radius: 8px;
+                margin: 5px;
+            }
+        """)
 
 def save_theme_preference(self):
     """حفظ تفضيل السمة في ملف التكوين"""
