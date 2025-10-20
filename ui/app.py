@@ -133,7 +133,7 @@ class RectPackApp(QWidget):
 
         # تخطيط المحتوى الرئيسي مع المسافات والحشو المناسبين
         content_layout = QVBoxLayout(content_widget)
-        content_layout.setSpacing(20)
+        content_layout.setSpacing(18)  # تقليل المساحات بين الأقسام قليلاً
         content_layout.setContentsMargins(25, 25, 25, 25)
 
         # رأس التطبيق
@@ -148,18 +148,18 @@ class RectPackApp(QWidget):
 
         # أزرار الإجراءات السريعة في الرأس
         self.quick_action_layout = QHBoxLayout()
-        self.quick_action_layout.setSpacing(15)
+        self.quick_action_layout.setSpacing(12)  # تقليل المساحات في الرأس
 
         header_layout.addLayout(self.quick_action_layout)
         content_layout.addLayout(header_layout)
 
         # قسم إعدادات الملفات
         files_section, files_layout = _create_section_card(self, "📁 إعدادات الملفات")
-        files_layout.setSpacing(12)
+        files_layout.setSpacing(10)  # تقليل المساحات في قسم الملفات
 
         # ملف الإدخال
         input_layout = QHBoxLayout()
-        input_layout.setSpacing(10)
+        input_layout.setSpacing(8)  # تقليل المساحات في تخطيط الإدخال
         self.input_edit = QLineEdit()
         self.input_edit.setMinimumWidth(400)
         self.input_edit.setPlaceholderText("اختر ملف Excel للبيانات...")
@@ -175,7 +175,7 @@ class RectPackApp(QWidget):
 
         # ملف الإخراج
         output_layout = QHBoxLayout()
-        output_layout.setSpacing(10)
+        output_layout.setSpacing(8)  # تقليل المساحات في تخطيط الإخراج
         self.output_edit = QLineEdit()
         self.output_edit.setMinimumWidth(400)
         self.output_edit.setPlaceholderText("حدد مكان حفظ النتائج...")
@@ -196,7 +196,7 @@ class RectPackApp(QWidget):
 
         # تخطيط أفقي واحد لجميع العناصر
         main_settings_layout = QHBoxLayout()
-        main_settings_layout.setSpacing(20)
+        main_settings_layout.setSpacing(18)  # تقليل المساحات في إعدادات المعالجة
 
         # العرض الأدنى
         min_width_label = QLabel("العرض الأدنى:")
@@ -251,7 +251,7 @@ class RectPackApp(QWidget):
 
         # أزرار التحكم الرئيسية
         buttons_layout = QHBoxLayout()
-        buttons_layout.setSpacing(20)
+        buttons_layout.setSpacing(18)  # تقليل المساحات في لوحة التحكم
 
         self.run_btn = QPushButton("▶️ بدء المعالجة")
         self.run_btn.setFont(QFont("Segoe UI", 10, QFont.Bold))
@@ -302,7 +302,7 @@ class RectPackApp(QWidget):
 
         # قسم السجل والنتائج
         results_section, results_layout = _create_section_card(self, "📊 النتائج والسجل")
-        results_layout.setSpacing(25)  # زيادة المسافات بين العناصر
+        results_layout.setSpacing(20)  # تقليل المسافات بين العناصر قليلاً
 
         # منطقة السجل
         log_label = QLabel("📝 سجل النشاطات:")
@@ -311,12 +311,14 @@ class RectPackApp(QWidget):
 
         self.log = QTextEdit()
         self.log.setReadOnly(True)
-        self.log.setMaximumHeight(550)
+        self.log.setMaximumHeight(400)  # تقليل ارتفاع منطقة السجل قليلاً
         results_layout.addWidget(self.log)
 
         # جدول النتائج
         table_label = QLabel("📋 ملخص المجموعات:")
         table_label.setFont(QFont("Segoe UI", 11, QFont.Bold))
+        table_label.setMaximumHeight(250)
+        table_label.setMinimumHeight(150)
         results_layout.addWidget(table_label)
 
         self.summary_table = QTableWidget(0, 4)
@@ -325,7 +327,7 @@ class RectPackApp(QWidget):
         self.summary_table.setAlternatingRowColors(True)
         self.summary_table.setSelectionBehavior(QTableWidget.SelectRows)
         self.summary_table.setEditTriggers(QTableWidget.NoEditTriggers)
-        self.summary_table.setMinimumHeight(300)  # حد أدنى للارتفاع لعرض أفضل
+        self.summary_table.setMinimumHeight(350)  # زيادة الارتفاع لعرض أفضل للبيانات
         results_layout.addWidget(self.summary_table)
 
         # زر فتح ملف Excel
