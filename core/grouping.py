@@ -1,12 +1,11 @@
-from typing import List, Tuple, Dict, Optional
+from .greedy_grouper import GreedyGrouper
+
+from typing import List, Tuple, Dict, Optional, Set
 from collections import defaultdict
 from .models import Rectangle, UsedItem, Group
 import time
 
-from typing import List, Tuple, Dict, Set
-from collections import defaultdict
-
-
+# دالة مساعدة للحفاظ على التوافق مع الكود الموجود
 def group_carpets_greedy(carpets: List[Rectangle],
                          min_width: int,
                          max_width: int,
@@ -14,205 +13,18 @@ def group_carpets_greedy(carpets: List[Rectangle],
                          start_with_largest: bool = True,
                          allow_split_rows: bool = True,
                          start_group_id: int = 1
-                         ) -> Tuple[list[Group], list[Rectangle]]:
+                         ) -> Tuple[List[Group], List[Rectangle]]:
     """
-    Greedy grouping algorithm:
-    - Start with largest width (if start_with_largest = True)
-    - For each primary rectangle type, try using quantities from max->1 to find a pairing (or alone)
-      that yields total_width in [min_width, max_width] and partner total_length close to primary_total_length
-      within tolerance_length.
-    - If found, deduct used quantities and create a Group.
-    - Continue until no more usable rectangles.
-    Returns: (groups, remaining_rectangles_with_remaining_qty)
+    دالة التوافق - تستخدم الفئة الجديدة GreedyGrouper.
+
+    هذه الدالة محفوظة للحفاظ على التوافق مع الكود الموجود.
+    يُفضل استخدام GreedyGrouper مباشرة في الكود الجديد.
     """
+    grouper = GreedyGrouper(min_width, max_width, tolerance_length,
+                           start_with_largest, allow_split_rows, start_group_id)
+    return grouper.group_carpets(carpets)
 
-    # Sort rectangles
-    # carpets_sorted = sorted(carpets, key=lambda r: r.width, reverse=start_with_largest)
-    carpets_sorted = sorted(carpets, key=lambda r: (r.width, r.length), reverse=start_with_largest)
-    id_map = {r.id: r for r in carpets_sorted}
-    # ثابت: كميات أصلية كما جاءت من الإدخال
-    original_qty_map: Dict[int, int] = {r.id: r.qty for r in carpets_sorted}
-    remaining_qty: Dict[int, int] = {r.id: r.qty for r in carpets_sorted}
 
-    # Map widths
-    widths_map = defaultdict(list)
-    for r in carpets_sorted:
-        widths_map[r.width].append(r.id)
-
-    groups: list[Group] = []
-    group_id = start_group_id
-    skipped_ids = set()
-
-    # Safety counter to avoid infinite loops
-    safety_counter = 0
-    max_iterations = 5000
-
-    while True:
-        safety_counter += 1
-        if safety_counter > max_iterations:
-            break
-
-        # Pick primary candidate
-        primary = None
-        for r in carpets_sorted:
-            if remaining_qty.get(r.id, 0) > 0 and r.width <= max_width and r.id not in skipped_ids:
-                primary = r
-                break
-
-        if primary is None:
-            break
-
-        primary_avail = remaining_qty[primary.id]
-        group_created = False
-
-        # Try using as many primary pieces as possible
-        for use_primary in range(primary_avail, 0, -1):
-            ref_total_len = primary.length * use_primary
-            chosen_items = [UsedItem(primary.id, primary.width, primary.length, use_primary, original_qty_map.get(primary.id, 0))]
-            chosen_width = primary.width
-
-            # Remaining width range
-            min_rem = max(min_width - chosen_width, 0)
-            max_rem = max_width - chosen_width
-
-            # Work on temporary quantities
-            temp_qty = dict(remaining_qty)
-            # احجز كمية الأساس مبدئياً
-            temp_qty[primary.id] = max(0, temp_qty.get(primary.id, 0) - use_primary)
-            candidate_widths = sorted(widths_map.keys(), reverse=True)
-
-            # Try to add partners
-            for w in candidate_widths:
-                if chosen_width + w > max_width:
-                    continue
-                for cid in widths_map[w]:
-                    if cid == primary.id:
-                        continue
-                    avail = temp_qty.get(cid, 0)
-                    if avail <= 0:
-                        continue
-                    cand = id_map[cid]
-
-                    # تجنب القسمة على الصفر: تجاهل المرشح بطول غير موجب
-                    if cand.length <= 0:
-                        continue
-                    desired_qty = max(1, int(round(ref_total_len / cand.length)))
-                    take = min(desired_qty, avail)
-                    if take <= 0:
-                        continue
-
-                    cand_total_len = cand.length * take
-                    diff = abs(cand_total_len - ref_total_len)
-
-                    if diff <= tolerance_length and chosen_width + cand.width <= max_width:
-                        chosen_items.append(UsedItem(cid, cand.width, cand.length, take, original_qty_map.get(cid, 0)))
-                        chosen_width += cand.width
-                        temp_qty[cid] = max(0, temp_qty[cid] - take)
-                        break
-                if chosen_width >= min_width:
-                    break
-
-            # If still below min_width, allow repeating blocks (including repeating primary) as separate entries
-            if chosen_width < min_width:
-                # primary block repeat (if quantities allow)
-                repeatable_blocks: list[tuple[int,int,int,int]] = []
-                if temp_qty.get(primary.id, 0) >= use_primary and chosen_width + primary.width <= max_width:
-                    repeatable_blocks.append((primary.id, primary.width, primary.length, use_primary))
-
-                # also allow repeating of any partner blocks with their desired block size if available
-                for rid in list(temp_qty.keys()):
-                    if rid == primary.id:
-                        continue
-                    cand = id_map[rid]
-                    # تجنب القسمة على الصفر: تجاهل المرشح بطول غير موجب
-                    if cand.length <= 0:
-                        continue
-                    desired_block = max(1, int(round(ref_total_len / cand.length)))
-                    if temp_qty[rid] >= desired_block and chosen_width + cand.width <= max_width:
-                        repeatable_blocks.append((rid, cand.width, cand.length, desired_block))
-
-                repeatable_blocks.sort(key=lambda t: t[1], reverse=True)
-                for rid, rwidth, rlength, rqty_block in repeatable_blocks:
-                    while chosen_width < min_width and temp_qty.get(rid, 0) >= rqty_block and chosen_width + rwidth <= max_width:
-                        if abs(rlength * rqty_block - ref_total_len) > tolerance_length:
-                            break
-                        chosen_items.append(UsedItem(rid, rwidth, rlength, rqty_block, original_qty_map.get(rid, 0)))
-                        chosen_width += rwidth
-                        temp_qty[rid] = max(0, temp_qty[rid] - rqty_block)
-                        if chosen_width >= min_width:
-                            break
-
-            # If valid group formed
-            if min_width <= chosen_width <= max_width:
-                # قيد 1: التحقق من أن المجموعة ليست مكونة من عنصر واحد مكرر
-                unique_rect_ids = set(item.rect_id for item in chosen_items)
-                is_single_element_repeated = len(unique_rect_ids) == 1
-                
-                if is_single_element_repeated:
-                    # مجموعة من عنصر واحد مكرر - تجاهلها ولا نخصم الكميات
-                    continue
-                
-                # قيد 2: التحقق من وجود مجموعة بنفس المعرفات والأطوال (مع مراعاة الترتيب)
-                is_duplicate = False
-                for existing_group in groups:
-                    # الحصول على معرفات وأطوال المجموعة الموجودة مرتبة حسب المعرف
-                    existing_items = sorted(existing_group.items, key=lambda x: (x.rect_id, x.length))
-                    existing_signatures = [(item.rect_id, item.length) for item in existing_items]
-
-                    # الحصول على معرفات وأطوال المجموعة الجديدة مرتبة حسب المعرف
-                    new_items = sorted(chosen_items, key=lambda x: (x.rect_id, x.length))
-                    new_signatures = [(item.rect_id, item.length) for item in new_items]
-                    
-                    # إذا تطابقت المعرفات والأطوال بنفس الترتيب، هذه مجموعة مكررة
-                    if existing_signatures == new_signatures:
-                        is_duplicate = True
-                        break
-                
-                # إذا لم تكن مكررة، أضف المجموعة
-                if not is_duplicate:
-                    # خصم نهائي من المخزون الفعلي
-                    for it in chosen_items:
-                        remaining_qty[it.rect_id] = max(0, remaining_qty.get(it.rect_id, 0) - it.used_qty)
-                        id_map[it.rect_id].qty = remaining_qty[it.rect_id]
-                    groups.append(Group(group_id, chosen_items))
-                    group_id += 1
-                    group_created = True
-                    break
-                else:
-                    # مجموعة مكررة - لا نخصم الكميات، الكميات تبقى كما هي
-                    # لأننا لم نخصمها بعد (كنا نعمل على temp_qty)
-                    continue
-
-        # If no group formed
-        if not group_created:
-            if min_width <= primary.width <= max_width:
-                use = 1
-                remaining_qty[primary.id] -= use
-                if remaining_qty[primary.id] < 0:
-                    remaining_qty[primary.id] = 0
-                id_map[primary.id].qty = remaining_qty[primary.id]
-                groups.append(Group(group_id, [UsedItem(primary.id, primary.width, primary.length, use, original_qty_map.get(primary.id, 0))]))
-                group_id += 1
-            else:
-                skipped_ids.add(primary.id)
-
-        # Clean up zero-quantity items
-        for k in list(remaining_qty.keys()):
-            if remaining_qty[k] <= 0:
-                del remaining_qty[k]
-
-        # Progress log every 10 groups
-        if group_id % 10 == 0:
-            pass
-
-    # Prepare remaining rectangles
-    remaining = []
-    for r in carpets_sorted:
-        q = remaining_qty.get(r.id, 0)
-        if q > 0:
-            remaining.append(Rectangle(r.id, r.width, r.length, q))
-
-    return groups, remaining
 
 
 
