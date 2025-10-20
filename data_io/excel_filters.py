@@ -122,28 +122,3 @@ def create_filter_cell_format(writer) -> any:
         'valign': 'vcenter'
     })
 
-
-def add_conditional_formatting(writer, worksheet, df: pd.DataFrame) -> None:
-    """إضافة تنسيقات شرطية لتمييز البيانات."""
-    # تنسيق شرطي للكفاءة العالية (أكبر من 80%)
-    try:
-        efficiency_col = None
-        for col_num, col_name in enumerate(df.columns):
-            if 'كفاءة' in col_name or 'كفاءة' in str(col_name):
-                efficiency_col = col_num
-                break
-
-        if efficiency_col is not None:
-            worksheet.conditional_format(2, efficiency_col, len(df) + 1, efficiency_col, {
-                'type': 'cell',
-                'criteria': '>',
-                'value': 80,
-                'format': writer.book.add_format({
-                    'bg_color': '#C6EFCE',  # أخضر فاتح للكفاءة العالية
-                    'font_color': '#006100'
-                })
-            })
-    except Exception as e:
-        # معالجة أفضل للأخطاء
-        print(f"خطأ في التنسيق الشرطي للكفاءة: {e}")
-        pass
