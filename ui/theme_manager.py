@@ -226,7 +226,7 @@ def apply_light_theme(self):
         /* الأزرار الأساسية */
         QPushButton {
             background-color: #007bff;
-            color: #FFFFFF;
+            color: black;
             border: none;
             border-radius: 6px;
             padding: 12px 24px;
@@ -239,17 +239,20 @@ def apply_light_theme(self):
             background-color: #0056b3;
             margin-top: -1px;
             border: 2px solid #000000;
+            color: #FFFFFF;
         }
 
         QPushButton:pressed {
             background-color: #004085;
             margin-top: 0px;
             border: 2px solid #000000;
+            color: #FFFFFF;
         }
 
         QPushButton:disabled {
             background-color: #6c757d;
-            color: #adb5bd;
+            color: #FFFFFF;
+            opacity: 0.7;
         }
 
         /* مربعات الإدخال */
@@ -265,10 +268,11 @@ def apply_light_theme(self):
 
         QLineEdit:focus {
             border-color: #007bff;
+            background-color: #FFFFFF;
         }
 
         QLineEdit::placeholder {
-            color: #888;
+            color: #666666;
         }
 
         /* منطقة السجل */
@@ -331,6 +335,12 @@ def apply_light_theme(self):
         QLabel {
             color: #333333;
             font-weight: 500;
+        }
+
+        /* العناوين الرئيسية */
+        QLabel[cssClass="title"] {
+            color: #007bff;
+            font-weight: 600;
         }
 
         /* الإطارات */

@@ -12,7 +12,6 @@ def create_window_controls(self):
     self.toolbar.setFixedHeight(40)
     self.toolbar.setStyleSheet("""
         QWidget {
-            background-color: #2C2C2C;
             border-bottom: 2px solid #007bff;
         }
     """)

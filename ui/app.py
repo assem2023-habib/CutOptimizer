@@ -123,13 +123,12 @@ class RectPackApp(QWidget):
         scroll_area.setStyleSheet("""
             QScrollArea {
                 border: none;
-                background-color: #1A1A1A;
             }
         """)
 
         # الويدجيت الداخلي للمنطقة القابلة للتمرير
         content_widget = QWidget()
-        content_widget.setStyleSheet("background-color: #1A1A1A;")
+        content_widget.setStyleSheet("")
 
         # تخطيط المحتوى الرئيسي مع المسافات والحشو المناسبين
         content_layout = QVBoxLayout(content_widget)
@@ -366,8 +365,12 @@ class RectPackApp(QWidget):
         # إضافة الرسوم المتحركة للأزرار
         setup_button_animations(self)
         self.showMaximized()
-        # تعطيل تعيين صورة الخلفية مؤقتاً لاختبار ما إذا كانت هي السبب في عدم فتح التطبيق
-        # self.set_background_image()
+
+        # إعادة تطبيق الثيم بعد إنشاء جميع العناصر لضمان عدم وجود تعارض في CSS
+        if self.is_dark_theme:
+            apply_dark_theme(self)
+        else:
+            apply_light_theme(self)
 
     def create_window_controls(self):
         """إنشاء شريط أدوات مع زر التبديل بين السمات فقط"""
@@ -376,7 +379,6 @@ class RectPackApp(QWidget):
         self.toolbar.setFixedHeight(50)
         self.toolbar.setStyleSheet("""
             QWidget {
-                background-color: #2C2C2C;
                 border-bottom: 2px solid #007bff;
                 border-radius: 8px;
                 margin: 5px;
@@ -439,7 +441,6 @@ class RectPackApp(QWidget):
             # تطبيق السمة الفاتحة
             self.theme_btn.setText("☀️")
             apply_light_theme(self)
-
         # حفظ الإعداد في ملف التكوين
         save_theme_preference(self)
         
