@@ -46,41 +46,44 @@ class GroupingWorker(QThread):
                 for e in errs:
                     self.signals.log.emit(f"⚠️ {e}")
 
-            # التجميع الأولي
-            self.signals.progress.emit(30)
-            self.signals.log.emit("🔄 تشكيل المجموعات الأولية...")
+            # نسخة احتياطية من البيانات الأصلية للحفظ
             originals_copy = [
                 # نفس الهوية والأبعاد مع الكمية الأصلية
                 type(c)(c.id, c.width, c.length, c.qty) if hasattr(c, 'id') else c
                 for c in carpets
             ]
-            groups, remaining = group_carpets_greedy(
+
+            # إعادة تجميع البواقي أولاً
+            self.signals.progress.emit(30)
+            self.signals.log.emit("🔄 إعادة تجميع البواقي أولاً...")
+            rem_groups, rem_final_remaining, quantity_stats = process_remainder_complete(
                 carpets,
                 min_width=self.min_width,
                 max_width=self.max_width,
                 tolerance_length=self.tolerance_len,
-                start_with_largest=self.cfg.get('start_with_largest', True),
-            )
-            self.signals.log.emit(f"✅ تم تشكيل {len(groups)} مجموعة أولية")
-
-            # إعادة تجميع البواقي
-            self.signals.progress.emit(60)
-            self.signals.log.emit("🔄 إعادة تجميع البواقي...")
-            rem_groups, rem_final_remaining, quantity_stats = process_remainder_complete(
-                remaining,
-                min_width=self.min_width,
-                max_width=self.max_width,
-                tolerance_length=self.tolerance_len,
-                start_group_id=max([g.id for g in groups] + [0]) + 1,
+                start_group_id=1,
                 merge_after=True,
                 verbose=False
             )
-            self.signals.log.emit(f"✅ تم تشكيل {len(rem_groups)} مجموعة إضافية")
+            self.signals.log.emit(f"✅ تم تشكيل {len(rem_groups)} مجموعة من البواقي")
+
+            # التجميع الأولي للبواقي المتبقية
+            self.signals.progress.emit(60)
+            self.signals.log.emit("🔄 تشكيل المجموعات الأولية للبواقي المتبقية...")
+            groups, remaining = group_carpets_greedy(
+                rem_final_remaining,
+                min_width=self.min_width,
+                max_width=self.max_width,
+                tolerance_length=self.tolerance_len,
+                start_with_largest=self.cfg.get('start_with_largest', True),
+                start_group_id=len(rem_groups) + 1
+            )
+            self.signals.log.emit(f"✅ تم تشكيل {len(groups)} مجموعة أولية إضافية")
 
             # حفظ
             self.signals.progress.emit(80)
             self.signals.log.emit("💾 حفظ النتائج...")
-            write_output_excel(self.output_path, groups, rem_final_remaining,
+            write_output_excel(self.output_path, groups, remaining,
                                remainder_groups=rem_groups,
                                min_width=self.min_width, max_width=self.max_width,
                                tolerance_length=self.tolerance_len,

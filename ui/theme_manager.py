@@ -2,21 +2,6 @@ import json
 import os
 from PySide6.QtWidgets import QWidget
 
-def toggle_theme(self):
-    """تبديل بين السمة الداكنة والفاتحة"""
-    self.is_dark_theme = not self.is_dark_theme
-
-    if self.is_dark_theme:
-        # تطبيق السمة الداكنة
-        self.theme_btn.setText("🌙")
-        apply_dark_theme(self)
-    else:
-        # تطبيق السمة الفاتحة
-        self.theme_btn.setText("☀️")
-        apply_light_theme(self)
-
-    # حفظ الإعداد في ملف التكوين
-    save_theme_preference(self)
 
 def apply_dark_theme(self):
     """تطبيق السمة الداكنة"""

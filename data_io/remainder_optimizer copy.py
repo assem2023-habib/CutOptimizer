@@ -459,7 +459,71 @@ def create_enhanced_remainder_groups(
             if not created_group:
                 break
         
-        # المرحلة النهائية لهذا النطاق تم إزالتها بناءً على طلب المستخدم
+        # المرحلة النهائية لهذا النطاق: تشكيل مجموعات من عنصر واحد فقط (مكرر) لتحقيق أقصى استفادة
+        # الشرط: العرض الكلي = مجموع عرض الإدخالات (بدون ضرب في الكمية)
+        # السماحية: نوزع الكميات بالتساوي بين الإدخالات بحيث يكون الفرق 0 <= tolerance_length/length
+        for rect in list(current_remaining):
+            if rect.qty <= 0:
+                continue
+            w = rect.width
+            L = rect.length if rect.length > 0 else 1
+            # حدود عدد الإدخالات الممكنة حسب العرض
+            k_min = (min_width + w - 1) // w
+            k_max = max_width // w
+            if k_min <= 0:
+                k_min = 1
+            if k_max <= 0 or k_min > k_max:
+                continue
+            
+            # طالما يمكننا تشكيل مجموعة صالحة، استمر
+            while rect.qty > 0:
+                Q = rect.qty
+                best_k = 0
+                best_used = 0
+                best_each = 0
+                # دلتا الكمية المسموحة بين الإدخالات (نختار توزيعاً متساوياً => الفارق = 0)
+                delta_max = tolerance_length // L
+                # جرّب جميع قيم k الممكنة واختَر ما يزيد الاستخدام
+                for k in range(k_max, k_min - 1, -1):
+                    total_w = k * w
+                    if total_w < min_width or total_w > max_width:
+                        continue
+                    # توزيع متساوٍ يحقق الفارق 0 <= delta_max دائماً
+                    q_each = Q // k
+                    if q_each <= 0:
+                        continue
+                    used = k * q_each
+                    if used > best_used:
+                        best_used = used
+                        best_k = k
+                        best_each = q_each
+                
+                if best_used <= 0 or best_k <= 0 or best_each <= 0:
+                    break  # لا يمكن تشكيل مزيد من المجموعات
+                
+                # بناء المجموعة باستخدام best_k إدخالاً من نفس العنصر وبنفس الكمية لكل إدخال
+                group_items = []
+                for _ in range(best_k):
+                    group_items.append(
+                        UsedItem(
+                            rect_id=rect.id,
+                            width=w,
+                            length=L if L != 1 else rect.length,
+                            used_qty=best_each,
+                            original_qty=Q
+                        )
+                    )
+                new_group = Group(id=next_group_id, items=group_items)
+                # تحقق العرض عبر models.Group.total_width()
+                if min_width <= new_group.total_width() <= max_width:
+                    # تحقق السماحية: الفارق بين أي إدخالين = |best_each - best_each| * L = 0 <= tolerance_length
+                    # خصم الكمية وإضافة المجموعة
+                    rect.qty -= best_used
+                    all_groups.append(new_group)
+                    next_group_id += 1
+                else:
+                    # لا يمكن إنشاء مجموعة بعرض صالح
+                    break
     
     # حساب الكميات الإجمالية بعد العملية
     final_remaining = [r for r in current_remaining if r.qty > 0]

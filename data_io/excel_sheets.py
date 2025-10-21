@@ -25,19 +25,7 @@ def _create_group_details_sheet(
     """إنشاء ورقة تفاصيل المجموعات مع تصنيفها."""
     rows = []
 
-    # المجموعات الأصلية
-    for g in groups:
-        for it in g.items:
-            rows.append({
-                'رقم المجموعة': f'المجموعة_{g.id}',
-                'نوع المجموعة': 'أصلية',
-                'معرف السجاد': it.rect_id,
-                'العرض': it.width,
-                'الطول': it.length,
-                'الكمية المستخدمة': it.used_qty,
-                'الطول الاجمالي للسجادة': it.length * it.used_qty,
-                'الكمية الأصلية': it.original_qty
-            })
+    
 
     # مجموعات البواقي العادية
     if remainder_groups:
@@ -45,7 +33,7 @@ def _create_group_details_sheet(
             for it in g.items:
                 rows.append({
                     'رقم المجموعة': f'المجموعة_{g.id}',
-                    'نوع المجموعة': 'بواقي عادية',
+                    # 'نوع المجموعة': 'بواقي عادية',
                     'معرف السجاد': it.rect_id,
                     'العرض': it.width,
                     'الطول': it.length,
@@ -53,21 +41,19 @@ def _create_group_details_sheet(
                     'الطول الاجمالي للسجادة': it.length * it.used_qty,
                     'الكمية الأصلية': it.original_qty
                 })
-
-    # المجموعات الإضافية المحسنة
-    if enhanced_remainder_groups:
-        for g in enhanced_remainder_groups:
-            for it in g.items:
-                rows.append({
-                    'رقم المجموعة': f'المجموعة_{g.id}',
-                    'نوع المجموعة': 'بواقي محسنة',
-                    'معرف السجاد': it.rect_id,
-                    'العرض': it.width,
-                    'الطول': it.length,
-                    'الكمية المستخدمة': it.used_qty,
-                    'الطول الاجمالي للسجادة': it.length * it.used_qty,
-                    'الكمية الأصلية': it.original_qty
-                })
+    # المجموعات الأصلية
+    for g in groups:
+        for it in g.items:
+            rows.append({
+                'رقم المجموعة': f'المجموعة_{g.id}',
+                # 'نوع المجموعة': 'أصلية',
+                'معرف السجاد': it.rect_id,
+                'العرض': it.width,
+                'الطول': it.length,
+                'الكمية المستخدمة': it.used_qty,
+                'الطول الاجمالي للسجادة': it.length * it.used_qty,
+                'الكمية الأصلية': it.original_qty
+            })
 
     # إنشاء DataFrame
     df = pd.DataFrame(rows)
@@ -83,20 +69,6 @@ def _create_group_summary_sheet(
     """إنشاء ورقة ملخص المجموعات مع الإحصائيات."""
     summary = []
 
-    # المجموعات الأصلية
-    for g in groups:
-        types_count = len(g.items)
-        area = sum(it.width * it.length * it.used_qty for it in g.items)
-        summary.append({
-            'رقم المجموعة': f'المجموعة_{g.id}',
-            'نوع المجموعة': 'أصلية',
-            'العرض الإجمالي': g.total_width(),
-            'الطول الإجمالي المرجعي (التقريبي)': g.ref_length(),
-            'المساحة الإجمالية': area,
-            'الكمية المستخدمة الكلية': g.total_used_qty(),
-            'عدد أنواع السجاد': types_count,
-        })
-
     # مجموعات البواقي العادية
     if remainder_groups:
         for g in remainder_groups:
@@ -111,21 +83,19 @@ def _create_group_summary_sheet(
                 'الكمية المستخدمة الكلية': g.total_used_qty(),
                 'عدد أنواع السجاد': types_count,
             })
-
-    # المجموعات الإضافية المحسنة
-    if enhanced_remainder_groups:
-        for g in enhanced_remainder_groups:
-            types_count = len(g.items)
-            area = sum(it.width * it.length * it.used_qty for it in g.items)
-            summary.append({
-                'رقم المجموعة': f'المجموعة_{g.id}',
-                'نوع المجموعة': 'بواقي محسنة',
-                'العرض الإجمالي': g.total_width(),
-                'الطول الإجمالي المرجعي (التقريبي)': g.ref_length(),
-                'المساحة الإجمالية': area,
-                'الكمية المستخدمة الكلية': g.total_used_qty(),
-                'عدد أنواع السجاد': types_count,
-            })
+    # المجموعات الأصلية
+    for g in groups:
+        types_count = len(g.items)
+        area = sum(it.width * it.length * it.used_qty for it in g.items)
+        summary.append({
+            'رقم المجموعة': f'المجموعة_{g.id}',
+            'نوع المجموعة': 'أصلية',
+            'العرض الإجمالي': g.total_width(),
+            'الطول الإجمالي المرجعي (التقريبي)': g.ref_length(),
+            'المساحة الإجمالية': area,
+            'الكمية المستخدمة الكلية': g.total_used_qty(),
+            'عدد أنواع السجاد': types_count,
+        })
 
     # إنشاء DataFrame
     df = pd.DataFrame(summary)
@@ -285,16 +255,6 @@ def _create_ui_summary_sheet(
     """إنشاء ورقة ملخص الواجهة مع تصنيف المجموعات."""
     ui_rows = []
 
-    # المجموعات الأصلية
-    for g in groups:
-        ui_rows.append({
-            'عدد الأنواع': len(g.items),
-            'الطول المرجعي': g.ref_length(),
-            'العرض الإجمالي': g.total_width(),
-            'رقم المجموعة': f'المجموعة_{g.id}',
-            'نوع المجموعة': 'أصلية'
-        })
-
     # مجموعات البواقي العادية
     if remainder_groups:
         for g in remainder_groups:
@@ -305,7 +265,15 @@ def _create_ui_summary_sheet(
                 'رقم المجموعة': f'المجموعة_{g.id}',
                 'نوع المجموعة': 'بواقي عادية'
             })
-
+    # المجموعات الأصلية
+    for g in groups:
+        ui_rows.append({
+            'عدد الأنواع': len(g.items),
+            'الطول المرجعي': g.ref_length(),
+            'العرض الإجمالي': g.total_width(),
+            'رقم المجموعة': f'المجموعة_{g.id}',
+            'نوع المجموعة': 'أصلية'
+        })
     # المجموعات الإضافية المحسنة
     if enhanced_remainder_groups:
         for g in enhanced_remainder_groups:
