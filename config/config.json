@@ -6,5 +6,5 @@
     "max_total_area": null,
     "start_with_largest": true,
     "allow_split_rows": true,
-    "theme": "dark"
+    "theme": "light"
 }

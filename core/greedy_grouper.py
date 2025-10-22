@@ -8,10 +8,11 @@
 المؤلف: نظام تحسين القطع
 التاريخ: 2024
 """
-
 from typing import List, Tuple, Dict, Optional, Set
 from collections import defaultdict
 from .models import Rectangle, UsedItem, Group
+
+from .optional_partner_grouper import create_groups_with_optional_partner
 
 
 class GreedyGrouper:
@@ -124,9 +125,21 @@ class GreedyGrouper:
         # تنظيف العناصر ذات الكمية الصفرية
         self._cleanup_zero_quantities()
 
+        # مرحلة جديدة: تشكيل مجموعات مع تكرار وإمكانية شريك
+        self.groups, self.remaining_qty, self.id_map, self.group_id = create_groups_with_optional_partner(
+            self.carpets_sorted,
+            self.remaining_qty,
+            self.original_qty_map,
+            self.id_map,
+            self.groups,
+            self.group_id,
+            self.min_width,
+            self.max_width,
+            self.tolerance_length
+        )
+
         # المرحلة النهائية: تشكيل مجموعات من عنصر واحد فقط (مكرر) لتحقيق أقصى استفادة
         self._create_single_element_groups()
-
     def _create_single_element_groups(self) -> None:
         """تشكيل مجموعات من عنصر واحد مكرر لتحقيق أقصى استفادة من البواقي."""
         # قائمة مؤقتة بالعناصر المتبقية للحسابات فقط
@@ -439,3 +452,5 @@ class GreedyGrouper:
             if q > 0:
                 remaining.append(Rectangle(r.id, r.width, r.length, q))
         return remaining
+
+

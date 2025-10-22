@@ -24,9 +24,6 @@ class Group:
     id: int
     items: List[UsedItem]
 
-    # def total_width(self)->int:
-    #     # return sum(item.width for item in self.items)# per spec: sum of widths of types
-    #     return sum(item.width * item.used_qty for item in self.items)
     def total_width(self) -> int:
     # مجموع العرض كما في التقرير — نحتسب العرض لكل عنصر مرة واحدة (أو لكل entry)
         return sum(item.width for item in self.items)
