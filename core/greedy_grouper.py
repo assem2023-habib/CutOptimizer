@@ -213,7 +213,7 @@ class GreedyGrouper:
                             width=w,
                             length=L if L != 1 else rect.length,
                             used_qty=best_each,
-                            original_qty=Q
+                            original_qty=self.original_qty_map.get(rect.id, 0)
                         )
                     )
 

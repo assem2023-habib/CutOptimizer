@@ -119,19 +119,41 @@ def create_groups_with_optional_partner(
         Q = remaining_qty[rect.id]
 
         # تكرار للعنصر الأساسي حتى نفاذ الكمية أو تشكيل مجموعات
-        while Q > 0:
-            # ابدأ بتكرار واحد، زد حتى الوصول إلى النطاق أو max_width
-            chosen_items = [UsedItem(rect.id, w, L, 1, original_qty_map[rect.id])]
-            chosen_width = w
+        # ابدأ بأكبر كمية ممكنة وانزل تدريجياً للحصول على أفضل استغلال
+        max_possible_qty = min(Q, max_width // w)
 
-            while len(chosen_items) * w <= max_width and sum(item.used_qty for item in chosen_items if item.rect_id == rect.id) < Q:
-                chosen_items.append(UsedItem(rect.id, w, L, 1, original_qty_map[rect.id]))
-                chosen_width = w * len(chosen_items)
+        # متغيرات لتتبع أفضل استخدام
+        best_total_used = 0
+        best_group = None
+        best_qty = 0
 
-            group = Group(id=0, items=chosen_items)
-            if min_width <= group.total_width() <= max_width and len(chosen_items) > 1:
+        # جرب توزيعات مختلفة للكمية
+        for num_items in range(max_possible_qty, 0, -1):
+            # احسب كمية كل عنصر (توزيع متساوي)
+            qty_per_item = Q // num_items
+            if qty_per_item <= 0:
+                continue
+
+            remaining_qty_extra = Q % num_items  # الكمية الإضافية الموزعة على العناصر الأولى
+
+            # أنشئ العناصر بالكميات الموزعة
+            chosen_items = []
+            chosen_width = 0
+
+            for i in range(num_items):
+                # أضف الكمية الإضافية للعناصر الأولى
+                extra = 1 if i < remaining_qty_extra else 0
+                item_qty = qty_per_item + extra
+
+                chosen_items.append(UsedItem(rect.id, w, L, item_qty, original_qty_map[rect.id]))
+                chosen_width += w
+
+            total_used_primary = sum(item.used_qty for item in chosen_items)
+
+            # تحقق من إمكانية تشكيل مجموعة بدون شريك
+            if min_width <= chosen_width <= max_width and len(chosen_items) > 1:
                 # تحقق السماحية
-                ref_len = group.ref_length()
+                ref_len = chosen_items[0].length * chosen_items[0].used_qty
                 valid = True
                 for item in chosen_items[1:]:
                     diff = abs(item.length * item.used_qty - ref_len)
@@ -140,25 +162,25 @@ def create_groups_with_optional_partner(
                         break
 
                 if valid:
-                    # استخدم validate_and_commit_group للتحقق من التكرار
-                    if validate_and_commit_group(chosen_items):
-                        Q = remaining_qty[rect.id]
-                        continue
-                    else:
-                        # إعادة الكميات إذا لم يتم التشكيل
-                        pass  # لا تحديث، لأن لم يتم خصم
+                    # احتسب إجمالي الكمية المستخدمة
+                    current_total_used = total_used_primary
 
-            # إذا لم يصل، ابحث عن شريك
-            if group.total_width() < min_width:
-                total_used_primary = sum(item.used_qty for item in chosen_items if item.rect_id == rect.id)
+                    # إذا كان هذا أفضل استخدام، احفظه
+                    if current_total_used > best_total_used:
+                        best_total_used = current_total_used
+                        best_group = Group(id=0, items=chosen_items.copy())
+                        best_qty = num_items
+
+            # إذا لم يكن العرض كافياً، ابحث عن شريك
+            if chosen_width < min_width:
                 # جرب مع كل شريك ممكن
                 candidate_rects = [r for r in carpets_sorted if r.id != rect.id and remaining_qty.get(r.id, 0) > 0]
                 candidate_rects.sort(key=lambda r: r.width, reverse=True)
 
                 for partner in candidate_rects:
                     p_w = partner.width
-                    group_width = group.total_width()
-                    if group_width + p_w > max_width:
+                    new_width = chosen_width + p_w
+                    if new_width > max_width:
                         continue
 
                     p_L = partner.length if partner.length > 0 else 1
@@ -169,12 +191,11 @@ def create_groups_with_optional_partner(
                     desired_qty = max(1, int(round(ref_len / p_L)))
                     take = min(desired_qty, p_Q)
 
-                    # جرب كميات تنازلية
+                    # جرب كميات تنازلية للشريك
                     for qty in range(take, 0, -1):
                         partner_total_len = p_L * qty
                         diff = abs(partner_total_len - ref_len)
-                        if diff <= tolerance_length and group_width + p_w <= max_width:
-                            new_width = group_width + p_w
+                        if diff <= tolerance_length and new_width <= max_width:
                             if min_width <= new_width <= max_width:
                                 # أنشئ المجموعة
                                 all_items = chosen_items + [UsedItem(partner.id, p_w, p_L, qty, original_qty_map[partner.id])]
@@ -188,16 +209,21 @@ def create_groups_with_optional_partner(
                                             break
 
                                     if valid:
-                                        # استخدم validate_and_commit_group
-                                        if validate_and_commit_group(all_items):
-                                            Q = remaining_qty[rect.id]
-                                            break  # انتقل للشريك التالي أو العنصر التالي
-                                        else:
-                                            # إعادة الكميات إذا لم يتم التشكيل
-                                            pass  # لا تحديث
+                                        # احتسب إجمالي الكمية المستخدمة (أساسي + شريك)
+                                        current_total_used = total_used_primary + qty
 
-            # إذا لم يتم تشكيل مجموعة، قلص الكمية وجرب مرة أخرى
-            Q -= 1
+                                        # إذا كان هذا أفضل استخدام، احفظه
+                                        if current_total_used > best_total_used:
+                                            best_total_used = current_total_used
+                                            best_group = Group(id=0, items=all_items.copy())
+                                            best_qty = num_items
+
+        # إذا وجدنا حل أفضل، أضفه
+        if best_group is not None:
+            # استخدم validate_and_commit_group للتحقق من التكرار
+            if validate_and_commit_group(best_group.items):
+                Q = remaining_qty[rect.id]
+                # إذا لم نتمكن من إضافة المجموعة، لا نحدث Q
 
     # تحقق إضافي: إلغاء أي مجموعة مكونة من عنصر واحد مكرر فقط
     groups_to_remove = []
