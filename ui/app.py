@@ -314,13 +314,12 @@ class RectPackApp(QWidget):
         self.log = QTextEdit()
         self.log.setReadOnly(True)
         self.log.setMaximumHeight(400)  # تقليل ارتفاع منطقة السجل قليلاً
+        self.log.setMinimumHeight(350)
         results_layout.addWidget(self.log)
 
         # جدول النتائج
         table_label = QLabel("📋 ملخص المجموعات:")
         table_label.setFont(QFont("Segoe UI", 11, QFont.Bold))
-        table_label.setMaximumHeight(250)
-        table_label.setMinimumHeight(150)
         results_layout.addWidget(table_label)
 
         self.summary_table = QTableWidget(0, 4)
