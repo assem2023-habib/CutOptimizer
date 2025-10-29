@@ -1,4 +1,5 @@
 from typing import List
+from collections import Counter
 from models.data_models import Carpet, CarpetUsed, GroupCarpet
 from core.group_helpers import (
     generate_valid_partner_combinations,
@@ -9,7 +10,7 @@ def build_groups(
         carpets: List[Carpet],
         min_width: int,
         max_width: int,
-        max_partner: int = 25,
+        max_partner: int = 5,
 ) -> List[GroupCarpet]:
     carpets.sort(key=lambda c: (c.width, c.height, c.qty), reverse=True)
     group: List[GroupCarpet] = []
@@ -17,95 +18,91 @@ def build_groups(
     for main in carpets:
         if not main.is_available():
             continue
-        no_partner_found = False
+        remaining_width = max_width - main.width
+
+        start_index = None
+        for j, c in enumerate(carpets):
+            if c.width <= remaining_width:
+                start_index = j
+                break
+        if start_index is None:
+            continue
         partner_level = 1
-        while partner_level <= max_partner and main.is_available() and not no_partner_found:
-            formed_group_in_level = False
-            # partner_sets = generate_valid_partner_combinations(
-            #     main, carpets, partner_level, min_width, max_width, allow_repetation= False  
-            # )
-            partner_sets = generate_valid_partner_combinations(
-                main, carpets,partner_level,  min_width, max_width, allow_repetation= True
+        print("main", main , ", start_index: ", start_index)
+        for partner_level in range(1, max_partner + 1):
+            if not main.is_available():
+                break
+           
+            partner_sets = []
+            partner_sets += generate_valid_partner_combinations(
+                main, carpets, partner_level, min_width, max_width, allow_repetation=False, start_index=start_index
+            )
+            partner_sets += generate_valid_partner_combinations(
+                main, carpets, partner_level, min_width, max_width, allow_repetation=True, start_index=start_index
             )
 
             if not partner_sets:
-                no_partner_found = True
-                break
+                continue
 
             for partners in partner_sets:
+                if not main.is_available():
+                    break
+
                 elements = [main] + partners
-                a = [e.height for e in elements]
-                XMax = [e.rem_qty for e in elements]
+                elements_counts = Counter(e.id for e in elements)
+                a = []
+                XMax = []
+                unique_elements = []
+                seen = set()
+                for e in elements:
+                    if e.id not in seen:
+                        seen.add(e.id)
+                        unique_elements.append(e)
+                        a.append(e.height)
+
+                        repetition_count = elements_counts[e.id]
+                        available_per_repetition = e.rem_qty // repetition_count
+                        XMax.append(available_per_repetition)
+                if any(x <= 0 for x in XMax):
+                    continue
 
                 x_vals, k_max = equal_products_solution(a, XMax)
                 if not x_vals or k_max <= 0:
                     continue
 
                 used_items : List[CarpetUsed] = []
-                for e,x in zip(elements, x_vals):
+                for e,x in zip(unique_elements, x_vals):
                     if x <= 0:
                         continue
-                    qty_used =min(x, e.rem_qty)
-                    e.consume(qty_used)
-                    used_items.append(
-                        CarpetUsed(
-                            carpet_id=e.id,
-                            width=e.width,
-                            height=e.height,
-                            qty_used=qty_used,
-                            qty_rem=e.rem_qty
+
+                    repetition_count = elements_counts[e.id]
+                    
+                    qty_per_repetition = min(x, e.rem_qty // repetition_count)
+                    if qty_per_repetition <= 0:
+                        continue
+                    total_qty_used = qty_per_repetition * repetition_count
+
+                    if total_qty_used > e.rem_qty:
+                        continue
+
+                    e.consume(total_qty_used)
+                    for _ in range(repetition_count):
+                        used_items.append(
+                            CarpetUsed(
+                                carpet_id=e.id,
+                                width=e.width,
+                                height=e.height,
+                                qty_used=qty_per_repetition,
+                                qty_rem=e.rem_qty
+                            )
                         )
-                    )
-
-                    new_group = GroupCarpet(group_id=group_id, items=used_items)
-                    if new_group.is_valid(min_width, max_width):
-                        group.append(new_group)
-                        group_id += 1
-                        formed_group_in_level = True
-
-                if not formed_group_in_level:
-                    no_partner_found = True
-
-                partner_level +=1
+                        
+                if len(used_items) < 2:
+                    continue
+                new_group = GroupCarpet(group_id=group_id, items=used_items)
+                if new_group.is_valid(min_width, max_width):
+                    group.append(new_group)
+                    group_id += 1
+                partner_level = 1
+        print("main_2", main , ", start_index_2: ", start_index)
     return group
-
-
-def run_demo():
-    from models.data_models import Carpet
-
-    carpets_data =carpets_data = [
-        {"width": 347, "height": 240, "qty": 128},
-        {"width": 315, "height": 400, "qty": 112},
-        {"width": 304, "height": 200, "qty": 20},
-        {"width": 294, "height": 370, "qty": 84},
-        {"width": 263, "height": 200, "qty": 296},
-        {"width": 260, "height": 350, "qty": 124},
-        {"width": 250, "height": 300, "qty": 144},
-        {"width": 242, "height": 160, "qty": 115},
-        {"width": 241, "height": 160, "qty": 40},
-        {"width": 210, "height": 250, "qty": 160},
-        {"width": 210, "height": 285, "qty": 140},
-        {"width": 200, "height": 300, "qty": 12},
-        {"width": 178, "height": 120, "qty": 40},
-        {"width": 168, "height": 235, "qty": 182},
-        {"width": 160, "height": 230, "qty": 18},
-        {"width": 145, "height": 200, "qty": 130},
-        {"width": 133, "height": 190, "qty": 12},
-        {"width": 126, "height": 170, "qty": 182},
-        {"width": 126, "height": 70, "qty": 212},
-        {"width": 95, "height": 60, "qty": 316},
-        {"width": 84, "height": 120, "qty": 210},
-        {"width": 84, "height": 50, "qty": 576},
-        {"width": 80, "height": 150, "qty": 20},
-        {"width": 45, "height": 50, "qty": 150},
-    ]
-
-    carpets = [Carpet(id=i+1, **d) for i, d in enumerate(carpets_data)]
-
-    groups = build_groups(carpets, min_width=370, max_width=400)
-    for g in groups:
-        print(g.summary())
-
-
-if __name__ == "__main__":
-    run_demo()

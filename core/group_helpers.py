@@ -89,10 +89,12 @@ def generate_combinations(candidates: List[Carpet], n: int)-> Iterator[List[Carp
 def generate_combinations_with_repetition(candidates: List[Carpet], n: int)->Iterator[List[Carpet]]:
     for combo in combinations_with_replacement(candidates, n):
         counts = Counter(c.id for c in combo)
-        valid = all(
-            next((cand for cand in candidates if cand.id == cid)).rem_qty >= cnt
-            for cid, cnt in counts.items()
-        )
+        valid = True
+        for cid, cnt in counts.items():
+            carpet = next((cand for cand in candidates if cand.id == cid), None)
+            if not carpet or carpet.rem_qty < cnt:
+                valid = False
+                break
         if valid:
             yield list(combo)
 
@@ -102,14 +104,21 @@ def generate_valid_partner_combinations(
         n: int,
         min_width: int,
         max_width: int,
-        allow_repetation: bool = False
+        allow_repetation: bool = False,
+        start_index: int =0
     )->List[List[Carpet]]:
     valid_group = []
+    filtered_candidates = [
+        c for c in candidates[start_index:]
+        if c.is_available() and (main.width + c.width) <= max_width
+    ]
+    if not filtered_candidates:
+        return valid_group
     generator = (
         generate_combinations_with_repetition if allow_repetation
         else generate_combinations
     )
-    for partners in generator(candidates, n):
+    for partners in generator(filtered_candidates, n):
         total_width = main.width + sum(p.width for p in partners)
         if min_width <= total_width <= max_width:
             valid_group.append(partners)
