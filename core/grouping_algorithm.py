@@ -28,7 +28,6 @@ def build_groups(
         if start_index is None:
             continue
         partner_level = 1
-        print("main", main , ", start_index: ", start_index)
         for partner_level in range(1, max_partner + 1):
             if not main.is_available():
                 break
@@ -104,5 +103,4 @@ def build_groups(
                     group.append(new_group)
                     group_id += 1
                 partner_level = 1
-        print("main_2", main , ", start_index_2: ", start_index)
     return group
