@@ -11,7 +11,7 @@
 
 import pandas as pd
 from typing import List, Dict, Optional, Tuple
-from core.models import Rectangle, Group, UsedItem
+from models.data_models import Rectangle, Group, UsedItem
 
 # =============================================================================
 # DATA CREATION FUNCTIONS - دوال إنشاء البيانات للصفحات

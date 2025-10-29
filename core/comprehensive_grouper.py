@@ -25,7 +25,7 @@ if current_dir not in sys.path:
 
 # Safe import handling for both package and standalone execution
 try:
-    from .models import Rectangle, UsedItem, Group
+    from ..models.data_models import Rectangle, UsedItem, Group
 except ImportError:
     from models import Rectangle, UsedItem, Group
 

@@ -10,7 +10,7 @@ import os
 current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, current_dir)
 
-from core.models import Rectangle
+from models.data_models import Rectangle
 
 def simple_repetition_test():
     """اختبار بسيط للتحقق من حساب التكرار."""

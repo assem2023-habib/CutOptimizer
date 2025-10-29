@@ -1,6 +1,6 @@
 from fpdf import FPDF
 from typing import List
-from core.models import Group
+from models.data_models import Group
 import os
 
 class SimplePDFReport:

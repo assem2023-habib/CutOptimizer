@@ -5,7 +5,7 @@ CutOptimizer - نظام تحسين القطع
 نظام متقدم لتجميع السجاد باستخدام خوارزميات ذكية لتحسين الاستغلال.
 """
 
-from .core.models import Rectangle, UsedItem, Group
+from .models.data_models import Rectangle, UsedItem, Group
 from .core.comprehensive_grouper import ComprehensiveGrouper, create_comprehensive_groups
 from .core.greedy_grouper import GreedyGrouper
 

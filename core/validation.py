@@ -1,5 +1,5 @@
 from typing import Tuple, Optional
-from core.models import Rectangle 
+from models.data_models import Rectangle 
 
 def validate_config(min_w: int, max_w: int, tol: int) ->Tuple[bool, Optional[str]]:
     """

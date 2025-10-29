@@ -12,7 +12,7 @@
 import os
 import pandas as pd
 from typing import List
-from core.models import Rectangle
+from models.data_models import Rectangle
 
 
 def read_input_excel(path: str, sheet_name: int = 0) -> List[Rectangle]:

@@ -7,7 +7,7 @@
 """
 
 from typing import List, Dict, Any
-from core.models import Rectangle, Group, UsedItem
+from models.data_models import Rectangle, Group, UsedItem
 
 
 def calculate_group_efficiency(group: Group) -> Dict[str, float]:
