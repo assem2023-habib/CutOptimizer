@@ -1,5 +1,5 @@
 from typing import Tuple, Optional
-from models.data_models import Rectangle 
+from models.data_models import Carpet 
 
 def validate_config(min_w: int, max_w: int, tol: int) ->Tuple[bool, Optional[str]]:
     """
@@ -23,14 +23,14 @@ def validate_config(min_w: int, max_w: int, tol: int) ->Tuple[bool, Optional[str
         return False, "tolerance must be non-negative."
     return True, None
 
-def validate_carpets(carpets: list[Rectangle])->list[str]:
+def validate_carpets(carpets: list[Carpet])->list[str]:
     # Define a function `validate_carpets` that takes a list of Rectangle objects 
     # and returns a list of error messages (strings) if any validation rules are broken.
     errors = []
     for c in carpets:
         if c.width <= 0:
             errors.append(f"Carpet id {c.id}: width <= 0")
-        if c.length <=0:
+        if c.height <=0:
             errors.append(f"Carpet id {c.id}: length <= 0")
         if c.qty < 0:
             errors.append(f"Carpet id {c.id}: qty < 0")

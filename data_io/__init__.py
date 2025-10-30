@@ -21,16 +21,8 @@
 from .excel_io import (
     read_input_excel,
     write_output_excel,
-    create_enhanced_remainder_groups,
-    create_enhanced_remainder_groups_from_rectangles,
-    exhaustively_regroup,
-    generate_partner_suggestions,
     validate_excel_data,
     get_excel_summary,
-    analyze_remaining_items,
-    get_optimization_recommendations,
-    calculate_group_efficiency,
-    optimize_group_formation
 )
 
 # استيراد الدوال من الوحدات المنفصلة
@@ -42,22 +34,6 @@ from .excel_reader import (
 
 from .excel_writer import (
     write_output_excel as write_excel
-)
-
-from .remainder_optimizer import (
-    create_enhanced_remainder_groups as create_groups,
-    create_enhanced_remainder_groups_from_rectangles as create_groups_from_rectangles,
-    exhaustively_regroup as regroup,
-    calculate_group_efficiency as calculate_efficiency,
-    process_remainder_complete as process_remainder,
-    generate_size_suggestions as generate_suggestions,
-    analyze_remaining_for_optimization as analyze_optimization
-)
-
-from .suggestion_generator import (
-    generate_partner_suggestions as generate_suggestions,
-    analyze_remaining_items as analyze_items,
-    get_optimization_recommendations as get_recommendations
 )
 
 # تعريف الإصدار
@@ -83,7 +59,6 @@ __all__ = [
     'generate_size_suggestions',
     'analyze_remaining_for_optimization',
     
-    # الدوال البديلة
     'read_excel',
     'write_excel',
     'create_groups',
