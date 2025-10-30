@@ -305,8 +305,6 @@ def _apply_advanced_formatting(writer, sheet_name, df, header_format, total_form
                     if row_num == 0:
                         continue
                     else:
-                        if col_num >= max_col:  # لا تحاول قراءة بيانات خارج الأعمدة
-                            cell_value = ''
                         if row_num >= 1 and row_num - 1 < len(df):
                             cell_value = df.iloc[row_num - 1, col_num]
                         else:

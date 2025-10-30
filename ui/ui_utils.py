@@ -1,8 +1,8 @@
 import json
 import os
-from PySide6.QtWidgets import (QWidget, QPushButton, QFrame, QLabel, QHBoxLayout, QVBoxLayout)
+from PySide6.QtWidgets import ( QPushButton, QFrame, QLabel, QVBoxLayout)
 from PySide6.QtCore import Qt, QPropertyAnimation, QRect
-from PySide6.QtGui import QFont
+from PySide6.QtGui import QPixmap, QPalette, QBrush, QFont
 from .theme_manager import  apply_dark_theme, apply_light_theme, save_theme_preference, load_theme_preference
 
 def toggle_maximize_restore(self):

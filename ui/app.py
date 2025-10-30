@@ -20,11 +20,11 @@ from .theme_manager import  (apply_dark_theme, apply_light_theme,
                              save_theme_preference, load_theme_preference)
 
 class WorkerSignals(QObject):
-    progress = Signal(int)              # 0-100
+    progress = Signal(int)              
     log = Signal(str)
     finished = Signal()
     error = Signal(str)
-    data_ready = Signal(list, list, dict)  # groups, remaining, stats
+    data_ready = Signal(list, list, dict)
 
 class GroupingWorker(QThread):
     def __init__(self, input_path, output_path, min_width, max_width, tolerance_len, cfg):
