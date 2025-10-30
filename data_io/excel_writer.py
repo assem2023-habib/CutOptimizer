@@ -1,18 +1,8 @@
-"""
-وحدة كتابة ملفات Excel
-=====================
-
-هذه الوحدة تحتوي على الدوال المسؤولة عن كتابة النتائج إلى ملفات Excel
-بشكل منظم ومفصل مع إحصائيات شاملة.
-
-المؤلف: نظام تحسين القطع
-التاريخ: 2024
-"""
 
 import pandas as pd
 from typing import List, Dict, Optional, Tuple
-from models.data_models import Rectangle, Group, UsedItem
-from pandas.api.types import is_numeric_dtype
+from models.data_models import Carpet, GroupCarpet, CarpetUsed
+import traceback
 
 # استيراد دوال إنشاء الصفحات من الملف المنفصل
 from .excel_sheets import (
@@ -23,10 +13,8 @@ from .excel_sheets import (
     _create_audit_sheet,
     _create_enhanced_stats_sheet,
     _create_ui_summary_sheet,
-    _create_optimized_remainder_groups_sheet,
     _create_suggestions_sheet,
-    _create_size_suggestions_sheet,
-    _suggest_additional_items
+    _create_size_suggestions_sheet
 )
 
 
@@ -36,57 +24,38 @@ from .excel_sheets import (
 
 def write_output_excel(
     path: str,
-    groups: List[Group],
-    remaining: List[Rectangle],
-    remainder_groups: Optional[List[Group]] = None,
+    groups: List[GroupCarpet],
+    remaining: List[Carpet],
+    remainder_groups: Optional[List[GroupCarpet]] = None,
     min_width: Optional[int] = None,
     max_width: Optional[int] = None,
     tolerance_length: Optional[int] = None,
-    originals: Optional[List[Rectangle]] = None,
-    enhanced_remainder_groups: Optional[List[Group]] = None
+    originals: Optional[List[Carpet]] = None,
+    enhanced_remainder_groups: Optional[List[GroupCarpet]] = None
 ) -> None:
     """
-    كتابة النتائج إلى ملف Excel مع تقارير مفصلة.
-
-    هذه الدالة تنشئ ملف Excel يحتوي على عدة أوراق:
-    - تفاصيل المجموعات: تفاصيل كل مجموعة مع تصنيفها
-    - ملخص المجموعات: إحصائيات شاملة للمجموعات
-    - السجاد المتبقي: العناصر التي لم يتم استخدامها
-    - ملخص الواجهة: ملخص مبسط للعرض
-    - الإجماليات: مقارنة قبل وبعد العملية
-    - اقتراحات تشكيل مجموعات: اقتراحات لتجميع البواقي
-    - إحصائيات المجموعات الإضافية: إحصائيات المجموعات المحسنة
-    - تدقيق الكميات: فحص دقيق للكميات
-
+    كتابة النتائج إلى ملف Excel مع صفحات متعددة.
+    
     المعاملات:
     ----------
     path : str
-        مسار ملف Excel المراد كتابته
-    groups : List[Group]
+        مسار ملف Excel الناتج
+    groups : List[GroupCarpet]
         المجموعات الأصلية
-    remaining : List[Rectangle]
+    remaining : List[Carpet]
         العناصر المتبقية
-    remainder_groups : Optional[List[Group]]
+    remainder_groups : Optional[List[GroupCarpet]]
         مجموعات البواقي العادية
+    enhanced_remainder_groups : Optional[List[GroupCarpet]]
+        مجموعات البواقي المحسنة
     min_width : Optional[int]
         الحد الأدنى للعرض
     max_width : Optional[int]
         الحد الأقصى للعرض
     tolerance_length : Optional[int]
-        حدود السماحية للطول
-    originals : Optional[List[Rectangle]]
-        العناصر الأصلية للتدقيق
-    enhanced_remainder_groups : Optional[List[Group]]
-        المجموعات الإضافية المحسنة من البواقي
-
-    أمثلة:
-    -------
-    >>> write_output_excel(
-    >>>     "results.xlsx",
-    >>>     groups=original_groups,
-    >>>     remaining=remaining_items,
-    >>>     enhanced_remainder_groups=enhanced_groups
-    >>> )
+        السماحية للطول
+    originals : Optional[List[Carpet]]
+        البيانات الأصلية للتدقيق
     """
     # إنشاء ورقة تفاصيل المجموعات
     df1 = _create_group_details_sheet(groups, remainder_groups, enhanced_remainder_groups)
@@ -147,19 +116,17 @@ def _write_all_sheets_to_excel(
                 totals_df.to_excel(writer, sheet_name='الإجماليات', index=False)
 
             # كتابة ورقة التدقيق
-            try:
-                if not df_audit.empty:
-                    df_audit.to_excel(writer, sheet_name='تدقيق الكميات', index=False)
-            except Exception as e:
-                # Silent error handling for audit sheet
-                pass
+            if not df_audit.empty:
+                df_audit.to_excel(writer, sheet_name='تدقيق الكميات', index=False)
+
+            # كتابة المجموعات المحسنة
+            if not df_optimized.empty:
+                df_optimized.to_excel(writer, sheet_name='اقتراحات محسنة', index=False)
 
             # ضبط عرض الأعمدة تلقائياً لكل ورقة
             _auto_adjust_column_width(writer, df1, df2, df3, totals_df, df_audit)
 
     except Exception as e:
-        # Silent error handling for production - attempt simplified file creation
-        # محاولة كتابة ملف مبسط جداً في حالة الخطأ
         try:
             with pd.ExcelWriter(path, engine='xlsxwriter') as writer:
                 df1.to_excel(writer, sheet_name='تفاصيل المجموعات', index=False)
@@ -173,7 +140,7 @@ def _write_all_sheets_to_excel(
 
         except Exception as e2:
             # If even the simplified version fails, just pass silently
-            pass
+            raise
 
 
 def _auto_adjust_column_width(writer, df1, df2, df3, totals_df, df_audit):
@@ -237,11 +204,142 @@ def _auto_adjust_column_width(writer, df1, df2, df3, totals_df, df_audit):
                     except Exception as e:
                         # في حالة حدوث خطأ في ضبط عرض العمود، استمر بالعمود التالي
                         worksheet.set_column(i, i, 15)  # عرض افتراضي
-                        continue
 
             except Exception as e:
-                import traceback
                 traceback.print_exc()
+
+def _apply_advanced_formatting(writer, sheet_name, df, header_format, total_format, normal_format, number_format):
+    """تطبيق التنسيقات المتقدمة على الورقة مع حل مشكلة الصفوف المكررة."""
+    worksheet = writer.sheets[sheet_name]
+
+    try:
+        # ضبط عرض الأعمدة تلقائياً
+        for col_num, col_name in enumerate(df.columns, start=0):
+            # الحصول على أطول محتوى في العمود
+            col_data = df[col_name].astype(str)
+            # حساب أطول طول للمحتوى في العمود
+            max_len = max(col_data.str.len().max(), len(str(col_name)))
+            # ضبط عرض العمود بناءً على أطول محتوى
+            column_width = min(max_len + 3, 60)
+            worksheet.set_column(col_num, col_num, column_width)
+
+        # تطبيق تنسيق العناوين (الصف الأول)
+        for col_num, col_name in enumerate(df.columns):
+            worksheet.write(1, col_num, col_name, header_format)
+
+        # إضافة صف مجاميع في نهاية الجدول
+        df = _add_summary_row(df)
+
+        # تطبيق تنسيقات للبيانات - حل مشكلة الصفوف المكررة
+        total_rows_found = set()  # لتتبع الصفوف التي تم التعامل معها كصفوف مجاميع
+
+        for row_num in range(len(df)):
+            # الصف الأخير هو صف المجاميع - تعامله بشكل خاص
+            if row_num == len(df) - 1 and len(df) > 0:
+                # صف المجاميع - تطبيق التنسيق الخاص مع الخط المغمق والمحاذاة في المنتصف
+                excel_row = row_num + 1
+                for col_num in range(len(df.columns)):
+                    cell_value = df.iloc[row_num, col_num]
+                    col_name = df.columns[col_num]
+
+                    # إنشاء تنسيق خاص لصف المجاميع مع خط مغمق ومحاذاة في المنتصف
+                    summary_format = writer.book.add_format({
+                        'bold': True,
+                        'font_size': 11,
+                        'font_name': 'Arial',
+                        'bg_color': '#E6F3FF',
+                        'font_color': '#0066CC',
+                        'border': 2,
+                        'border_color': '#006400',
+                        'align': 'center',
+                        'valign': 'vcenter',
+                        'num_format': '#,##0.00'
+                    })
+                    numeric_cols = ['العرض', 'الطول','الارتفاع', 'الكمية المستخدمة', 'الكمية الأصلية',
+                                  'الطول الاجمالي للسجادة', 'العرض الإجمالي', 'الطول الإجمالي المرجعي (التقريبي)',
+                                  'المساحة الإجمالية', 'الكمية المتبقية', 'الإجمالي قبل العملية',
+                                  'الإجمالي بعد العملية', 'المستهلك', 'الكفاءة (%)']
+
+                    if col_name in numeric_cols:
+                        # تنسيق خاص للأرقام في صف المجاميع
+                        try:
+                            numeric_value = float(cell_value) if cell_value != '' else 0
+                            worksheet.write(excel_row, col_num, numeric_value, summary_format)
+                        except (ValueError, TypeError):
+                            worksheet.write(excel_row, col_num, cell_value, summary_format)
+                    else:
+                        # تنسيق خاص للنصوص في صف المجاميع
+                        worksheet.write(excel_row, col_num, cell_value, summary_format)
+            else:
+                # تجنب معالجة نفس الصف مرتين كصفوف مجاميع
+                if row_num in total_rows_found:
+                    continue
+
+                # تحقق بسيط وبديهي لتحديد صفوف المجاميع
+                is_total_row = _is_total_row_simple(df, row_num)
+
+                if is_total_row:
+                    # تطبيق تنسيق صف المجاميع على هذا الصف والصف التالي إذا كان فارغاً
+                    _apply_total_row_formatting(worksheet, df, row_num, total_format, total_rows_found)
+                else:
+                    # تطبيق التنسيقات العادية للبيانات مع الحواف واللون الأخضر
+                    # كتابة البيانات في السطر row_num + 1 (بعد العناوين في السطر 1)
+                    excel_row = row_num + 1
+                    for col_num in range(len(df.columns)):
+                        cell_value = df.iloc[row_num, col_num]
+                        col_name = df.columns[col_num]
+
+                        numeric_cols = ['العرض', 'الطول','الارتفاع', 'الكمية المستخدمة', 'الكمية الأصلية',
+                                    'الطول الاجمالي للسجادة', 'العرض الإجمالي', 'الطول الإجمالي المرجعي (التقريبي)',
+                                    'المساحة الإجمالية', 'الكمية المتبقية', 'الإجمالي قبل العملية',
+                                    'الإجمالي بعد العملية', 'المستهلك', 'الكفاءة (%)']
+
+                        if col_name in numeric_cols:
+                            # تنسيق خاص للأرقام مع الحواف واللون الأخضر
+                            try:
+                                numeric_value = float(cell_value) if cell_value != '' else 0
+                                worksheet.write(excel_row, col_num, numeric_value, number_format)
+                            except (ValueError, TypeError):
+                                worksheet.write(excel_row, col_num, cell_value, normal_format)
+                        else:
+                            # تنسيق عام للنصوص مع الحواف واللون الأخضر
+                            worksheet.write(excel_row, col_num, cell_value, normal_format)
+
+        
+        # إضافة حواف خارجية قوية للجدول بالكامل
+        # حساب عدد الصفوف في Excel (عناوين الأعمدة + البيانات + صف المجاميع)
+        excel_rows = 1 + len(df)  # عناوين (1) + البيانات (len(df))
+        max_col = len(df.columns)
+
+        # إضافة حافة خارجية للجدول بالكامل
+        border_format = writer.book.add_format({
+            'border': 3,  # حافة خارجية سميكة جداً
+            'border_color': '#006400',  # أخضر داكن
+            'bg_color': '#E8F5E8'  # نفس اللون الأخضر الفاتح
+        })
+
+        # تطبيق الحافة الخارجية على الجدول بالكامل
+        for row_num in range(excel_rows):
+            for col_num in range(max_col + 1):
+                # الحواف الخارجية فقط (استثناء العناوين في الصف الأول)
+                if row_num == 0 or row_num == excel_rows - 1 or col_num == 0 or col_num == max_col:
+                    if row_num == 0:
+                        # لا نكتب فوق العناوين في الصف الأول
+                        continue
+                    else:
+                        # التأكد من عدم تجاوز حدود DataFrame (يشمل صف المجاميع)
+                        if row_num >= 1 and row_num - 1 < len(df):
+                            cell_value = df.iloc[row_num - 1, col_num]
+                        else:
+                            cell_value = ''
+                        worksheet.write(row_num, col_num, cell_value, border_format)
+
+        # إضافة تنسيقات شرطية لتحسين المظهر
+        add_conditional_formatting(writer, worksheet, df)
+
+    except Exception as e:
+        traceback.print_exc()
+        raise
 
 
 def _add_summary_row(df: pd.DataFrame) -> pd.DataFrame:
@@ -292,147 +390,13 @@ def _add_summary_row(df: pd.DataFrame) -> pd.DataFrame:
     df_with_summary = pd.concat([df_with_summary, pd.DataFrame([summary_row])], ignore_index=True)
 
     return df_with_summary
-
-
-def _apply_advanced_formatting(writer, sheet_name, df, header_format, total_format, normal_format, number_format):
-    """تطبيق التنسيقات المتقدمة على الورقة مع حل مشكلة الصفوف المكررة."""
-    worksheet = writer.sheets[sheet_name]
-
-    try:
-        # ضبط عرض الأعمدة تلقائياً
-        for col_num, col_name in enumerate(df.columns, start=0):
-            # الحصول على أطول محتوى في العمود
-            col_data = df[col_name].astype(str)
-            # حساب أطول طول للمحتوى في العمود
-            max_len = max(col_data.str.len().max(), len(str(col_name)))
-            # ضبط عرض العمود بناءً على أطول محتوى
-            column_width = min(max_len + 3, 60)
-            worksheet.set_column(col_num, col_num, column_width)
-
-        # تطبيق تنسيق العناوين (الصف الأول)
-        for col_num, col_name in enumerate(df.columns):
-            worksheet.write(1, col_num, col_name, header_format)
-
-        # إضافة صف مجاميع في نهاية الجدول
-        df = _add_summary_row(df)
-
-        # تطبيق تنسيقات للبيانات - حل مشكلة الصفوف المكررة
-        total_rows_found = set()  # لتتبع الصفوف التي تم التعامل معها كصفوف مجاميع
-
-        for row_num in range(len(df)):
-            # الصف الأخير هو صف المجاميع - تعامله بشكل خاص
-            if row_num == len(df) - 1 and len(df) > 0:
-                # صف المجاميع - تطبيق التنسيق الخاص مع الخط المغمق والمحاذاة في المنتصف
-                excel_row = row_num + 1
-                for col_num in range(len(df.columns)):
-                    cell_value = df.iloc[row_num, col_num]
-                    col_name = df.columns[col_num]
-
-                    # إنشاء تنسيق خاص لصف المجاميع مع خط مغمق ومحاذاة في المنتصف
-                    summary_format = writer.book.add_format({
-                        'bold': True,  # خط مغمق
-                        'font_size': 11,
-                        'font_name': 'Arial',
-                        'bg_color': '#E6F3FF',  # أزرق فاتح مميز
-                        'font_color': '#0066CC',  # أزرق داكن
-                        'border': 2,
-                        'border_color': '#006400',
-                        'align': 'center',  # محاذاة في المنتصف
-                        'valign': 'vcenter',
-                        'num_format': '#,##0.00'
-                    })
-
-                    if col_name in ['العرض', 'الطول', 'الكمية المستخدمة', 'الكمية الأصلية',
-                                  'الطول الاجمالي للسجادة', 'العرض الإجمالي', 'الطول الإجمالي المرجعي (التقريبي)',
-                                  'المساحة الإجمالية', 'الكمية المتبقية', 'الإجمالي قبل العملية',
-                                  'الإجمالي بعد العملية', 'المستهلك', 'الكفاءة (%)']:
-                        # تنسيق خاص للأرقام في صف المجاميع
-                        try:
-                            numeric_value = float(cell_value) if cell_value != '' else 0
-                            worksheet.write(excel_row, col_num, numeric_value, summary_format)
-                        except (ValueError, TypeError):
-                            worksheet.write(excel_row, col_num, cell_value, summary_format)
-                    else:
-                        # تنسيق خاص للنصوص في صف المجاميع
-                        worksheet.write(excel_row, col_num, cell_value, summary_format)
-            else:
-                # تجنب معالجة نفس الصف مرتين كصفوف مجاميع
-                if row_num in total_rows_found:
-                    continue
-
-                # تحقق بسيط وبديهي لتحديد صفوف المجاميع
-                is_total_row = _is_total_row_simple(df, row_num)
-
-                if is_total_row:
-                    # تطبيق تنسيق صف المجاميع على هذا الصف والصف التالي إذا كان فارغاً
-                    _apply_total_row_formatting(worksheet, df, row_num, total_format, total_rows_found)
-                else:
-                    # تطبيق التنسيقات العادية للبيانات مع الحواف واللون الأخضر
-                    # كتابة البيانات في السطر row_num + 1 (بعد العناوين في السطر 1)
-                    excel_row = row_num + 1
-                    for col_num in range(len(df.columns)):
-                        cell_value = df.iloc[row_num, col_num]
-                        col_name = df.columns[col_num]
-
-                        if col_name in ['العرض', 'الطول', 'الكمية المستخدمة', 'الكمية الأصلية',
-                                      'الطول الاجمالي للسجادة', 'العرض الإجمالي', 'الطول الإجمالي المرجعي (التقريبي)',
-                                      'المساحة الإجمالية', 'الكمية المتبقية', 'الإجمالي قبل العملية',
-                                      'الإجمالي بعد العملية', 'المستهلك', 'الكفاءة (%)']:
-                            # تنسيق خاص للأرقام مع الحواف واللون الأخضر
-                            try:
-                                numeric_value = float(cell_value) if cell_value != '' else 0
-                                worksheet.write(excel_row, col_num, numeric_value, number_format)
-                            except (ValueError, TypeError):
-                                worksheet.write(excel_row, col_num, cell_value, normal_format)
-                        else:
-                            # تنسيق عام للنصوص مع الحواف واللون الأخضر
-                            worksheet.write(excel_row, col_num, cell_value, normal_format)
-
-        
-        # إضافة حواف خارجية قوية للجدول بالكامل
-        # حساب عدد الصفوف في Excel (عناوين الأعمدة + البيانات + صف المجاميع)
-        excel_rows = 1 + len(df)  # عناوين (1) + البيانات (len(df))
-        max_col = len(df.columns) - 1
-
-        # إضافة حافة خارجية للجدول بالكامل
-        border_format = writer.book.add_format({
-            'border': 3,  # حافة خارجية سميكة جداً
-            'border_color': '#006400',  # أخضر داكن
-            'bg_color': '#E8F5E8'  # نفس اللون الأخضر الفاتح
-        })
-
-        # تطبيق الحافة الخارجية على الجدول بالكامل
-        for row_num in range(excel_rows):
-            for col_num in range(max_col + 1):
-                # الحواف الخارجية فقط (استثناء العناوين في الصف الأول)
-                if row_num == 0 or row_num == excel_rows - 1 or col_num == 0 or col_num == max_col:
-                    if row_num == 0:
-                        # لا نكتب فوق العناوين في الصف الأول
-                        continue
-                    else:
-                        # التأكد من عدم تجاوز حدود DataFrame (يشمل صف المجاميع)
-                        if row_num >= 1 and row_num - 1 < len(df):
-                            cell_value = df.iloc[row_num - 1, col_num]
-                        else:
-                            cell_value = ''
-                        worksheet.write(row_num, col_num, cell_value, border_format)
-
-        # إضافة تنسيقات شرطية لتحسين المظهر
-        add_conditional_formatting(writer, worksheet, df)
-
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        raise
-
-
+    
 # =============================================================================
 # FORMAT CREATION FUNCTIONS - دوال إنشاء التنسيقات
 # =============================================================================
 
 def add_conditional_formatting(writer, worksheet, df: pd.DataFrame) -> None:
     """إضافة تنسيقات شرطية لتمييز البيانات."""
-    # تنسيق شرطي للكفاءة العالية (أكبر من 80%)
     try:
         efficiency_col = None
         for col_num, col_name in enumerate(df.columns):
@@ -451,8 +415,6 @@ def add_conditional_formatting(writer, worksheet, df: pd.DataFrame) -> None:
                 })
             })
     except Exception as e:
-        # معالجة أفضل للأخطاء
-        print(f"خطأ في التنسيق الشرطي للكفاءة: {e}")
         pass
     
 def _create_header_format(workbook):
@@ -461,7 +423,7 @@ def _create_header_format(workbook):
         'bold': True,
         'font_size': 12,
         'font_name': 'Arial',
-        'bg_color': '#4F81BD',  # أزرق متوسط
+        'bg_color': '#4F81BD',
         'font_color': 'white',
         'border': 1,
         'border_color': 'black',
@@ -521,14 +483,7 @@ def _create_number_format(workbook):
 # =============================================================================
 
 def _is_total_row_simple(df, row_num):
-    """
-    تحقق محسّن لتحديد ما إذا كان الصف صف مجاميع.
-
-    الإصلاحات:
-    - فصل التحقق من القيم الرقمية عن الكلمات النصية
-    - معالجة أفضل للقيم الفارغة
-    - التحقق من وجود الأعمدة أولاً
-    """
+    """تحقق إذا كان الصف صف مجاميع."""
     if row_num >= len(df):
         return False
 
@@ -570,30 +525,12 @@ def _is_total_row_simple(df, row_num):
 
 
 def _apply_total_row_formatting(worksheet, df, row_num, total_format, total_rows_found):
-    """
-    تطبيق تنسيق صف المجاميع مع تجنب التكرار.
+    """تطبيق تنسيق صف المجاميع."""
 
-    المعاملات:
-    -----------
-    worksheet : xlsxwriter.worksheet
-        ورقة Excel
-    df : pd.DataFrame
-        البيانات
-    row_num : int
-        رقم الصف (في DataFrame)
-    total_format : xlsxwriter.format
-        تنسيق المجاميع
-    total_rows_found : set
-        مجموعة الصفوف المعالجة (لتجنب التكرار)
-    """
     if row_num >= len(df):
         return
 
-    # إضافة الصف إلى قائمة الصفوف المعالجة
     total_rows_found.add(row_num)
-
-    # تطبيق التنسيق على جميع الأعمدة في الصف
-    # +1 لحساب صف العناوين (1)
     excel_row = row_num + 1
 
     for col_num in range(len(df.columns)):
@@ -648,312 +585,53 @@ def _add_sheet_header_info(writer, sheet_name, df):
         pass
 
 def _create_optimized_remainder_groups_sheet(
-    remaining: List[Rectangle],
-    originals: Optional[List[Rectangle]],
+    remaining: List[Carpet],
+    originals: Optional[List[Carpet]],
     min_width: Optional[int] = None,
     max_width: Optional[int] = None,
     tolerance_length: Optional[int] = None
 ) -> pd.DataFrame:
-    """
-    إنشاء ورقة اقتراحات تشكيل المجموعات المحسنة من المتبقيات.
-    
-    هذه الدالة تشكل مجموعات من المتبقيات، ثم تقترح عناصر إضافية من الأصليات.
-    
-    ملاحظات مهمة:
-    - العرض الكلي = مجموع عرض كل نوع (مرة واحدة فقط، بغض النظر عن الكمية)
-    - tolerance_ref لكل عنصر = length * qty
-    - الشرط: abs(tolerance_ref1 - tolerance_ref2) <= tolerance_length
-    
-    المعاملات:
-    -----------
-    remaining : List[Rectangle]
-        العناصر المتبقية.
-    originals : Optional[List[Rectangle]]
-        العناصر الأصلية للاقتراحات.
-    min_width : Optional[int]
-        الحد الأدنى للعرض (افتراضي 370).
-    max_width : Optional[int]
-        الحد الأقصى للعرض (افتراضي 400).
-    tolerance_length : Optional[int]
-        سماحية الطول (افتراضي 100).
-        
-    الإرجاع:
-    --------
-    pd.DataFrame: الورقة الجديدة.
-    """
+    """إنشاء ورقة اقتراحات مجموعات محسنة من المتبقيات."""
     # تعيين القيم الافتراضية
     eff_min_width = 370 if min_width is None else int(min_width)
     eff_max_width = 400 if max_width is None else int(max_width)
-    eff_tolerance = 100 if tolerance_length is None else int(tolerance_length)
-    
-    # نسخ البيانات لتجنب التعديل
-    remaining_copy = [Rectangle(r.id, r.width, r.length, r.qty) for r in remaining]
-    originals_copy = [Rectangle(o.id, o.width, o.length, o.qty) for o in originals] if originals else []
+    eff_tolerance = 0 if tolerance_length is None else int(tolerance_length)
     
     # قائمة للصفوف
     rows = []
-    group_id = 1
-    
-    # تجميع المتبقيات حسب المعرف
-    remaining_dict: Dict[Tuple[int, int, int], int] = {}
-    for r in remaining_copy:
-        key = (r.id, r.width, r.length)
-        remaining_dict[key] = remaining_dict.get(key, 0) + r.qty
-    
-    # خوارزمية تشكيل المجموعات (Greedy مع تحسين)
-    iteration = 0
-    max_iterations = 1000
-    
-    while remaining_dict and iteration < max_iterations:
-        iteration += 1
-        group_items = []
-        current_width = 0
-        ref_length_value = None  # الطول المرجعي (من أول عنصر)
-        
-        # فرز المتبقيات حسب العرض تنازلياً (لاستغلال العرض أولاً)
-        sorted_remaining = sorted(remaining_dict.items(), 
-                                 key=lambda x: (x[0][1], x[0][2]), 
-                                 reverse=True)
-        
-        # اختيار العنصر الأول (الأعرض)
-        first_added = False
-        for key, qty in sorted_remaining[:]:
-            if qty <= 0:
-                if key in remaining_dict:
-                    del remaining_dict[key]
-                continue
-            
-            rect_id, w, l = key
-            
-            # التحقق من العرض
-            if current_width + w > eff_max_width:
-                continue
-            
-            if not first_added:
-                # أول عنصر: نحاول أخذ أكبر كمية ممكنة
-                max_qty = min(qty, (eff_max_width - current_width) // w) if w > 0 else qty
-                
-                for test_qty in range(max_qty, 0, -1):
-                    ref_length_value = l * test_qty
+    if remaining:
+        remaining_with_qty = [r for r in remaining if r.rem_qty > 0]
+        if remaining_with_qty:
+            group_id = 1
+            for i in range(0, len(remaining_with_qty), 2):
+                main = remaining_with_qty[i]
+                partners = remaining_with_qty[i+1 : i+3] if i +1 < len(remaining_with_qty) else []
+
+                total_width = main.width + sum(p.width for p in partners)
+                if eff_min_width <= total_width <= eff_max_width:
+                    items_str = f"ID:{main.id} ({main.width}x{main.height}) qty:{main.rem_qty}"
+                    for p in partners:
+                        items_str += f", ID:{p.id} ({p.width}x{p.height}) qty:{p.rem_qty}"
                     
-                    # إضافة العنصر الأول
-                    group_items.append((key, test_qty))
-                    current_width += w  # العرض يُحسب مرة واحدة فقط
-                    remaining_dict[key] -= test_qty
-                    if remaining_dict[key] <= 0:
-                        del remaining_dict[key]
-                    first_added = True
-                    break
-                
-                if first_added:
-                    break
-        
-        if not first_added or ref_length_value is None:
-            break
-        
-        # إضافة عناصر إضافية (شركاء)
-        partners_added = True
-        max_partners = 10
-        
-        while partners_added and current_width < eff_max_width and len(group_items) < max_partners:
-            partners_added = False
-            best_partner = None
-            best_qty = 0
-            best_new_width = current_width
-            
-            # البحث عن أفضل شريك
-            for key, qty in list(remaining_dict.items()):
-                if qty <= 0:
-                    continue
-                
-                rect_id, w, l = key
-                
-                # التحقق من العرض
-                new_width = current_width + w
-                if new_width > eff_max_width:
-                    continue
-                
-                # البحث عن أعظم كمية تحقق tolerance
-                if l <= 0:
-                    continue
-                
-                ideal_qty = ref_length_value / l
-                search_range = max(3, int(ideal_qty * 0.2))
-                
-                for test_qty in range(max(1, int(ideal_qty - search_range)),
-                                     min(int(ideal_qty + search_range) + 1, qty + 1)):
-                    if test_qty <= 0 or test_qty > qty:
-                        continue
-                    
-                    tolerance_ref = l * test_qty
-                    diff = abs(tolerance_ref - ref_length_value)
-                    
-                    if diff <= eff_tolerance:
-                        # عنصر مقبول: نفضل الذي يعطي أكبر عرض
-                        if new_width > best_new_width or (new_width == best_new_width and test_qty > best_qty):
-                            best_partner = key
-                            best_qty = test_qty
-                            best_new_width = new_width
-                        break
-            
-            if best_partner:
-                group_items.append((best_partner, best_qty))
-                current_width = best_new_width
-                remaining_dict[best_partner] -= best_qty
-                if remaining_dict[best_partner] <= 0:
-                    del remaining_dict[best_partner]
-                partners_added = True
-        
-        # التحقق من صلاحية المجموعة
-        if not group_items or current_width < eff_min_width:
-            # مجموعة غير صالحة
-            break
-        
-        # التحقق من وجود عنصرين مختلفين على الأقل
-        unique_ids = set(item[0][0] for item in group_items)
-        if len(unique_ids) < 2:
-            # مجموعة من عنصر واحد - ممنوعة
-            break
-        
-        # حساب الكفاءة
-        efficiency = (current_width / eff_max_width) * 100 if eff_max_width > 0 else 0
-        
-        # اقتراح عناصر إضافية
-        suggestions = _suggest_additional_items(
-            group_items, 
-            originals_copy, 
-            eff_min_width, 
-            eff_max_width, 
-            current_width,
-            ref_length_value,
-            eff_tolerance
-        )
-        
-        # إضافة الصف للورقة
-        items_str = ', '.join([f"ID:{k[0]} ({k[1]}x{k[2]}) qty:{q}" for k, q in group_items])
+                    rows.append({
+                        'رقم المجموعة': f'مجموعة_{group_id}',
+                        'العناصر المستخدمة': items_str,
+                        'العرض الإجمالي': total_width,
+                        'الكفاءة (%)': round(total_width / eff_max_width * 100, 2),
+                        'ملاحظات': 'اقتراح تلقائي'
+                    })
+                    group_id += 1
+
+    if not rows:
         rows.append({
-            'رقم المجموعة': f'مجموعة_{group_id}',
-            'العناصر المستخدمة': items_str,
-            'العرض الإجمالي': current_width,
-            'الطول المرجعي': ref_length_value,
-            'الكفاءة (%)': round(efficiency, 2),
-            'الاقتراحات الإضافية': ', '.join(suggestions) if suggestions else 'لا توجد اقتراحات',
-            'ملاحظات': 'مجموعة صالحة'
-        })
-        group_id += 1
-    
-    # إنشاء DataFrame
-    df = pd.DataFrame(rows)
-    
-    # إضافة صف فارغ في حالة عدم وجود بيانات
-    if df.empty:
-        df = pd.DataFrame([{
-            'رقم المجموعة': 'لا توجد مجموعات محسنة',
+            'رقم المجموعة': 'لا توجد مجموعات',
             'العناصر المستخدمة': 'لا توجد بيانات',
             'العرض الإجمالي': 0,
-            'الطول المرجعي': 0,
             'الكفاءة (%)': 0,
-            'الاقتراحات الإضافية': 'لا توجد اقتراحات',
-            'ملاحظات': 'لا توجد بيانات متاحة للتحسين'
-        }])
-    
-    return df
+            'ملاحظات': 'لا توجد متبقيات كافية'
+        })
 
-
-def _suggest_additional_items(
-    group_items: List[Tuple],
-    originals: List[Rectangle],
-    min_width: int,
-    max_width: int,
-    current_width: int,
-    ref_length_value: int,
-    tolerance: int
-) -> List[str]:
-    """
-    اقتراح عناصر إضافية لإكمال المجموعة بناءً على البيانات الموجودة.
-    
-    يتحقق من:
-    1. العرض المتبقي
-    2. شرط tolerance
-    3. الكمية المتاحة
-    
-    المعاملات:
-    -----------
-    group_items : List[Tuple]
-        العناصر الحالية في المجموعة
-    originals : List[Rectangle]
-        العناصر الأصلية المتاحة
-    min_width : int
-        الحد الأدنى للعرض
-    max_width : int
-        الحد الأقصى للعرض
-    current_width : int
-        العرض الحالي للمجموعة
-    ref_length_value : int
-        الطول المرجعي للمجموعة
-    tolerance : int
-        السماحية المسموحة
-        
-    الإرجاع:
-    --------
-    List[str]: قائمة الاقتراحات
-    """
-    suggestions = []
-    remaining_width = max_width - current_width
-    
-    if remaining_width <= 0:
-        return suggestions
-    
-    # تجميع العناصر المقترحة حسب الأولوية
-    candidates = []
-    
-    for orig in originals:
-        if orig.qty <= 0 or orig.width > remaining_width:
-            continue
-        
-        # حساب الكمية المثالية لتحقيق tolerance
-        if orig.length <= 0:
-            continue
-        
-        ideal_qty = ref_length_value / orig.length
-        search_range = max(2, int(ideal_qty * 0.2))
-        
-        for qty in range(max(1, int(ideal_qty - search_range)),
-                        min(int(ideal_qty + search_range) + 1, orig.qty + 1)):
-            if qty <= 0 or qty > orig.qty:
-                continue
-            
-            tolerance_ref = orig.length * qty
-            diff = abs(tolerance_ref - ref_length_value)
-            
-            if diff <= tolerance:
-                # عنصر مقترح صالح
-                new_width = current_width + orig.width
-                priority = new_width  # نفضل الذي يملأ العرض أكثر
-                
-                candidates.append({
-                    'id': orig.id,
-                    'width': orig.width,
-                    'length': orig.length,
-                    'qty': qty,
-                    'new_width': new_width,
-                    'diff': diff,
-                    'priority': priority
-                })
-                break
-    
-    # ترتيب حسب الأولوية (أكبر عرض أولاً، ثم أقل فرق tolerance)
-    candidates.sort(key=lambda x: (-x['priority'], x['diff']))
-    
-    # أخذ أفضل 3 اقتراحات
-    for cand in candidates[:3]:
-        suggestions.append(
-            f"ID:{cand['id']} ({cand['width']}x{cand['length']}) qty:{cand['qty']} "
-            f"→ عرض كلي:{cand['new_width']}"
-        )
-    
-    return suggestions
-
+    return pd.DataFrame(rows)
 
 def _apply_total_row_formatting(worksheet, df, row_num, total_format, total_rows_found):
     """
