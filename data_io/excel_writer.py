@@ -213,36 +213,28 @@ def _apply_advanced_formatting(writer, sheet_name, df, header_format, total_form
     worksheet = writer.sheets[sheet_name]
 
     try:
-        # ضبط عرض الأعمدة تلقائياً
         for col_num, col_name in enumerate(df.columns, start=0):
-            # الحصول على أطول محتوى في العمود
             col_data = df[col_name].astype(str)
-            # حساب أطول طول للمحتوى في العمود
             max_len = max(col_data.str.len().max(), len(str(col_name)))
-            # ضبط عرض العمود بناءً على أطول محتوى
             column_width = min(max_len + 3, 60)
             worksheet.set_column(col_num, col_num, column_width)
 
-        # تطبيق تنسيق العناوين (الصف الأول)
         for col_num, col_name in enumerate(df.columns):
-            worksheet.write(1, col_num, col_name, header_format)
+            worksheet.write(0, col_num, col_name, header_format)
 
-        # إضافة صف مجاميع في نهاية الجدول
-        df = _add_summary_row(df)
+        df_with_summary = _add_summary_row(df)
 
-        # تطبيق تنسيقات للبيانات - حل مشكلة الصفوف المكررة
-        total_rows_found = set()  # لتتبع الصفوف التي تم التعامل معها كصفوف مجاميع
+        total_rows_found = set()
 
-        for row_num in range(len(df)):
-            # الصف الأخير هو صف المجاميع - تعامله بشكل خاص
-            if row_num == len(df) - 1 and len(df) > 0:
-                # صف المجاميع - تطبيق التنسيق الخاص مع الخط المغمق والمحاذاة في المنتصف
+        for row_num in range(len(df_with_summary)):
+            if row_num == len(df_with_summary) - 1 and len(df_with_summary) > 0:
                 excel_row = row_num + 1
-                for col_num in range(len(df.columns)):
-                    cell_value = df.iloc[row_num, col_num]
-                    col_name = df.columns[col_num]
+                num_cols = len(df_with_summary.columns)
 
-                    # إنشاء تنسيق خاص لصف المجاميع مع خط مغمق ومحاذاة في المنتصف
+                for col_num in range(num_cols):
+                    col_name = df_with_summary.columns[col_num]
+                    cell_value = df_with_summary.iloc[row_num, col_num]
+
                     summary_format = writer.book.add_format({
                         'bold': True,
                         'font_size': 11,
@@ -261,80 +253,66 @@ def _apply_advanced_formatting(writer, sheet_name, df, header_format, total_form
                                   'الإجمالي بعد العملية', 'المستهلك', 'الكفاءة (%)']
 
                     if col_name in numeric_cols:
-                        # تنسيق خاص للأرقام في صف المجاميع
                         try:
                             numeric_value = float(cell_value) if cell_value != '' else 0
                             worksheet.write(excel_row, col_num, numeric_value, summary_format)
                         except (ValueError, TypeError):
                             worksheet.write(excel_row, col_num, cell_value, summary_format)
                     else:
-                        # تنسيق خاص للنصوص في صف المجاميع
                         worksheet.write(excel_row, col_num, cell_value, summary_format)
             else:
-                # تجنب معالجة نفس الصف مرتين كصفوف مجاميع
                 if row_num in total_rows_found:
                     continue
 
-                # تحقق بسيط وبديهي لتحديد صفوف المجاميع
-                is_total_row = _is_total_row_simple(df, row_num)
+                is_total_row = _is_total_row_simple(df_with_summary, row_num)
 
                 if is_total_row:
-                    # تطبيق تنسيق صف المجاميع على هذا الصف والصف التالي إذا كان فارغاً
-                    _apply_total_row_formatting(worksheet, df, row_num, total_format, total_rows_found)
+                    _apply_total_row_formatting(worksheet, df_with_summary, row_num, total_format, total_rows_found)
                 else:
-                    # تطبيق التنسيقات العادية للبيانات مع الحواف واللون الأخضر
-                    # كتابة البيانات في السطر row_num + 1 (بعد العناوين في السطر 1)
                     excel_row = row_num + 1
-                    for col_num in range(len(df.columns)):
-                        cell_value = df.iloc[row_num, col_num]
-                        col_name = df.columns[col_num]
+                    num_cols = len(df_with_summary.columns)
 
+                    for col_num in range(num_cols):
+                        col_name = df_with_summary.columns[col_num]
+                        cell_value = df_with_summary.iloc[row_num, col_num]
+                        
                         numeric_cols = ['العرض', 'الطول','الارتفاع', 'الكمية المستخدمة', 'الكمية الأصلية',
                                     'الطول الاجمالي للسجادة', 'العرض الإجمالي', 'الطول الإجمالي المرجعي (التقريبي)',
                                     'المساحة الإجمالية', 'الكمية المتبقية', 'الإجمالي قبل العملية',
                                     'الإجمالي بعد العملية', 'المستهلك', 'الكفاءة (%)']
 
                         if col_name in numeric_cols:
-                            # تنسيق خاص للأرقام مع الحواف واللون الأخضر
                             try:
                                 numeric_value = float(cell_value) if cell_value != '' else 0
                                 worksheet.write(excel_row, col_num, numeric_value, number_format)
                             except (ValueError, TypeError):
                                 worksheet.write(excel_row, col_num, cell_value, normal_format)
                         else:
-                            # تنسيق عام للنصوص مع الحواف واللون الأخضر
                             worksheet.write(excel_row, col_num, cell_value, normal_format)
 
-        
-        # إضافة حواف خارجية قوية للجدول بالكامل
-        # حساب عدد الصفوف في Excel (عناوين الأعمدة + البيانات + صف المجاميع)
-        excel_rows = 1 + len(df)  # عناوين (1) + البيانات (len(df))
+        excel_rows = 1 + len(df_with_summary)
         max_col = len(df.columns)
 
-        # إضافة حافة خارجية للجدول بالكامل
         border_format = writer.book.add_format({
-            'border': 3,  # حافة خارجية سميكة جداً
-            'border_color': '#006400',  # أخضر داكن
-            'bg_color': '#E8F5E8'  # نفس اللون الأخضر الفاتح
+            'border': 3,  
+            'border_color': '#006400',  
+            'bg_color': '#E8F5E8'  
         })
 
-        # تطبيق الحافة الخارجية على الجدول بالكامل
         for row_num in range(excel_rows):
-            for col_num in range(max_col + 1):
-                # الحواف الخارجية فقط (استثناء العناوين في الصف الأول)
+            for col_num in range(max_col):
                 if row_num == 0 or row_num == excel_rows - 1 or col_num == 0 or col_num == max_col:
                     if row_num == 0:
-                        # لا نكتب فوق العناوين في الصف الأول
                         continue
                     else:
-                        # التأكد من عدم تجاوز حدود DataFrame (يشمل صف المجاميع)
+                        if col_num >= max_col:  # لا تحاول قراءة بيانات خارج الأعمدة
+                            cell_value = ''
                         if row_num >= 1 and row_num - 1 < len(df):
                             cell_value = df.iloc[row_num - 1, col_num]
                         else:
                             cell_value = ''
                         worksheet.write(row_num, col_num, cell_value, border_format)
 
-        # إضافة تنسيقات شرطية لتحسين المظهر
         add_conditional_formatting(writer, worksheet, df)
 
     except Exception as e:
@@ -595,7 +573,7 @@ def _create_optimized_remainder_groups_sheet(
     # تعيين القيم الافتراضية
     eff_min_width = 370 if min_width is None else int(min_width)
     eff_max_width = 400 if max_width is None else int(max_width)
-    eff_tolerance = 0 if tolerance_length is None else int(tolerance_length)
+    eff_tolerance = 0
     
     # قائمة للصفوف
     rows = []

@@ -91,7 +91,6 @@ class GroupingWorker(QThread):
                 remaining=remaining,
                 min_width=self.min_width,
                 max_width=self.max_width,
-                tolerance_length=self.tolerance_len,
                 originals=original_carpets
             )
                                
@@ -501,7 +500,7 @@ class RectPackApp(QWidget):
        # read config validation
         cfg = self.config
         # ok, err = validate_config(min_width, max_width, tolerance_len)
-        ok, err = validate_config(min_width, max_width)
+        ok, err = validate_config(min_width, max_width,0)
         if not ok:
             QMessageBox.warning(self, "إعدادات خاطئة", err)
             return
@@ -545,7 +544,7 @@ class RectPackApp(QWidget):
             for g in groups:
                 row = self.summary_table.rowCount()
                 self.summary_table.insertRow(row)
-                self.summary_table.setItem(row, 0, QTableWidgetItem(f"مجموعة {g.id}"))
+                self.summary_table.setItem(row, 0, QTableWidgetItem(f"مجموعة {g.group_id}"))
                 self.summary_table.setItem(row, 1, QTableWidgetItem(str(len(g.items))))
                 self.summary_table.setItem(row, 2, QTableWidgetItem(str(g.total_width())))
                 self.summary_table.setItem(row, 3, QTableWidgetItem(str(g.total_height())))

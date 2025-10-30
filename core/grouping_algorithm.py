@@ -10,7 +10,7 @@ def build_groups(
         carpets: List[Carpet],
         min_width: int,
         max_width: int,
-        max_partner: int = 5,
+        max_partner: int = 9,
 ) -> List[GroupCarpet]:
     carpets.sort(key=lambda c: (c.width, c.height, c.qty), reverse=True)
     group: List[GroupCarpet] = []
@@ -27,6 +27,11 @@ def build_groups(
                 break
         if start_index is None:
             continue
+        if min_width >= 370 and min_width <= 400 and main.width <= 70:
+            max_partner = 10
+        if min_width >= 470 and main.width <= 60:
+            max_partner = 12
+
         partner_level = 1
         for partner_level in range(1, max_partner + 1):
             if not main.is_available():

@@ -84,3 +84,8 @@ class GroupCarpet:
             f"qty={self.total_qty()}, area={self.total_area():.2f}, "
             f"items=[{items_desc}]"
         )
+    def ref_height(self) -> int:
+        """إرجاع الطول المرجعي (طول أول عنصر في المجموعة)"""
+        if not self.items:
+            return 0  # أو يمكنك رفع استثناء إذا كانت القائمة فارغة
+        return self.items[0].length_ref()

@@ -21,7 +21,7 @@ def _create_group_details_sheet(
                 'الطول': it.height,
                 'الكمية المستخدمة': it.qty_used,
                 'الطول الاجمالي للسجادة': it.length_ref(),
-                    'الكمية الاصلية' : it.original_qty,
+                'الكمية الاصلية' : it.qty_used + it.qty_rem,
                 'الكمية المتبقية': it.qty_rem
             })
 
@@ -41,7 +41,6 @@ def _create_group_summary_sheet(
     # المجموعات الأصلية
     for g in groups:
         types_count = len(g.items)
-        area = sum(it.width * it.length * it.used_qty for it in g.items)
         summary.append({
             'رقم المجموعة': f'المجموعة_{g.group_id}',
                 'العرض الإجمالي': g.total_width(),
@@ -80,7 +79,7 @@ def _create_remaining_sheet(remaining: List[Carpet]) -> pd.DataFrame:
 
     # تجميع البيانات وتنظيمها
     if not df.empty:
-        df = df.sort_values(by=['الارتفاع', 'العرض', 'معرف السجادة'])
+        df = df.sort_values(by=['الطول', 'العرض', 'معرف السجادة'])
 
     return df
 
@@ -191,7 +190,6 @@ def _create_audit_sheet(
 def _create_enhanced_stats_sheet(enhanced_remainder_groups: Optional[List[GroupCarpet]]) -> pd.DataFrame:
     """إنشاء ورقة إحصائيات المجموعات الإضافية."""
     if not enhanced_remainder_groups:
-        # إنشاء DataFrame فارغ مع رؤوس الأعمدة حتى لو لم تكن هناك بيانات
         return pd.DataFrame(columns=[
             'رقم المجموعة', 'عدد العناصر', 'العرض الإجمالي', 
             'أقصى ارتفاع', 'المساحة الإجمالية'
@@ -220,11 +218,10 @@ def _create_ui_summary_sheet(
 ) -> pd.DataFrame:
     """إنشاء ورقة ملخص الواجهة مع تصنيف المجموعات."""
     ui_rows = []
-    # المجموعات الأصلية
     for g in groups:
         ui_rows.append({
             'عدد الأنواع': len(g.items),
-            'الطول المرجعي': g.ref_length(),
+            'الطول المرجعي': g.ref_height(),
             'العرض الإجمالي': g.total_width(),
             'رقم المجموعة': f'المجموعة_{g.id}',
         })
@@ -233,15 +230,6 @@ def _create_ui_summary_sheet(
     df = pd.DataFrame(ui_rows)
 
     return df
-
-
-# def _create_optimized_remainder_groups_sheet(
-#     remaining: List[Carpet],
-#     min_width: Optional[int] = None,
-#     max_width: Optional[int] = None,
-#     tolerance_length: Optional[int] = None
-# ) -> pd.DataFrame:
-
 
 def _create_suggestions_sheet(
     remaining: List[Carpet],
@@ -271,7 +259,7 @@ def _create_suggestions_sheet(
                     'رقم الاقتراح': i + 1,
                     'معرف السجادة': r.id,
                     'العرض': r.width,
-                    'الارتفاع': r.height,
+                    'الطول': r.height,
                     'الكمية المتبقية': r.rem_qty,
                     'الاقتراح': f'يمكن دمجها مع سجادات عرض {eff_max_width - r.width} أو أقل',
                     'ملاحظات': 'تحتاج تحليل يدوي'
