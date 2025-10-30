@@ -68,20 +68,6 @@ def equal_products_solution(a: List[int], Xmax:List[int])->Tuple[Optional[List[i
     
     return x_list, k_max
 
-# def test_candidate_group(elements: List[Carpet], min_width:int, max_width:int) ->bool:
-#     a = [int(e.height) for e in elements]
-#     XMax = [int(e.rem_qty) for e in elements]
-
-#     x_vals, k_max = equal_products_solution(a, XMax)
-#     if not x_vals :
-#         return  False
-#     total_width = sum(int(e.width) for e in elements)
-
-#     if not (min_width <= total_width <= max_width):
-#         return False
-    
-#     return True
-
 def generate_combinations(candidates: List[Carpet], n: int)-> Iterator[List[Carpet]]:
     for combo in combinations(candidates, n):
         yield list(combo)

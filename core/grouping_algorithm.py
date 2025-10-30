@@ -103,6 +103,7 @@ def build_groups(
                         
                 if len(used_items) < 2:
                     continue
+                print(used_items , " \n ,")
                 new_group = GroupCarpet(group_id=group_id, items=used_items)
                 if new_group.is_valid(min_width, max_width):
                     group.append(new_group)

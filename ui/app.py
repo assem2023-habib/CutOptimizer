@@ -149,12 +149,6 @@ class RectPackApp(QWidget):
         header_layout.addStretch()
         content_layout.addLayout(header_layout)
 
-        # self.quick_action_layout = QHBoxLayout()
-        # self.quick_action_layout.setSpacing(12)
-
-        # header_layout.addLayout(self.quick_action_layout)
-        # content_layout.addLayout(header_layout)
-
         files_section, files_layout = _create_section_card(self, "📁 إعدادات الملفات")
         files_layout.setSpacing(10)
 
