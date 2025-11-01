@@ -4,6 +4,7 @@
     "tolerance_length": 100,
     "min_total_area": null,
     "max_total_area": null,
+    "max_partner": 7,
     "start_with_largest": true,
     "allow_split_rows": true,
     "theme": "dark"

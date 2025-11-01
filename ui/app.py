@@ -62,7 +62,8 @@ class GroupingWorker(QThread):
                 carpets=carpets,
                 min_width=self.min_width,
                 max_width=self.max_width,
-                max_partner=self.cfg.get('max_partner', 5)
+                max_partner=self.cfg.get('max_partner', 7),
+                tolerance= self.tolerance_len
             )
             self.signals.log.emit(f"✅ تم تشكيل {len(groups)} مجموعة")
 
@@ -149,6 +150,12 @@ class RectPackApp(QWidget):
         header_layout.addStretch()
         content_layout.addLayout(header_layout)
 
+        # self.quick_action_layout = QHBoxLayout()
+        # self.quick_action_layout.setSpacing(12)
+
+        # header_layout.addLayout(self.quick_action_layout)
+        # content_layout.addLayout(header_layout)
+
         files_section, files_layout = _create_section_card(self, "📁 إعدادات الملفات")
         files_layout.setSpacing(10)
 
@@ -222,8 +229,8 @@ class RectPackApp(QWidget):
         self.tolerance_edit.setAlignment(Qt.AlignCenter)
         self.tolerance_edit.setValidator(QIntValidator(0, 100, self))
 
-        # main_settings_layout.addWidget(self.tolerance_edit)
-        # main_settings_layout.addWidget(tolerance_label)
+        main_settings_layout.addWidget(self.tolerance_edit)
+        main_settings_layout.addWidget(tolerance_label)
         main_settings_layout.addWidget(self.max_width_edit)
         main_settings_layout.addWidget(max_width_label)
         main_settings_layout.addWidget(self.min_width_edit)
@@ -239,13 +246,13 @@ class RectPackApp(QWidget):
 
         self.run_btn = QPushButton("▶️ بدء المعالجة")
         self.run_btn.setFont(QFont("Segoe UI", 10, QFont.Bold))
-        self.run_btn.setMinimumHeight(35)
+        self.run_btn.setMinimumHeight(20)
         self.run_btn.clicked.connect(self.run_grouping)
         buttons_layout.addWidget(self.run_btn)
 
         self.cancel_btn = QPushButton("⏹️ إلغاء")
         self.cancel_btn.setFont(QFont("Segoe UI", 10, QFont.Bold))
-        self.cancel_btn.setMinimumHeight(35)
+        self.cancel_btn.setMinimumHeight(20)
         self.cancel_btn.clicked.connect(self.cancel_operation)
         self.cancel_btn.setEnabled(False)  # معطل في البداية
         buttons_layout.addWidget(self.cancel_btn)
@@ -476,7 +483,7 @@ class RectPackApp(QWidget):
         try:
             min_width = int(self.min_width_edit.text().strip())
             max_width = int(self.max_width_edit.text().strip())
-            # tolerance_len = int(self.tolerance_edit.text().strip())
+            tolerance_len = int(self.tolerance_edit.text().strip())
 
             if min_width <= 0 or max_width <= 0:
                 QMessageBox.warning(self, "قيم خاطئة", "العرض الأدنى والأقصى يجب أن يكونا أكبر من 0")
@@ -484,8 +491,8 @@ class RectPackApp(QWidget):
             if min_width >= max_width:
                 QMessageBox.warning(self, "قيم خاطئة", "العرض الأدنى يجب أن يكون أقل من العرض الأقصى")
                 return
-            # if tolerance_len < 0:
-            #     QMessageBox.warning(self, "قيم خاطئة", "هامش التسامح يجب أن يكون صفراً أو رقماً موجباً")
+            if tolerance_len < 0:
+                QMessageBox.warning(self, "قيم خاطئة", "هامش التسامح يجب أن يكون صفراً أو رقماً موجباً")
                 return
         except ValueError:
             QMessageBox.warning(self, "قيم خاطئة", "يرجى إدخال أرقام صحيحة للعرض الأدنى والأقصى وهامش التسامح")
@@ -507,7 +514,7 @@ class RectPackApp(QWidget):
         self.open_excel_btn.setVisible(False)
         self.is_running = True
 
-        self.worker = GroupingWorker(input_path, output_path, min_width, max_width,0, cfg)
+        self.worker = GroupingWorker(input_path, output_path, min_width, max_width,tolerance_len , cfg)
         self.worker.signals.progress.connect(lambda v: self.progress_bar.setValue(v))
         self.worker.signals.log.connect(self.log_append)
         self.worker.signals.data_ready.connect(self.update_summary_table)

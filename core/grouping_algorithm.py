@@ -3,14 +3,16 @@ from collections import Counter
 from models.data_models import Carpet, CarpetUsed, GroupCarpet
 from core.group_helpers import (
     generate_valid_partner_combinations,
-    equal_products_solution
+    equal_products_solution,
+    equal_products_solution_with_tolerance
 )
 
 def build_groups(
         carpets: List[Carpet],
         min_width: int,
         max_width: int,
-        max_partner: int = 9,
+        max_partner: int = 7,
+        tolerance: int = 0,
 ) -> List[GroupCarpet]:
     carpets.sort(key=lambda c: (c.width, c.height, c.qty), reverse=True)
     group: List[GroupCarpet] = []
@@ -69,8 +71,10 @@ def build_groups(
                         XMax.append(available_per_repetition)
                 if any(x <= 0 for x in XMax):
                     continue
-
-                x_vals, k_max = equal_products_solution(a, XMax)
+                if tolerance == 0:
+                    x_vals, k_max = equal_products_solution(a, XMax)
+                else :
+                    x_vals, k_max = equal_products_solution_with_tolerance(a, XMax, tolerance)
                 if not x_vals or k_max <= 0:
                     continue
 
@@ -103,7 +107,6 @@ def build_groups(
                         
                 if len(used_items) < 2:
                     continue
-                print(used_items , " \n ,")
                 new_group = GroupCarpet(group_id=group_id, items=used_items)
                 if new_group.is_valid(min_width, max_width):
                     group.append(new_group)

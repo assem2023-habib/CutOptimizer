@@ -1,6 +1,6 @@
 from typing import List, Optional, Tuple, Iterator
 from models.data_models import Carpet, CarpetUsed, GroupCarpet
-from math import floor 
+from math import floor, ceil 
 from collections import Counter
 from itertools import combinations, combinations_with_replacement
 
@@ -67,6 +67,65 @@ def equal_products_solution(a: List[int], Xmax:List[int])->Tuple[Optional[List[i
         x_list.append(int(xi))
     
     return x_list, k_max
+
+def equal_products_solution_with_tolerance(a: List[int],
+                             Xmax:List[int],
+                             delta : int)->Tuple[Optional[List[int]], int]:
+    n = len(a)
+    if n == 0 or n!=len(Xmax):
+        return None,0
+    if any (ai <= 0 for ai in a):
+        return None, 0
+    if any(xm < 0 for xm in Xmax):
+        return None, 0
+    if n == 1 :
+        return [Xmax[0]], Xmax[0]
+    
+    a_ref = a[0]
+    x0_max = Xmax[0]
+
+    for i in range(1, n):
+        limit = floor((a[i] * Xmax[i] + delta) /a_ref )
+        x0_max = min(x0_max,limit)
+    if x0_max < 0:
+        return None, 0  
+
+    for x0 in range(x0_max, -1, -1):
+        target = a_ref * x0
+        x_candidate = [x0]
+        valid = True
+        for i in range(1, n):
+            x_i_min_raw = (target - delta) / a[i]
+            x_i_min = max(0, ceil(x_i_min_raw))
+
+            x_i_max = floor((target + delta) / a[i])
+            x_i = min(x_i_max, Xmax[i])
+            if x_i < x_i_min or x_i < 0:
+                valid = False
+                break
+
+            if abs(a[i] * x_i - target) > delta:
+                valid = False
+                break
+
+            x_candidate.append(x_i)
+        
+        if not valid:
+            continue
+
+        all_pairs_valid = True
+        for i in range(n):
+            for j in range(i + 1, n):
+                diff = abs(a[i] * x_candidate[i] - a[j] * x_candidate[j])
+                if diff > delta:
+                    all_pairs_valid = False
+                    break
+            if not all_pairs_valid:
+                break
+        if all_pairs_valid:
+            k_max = x_candidate[0]
+            return x_candidate, k_max
+    return None, 0
 
 def generate_combinations(candidates: List[Carpet], n: int)-> Iterator[List[Carpet]]:
     for combo in combinations(candidates, n):
