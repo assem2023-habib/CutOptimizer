@@ -5,3 +5,4 @@ PySide6
 matplotlib
 fpdf2
 pyinstaller
+qtawesome
