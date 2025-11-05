@@ -67,7 +67,7 @@ def write_output_excel(
     df3 = _create_remaining_sheet(remaining)
 
     # إنشاء ورقة الإجماليات
-    totals_df = _create_totals_sheet(groups, remaining, remainder_groups, enhanced_remainder_groups)
+    totals_df = _create_totals_sheet(originals ,groups, remaining, remainder_groups, enhanced_remainder_groups)
 
     # إنشاء ورقة إحصائيات المجموعات الإضافية
     df_enhanced_stats = _create_enhanced_stats_sheet(enhanced_remainder_groups)

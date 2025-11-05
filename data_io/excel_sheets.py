@@ -85,39 +85,33 @@ def _create_remaining_sheet(remaining: List[Carpet]) -> pd.DataFrame:
 
 
 def _create_totals_sheet(
+    original_groups: List[Carpet],
     groups: List[GroupCarpet],
     remaining: List[Carpet],
     remainder_groups: Optional[List[GroupCarpet]] = None,
     enhanced_remainder_groups: Optional[List[GroupCarpet]] = None
 ) -> pd.DataFrame:
     """إنشاء ورقة الإجماليات مع مقارنة قبل وبعد العملية."""
-    # حساب الإجمالي قبل العملية
     total_original = 0
-    all_groups = [groups]
-    if remainder_groups:
-        all_groups.append(remainder_groups)
-    if enhanced_remainder_groups:
-        all_groups.append(enhanced_remainder_groups)
-
-    for group_list in all_groups:
-        for g in group_list:
-            for it in g.items:
-                original_qty = it.qty_used + it.qty_rem
-                total_original += it.width * it.height * original_qty
-    total_used = 0
-    for group_list in all_groups:
-        for g in group_list:
-            total_used += g.total_area()
+    if original_groups:
+        for carpet in original_groups:
+            total_original += carpet.area() * carpet.qty
+    else:
+        for group in groups:
+            for carpet in group.items:
+                total_original += carpet.area() * (carpet.qty_used + carpet.qty_rem)
 
     total_remaining = 0
-    for r in remaining:
-        total_remaining += r.width * r.height * r.rem_qty
+    for carpet in remaining:
+        total_remaining += carpet.area() * carpet.rem_qty
+
+    total_used = total_original - total_remaining
 
     return pd.DataFrame([{
         "الإجمالي الأصلي (cm²)": total_original,
         "المستهلك (cm²)": total_used,
         "المتبقي (cm²)": total_remaining,
-        "نسبة الاستهلاك (%)": round(total_used / total_original * 100, 2) if total_original > 0 else 0
+        "نسبة الاستهلاك (%)": (total_used / total_original * 100) if total_original > 0 else 0
     }])
 
 
