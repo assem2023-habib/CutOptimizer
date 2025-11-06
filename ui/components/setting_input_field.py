@@ -42,7 +42,7 @@ class SettingInputField(QWidget):
         layout.addWidget(self.label)
 
         self.input = QLineEdit(self)
-        self.input.setText(self.input_value)
+        self.input.setText(str(self.input_value))
         self.input.setEnabled(self.is_enabled)
 
         if self.input_type == "number":
