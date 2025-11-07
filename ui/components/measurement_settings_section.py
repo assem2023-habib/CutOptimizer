@@ -63,3 +63,8 @@ class MeasurementSettingsSection(QWidget):
             background-color: transparent;
             border-radius: 8px;
         """)
+
+    def set_inputs_enabled(self, enabled: bool):
+        self.min_input.input.setEnabled(enabled)
+        self.max_input.input.setEnabled(enabled)
+        self.margin_input.input.setEnabled(enabled)
