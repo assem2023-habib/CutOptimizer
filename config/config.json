@@ -8,5 +8,6 @@
     "start_with_largest": true,
     "allow_split_rows": true,
     "theme": "dark",
-    "background_image": "C:\\Users\\RYZEN\\Desktop\\Task\\CutOptimizer\\config\\backgrounds\\product2.jpg"
+    "background_image": "C:\\Users\\RYZEN\\Desktop\\Task\\CutOptimizer\\config\\backgrounds\\product2.jpg",
+    "selected_mode": "same carpet group last"
 }

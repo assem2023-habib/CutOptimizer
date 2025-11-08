@@ -1,11 +1,14 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel
-from PySide6.QtGui import QFont
+from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, 
+                               QLabel, QGraphicsBlurEffect,  
+                               QGraphicsDropShadowEffect)
+from PySide6.QtGui import QFont, QColor
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QGraphicsBlurEffect,  QGraphicsDropShadowEffect
 
 from ui.components.setting_input_field import SettingInputField 
+from ui.components.drop_down_list import DropDownList
 
 import os
+import json
 
 class MeasurementSettingsSection(QWidget):
     def __init__(self,
@@ -30,11 +33,31 @@ class MeasurementSettingsSection(QWidget):
         main_layout.setContentsMargins(20, 20, 20, 20)
         main_layout.setSpacing(18)
 
+        title_layout = QHBoxLayout()
+        title_layout.setContentsMargins(0, 0, 0, 0)
+        title_layout.setSpacing(15)
+
         title_label = QLabel(self.section_title_text)
         title_label.setFont(QFont("Segoe UI", 10, QFont.Bold))
         title_label.setStyleSheet(f"color: {self.section_title_text_color};")
         title_label.setAlignment(Qt.AlignLeft)
-        main_layout.addWidget(title_label)
+
+        self.mode_dropdown= DropDownList(
+            selected_value_text="Default Mod",
+            options_list=["same carpet group first", "same carpet group last"],
+        )
+        self.mode_dropdown.setFixedWidth(200)
+
+        self.load_saved_mode()
+        self.mode_dropdown.list_widget.itemClicked.connect(
+            lambda _: self.save_selected_mode()
+        )
+
+        title_layout.addWidget(title_label)
+        title_layout.addStretch()
+        title_layout.addWidget(self.mode_dropdown, alignment=Qt.AlignLeft)
+
+        main_layout.addLayout(title_layout)
 
         fields_layout = QHBoxLayout()
         fields_layout.setSpacing(30)
@@ -63,8 +86,8 @@ class MeasurementSettingsSection(QWidget):
         main_layout.addLayout(fields_layout)
 
         shadow = QGraphicsDropShadowEffect()
-        shadow.setBlurRadius(20)
-        shadow.setColor(Qt.black)
+        shadow.setBlurRadius(25)
+        shadow.setColor(QColor(0, 0, 0, 160))
         shadow.setOffset(0, 4)
         self.setGraphicsEffect(shadow)
 
@@ -72,7 +95,7 @@ class MeasurementSettingsSection(QWidget):
         self.setAttribute(Qt.WA_StyledBackground, True)
 
         blur = QGraphicsBlurEffect()
-        blur.setBlurRadius(10)
+        blur.setBlurRadius(12)
         self.setGraphicsEffect(blur)
 
     def _apply_styles(self):
@@ -89,3 +112,41 @@ class MeasurementSettingsSection(QWidget):
         self.min_input.input.setEnabled(enabled)
         self.max_input.input.setEnabled(enabled)
         self.margin_input.input.setEnabled(enabled)
+        self.mode_dropdown.setDisabled(not enabled)
+        
+    def load_saved_mode(self):
+        config_file_path= os.path.join(os.getcwd(), "config", "config.json")
+        if not os.path.exists(config_file_path):
+            return
+        
+        try:
+            with open(config_file_path, "r", encoding="utf-8") as f:
+                cfg= json.load(f)
+            saved_mode= cfg.get("selected_mode")
+            if saved_mode and saved_mode in self.mode_dropdown.options_list:
+                self.mode_dropdown.selected_value_text = saved_mode
+                self.mode_dropdown.selector_btn.setText(saved_mode)
+        except Exception as e:
+            raise e
+        
+    def save_selected_mode(self):
+        try:
+            config_file_path = os.path.join(os.getcwd(), "config", "config.json")
+            mode = self.mode_dropdown.get_selected_value()
+
+            if os.path.exists(config_file_path):
+                with open(config_file_path, "r", encoding="utf-8") as f:
+                    cfg = json.load(f)
+            else:
+                cfg = {}
+
+            cfg["selected_mode"] = mode
+            os.makedirs(os.path.dirname(config_file_path), exist_ok=True)
+
+            with open(config_file_path, "w", encoding="utf-8") as f:
+                json.dump(cfg, f, ensure_ascii=False, indent=4)
+        except Exception as e:
+            raise e
+
+    def get_selected_mode(self) -> str:
+        return self.mode_dropdown.selected_value_text
