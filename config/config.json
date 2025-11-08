@@ -7,5 +7,6 @@
     "max_partner": 7,
     "start_with_largest": true,
     "allow_split_rows": true,
-    "theme": "dark"
+    "theme": "dark",
+    "background_image": "C:\\Users\\RYZEN\\Desktop\\Task\\CutOptimizer\\config\\backgrounds\\product.jpg"
 }

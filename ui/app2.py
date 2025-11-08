@@ -1,6 +1,7 @@
 import json
 import traceback
 import sys, os
+import shutil
 import copy
 import subprocess
 import platform
@@ -9,25 +10,27 @@ from PySide6.QtWidgets import (QWidget,QApplication,QLineEdit, QPushButton, QVBo
                                  QTextEdit, QHBoxLayout, QMessageBox, 
                                  QTableWidget, QTableWidgetItem, 
                                  QProgressBar, QHeaderView, QScrollArea)
-from PySide6.QtCore import Qt, QThread, Signal, QObject, QTimer
-from PySide6.QtGui import QFont, QIntValidator
+from PySide6.QtCore import Qt, QThread, Signal, QObject,QSize, QTimer, QTime
+
+from PySide6.QtGui import QFont, QIntValidator, QPixmap, QPalette, QBrush
 from data_io.excel_io import read_input_excel, write_output_excel
 from core.grouping_algorithm import build_groups
 from core.validation import validate_config, validate_carpets
 from .ui_utils import ( setup_button_animations,
                        _create_section_card)
-from ui.components.top_button_section import TopButtonSection
+from ui.sections.top_button_section import TopButtonSection
 from core.actions.file_actions import (
     browse_input_lineedit,
     browse_output_lineedit,
     open_excel_file
 )
-from ui.components.measurement_settings_section import MeasurementSettingsSection
-from ui.components.process_controll_section import ProcessControllSection
+from ui.components.app_button import AppButton
+from ui.sections.measurement_settings_section import MeasurementSettingsSection
+from ui.sections.process_controll_section import ProcessControllSection
 from core.workers.grouping_worker import GroupingWorker
 from ui.components.progress_status_item import ProgressStatusItem
-from ui.components.results_and_summary_section import ResultsAndSummarySection
-
+from ui.sections.results_and_summary_section import ResultsAndSummarySection
+from core.utilies.timer_utils import init_timer, start_timer, stop_timer
 
 class RectPackApp(QWidget):
     def __init__(self, config_path='config/config.json'):
@@ -35,15 +38,26 @@ class RectPackApp(QWidget):
 
         self.worker_thread = None
         self.worker = None
-        self.is_running = None
+        self.is_running = False
         self.config_path = config_path
         self.config = self.load_config()
-        self.input_edit = QLineEdit()
-        self.output_edit = QLineEdit()
+        init_timer(self)
 
         self._setup_ui()
 
+    def resizeEvent(self, event):
+        if "background_image" in self.config:
+            self.apply_background(self.config["background_image"])
+        super().resizeEvent(event)
+
     def _setup_ui(self):
+        self.resize(900, 800)
+        screen = QApplication.primaryScreen().availableGeometry()
+        window_size = self.frameGeometry()
+        self.move(
+            (screen.width() - window_size.width()) // 2,
+            (screen.height() - window_size.height()) // 2
+        )
         self.setObjectName("mainWindow")
         self.setWindowTitle("تجميع السجاد - نظام محسن")
 
@@ -71,7 +85,15 @@ class RectPackApp(QWidget):
 
         header_layout.addWidget(title_label)
         header_layout.addStretch()
-        
+        self.change_bg_btn = AppButton(
+            text="🖼️",
+            color="#6f42c1",
+            hover_color="#8c68d4",
+            text_color="#FFFFFF",
+            fixed_size=QSize(50, 22)
+        )
+        self.change_bg_btn.clicked.connect(self.change_background)
+        header_layout.addWidget(self.change_bg_btn)
         content_layout.addLayout(header_layout)
 
         self.top_button_section = TopButtonSection(
@@ -83,7 +105,8 @@ class RectPackApp(QWidget):
 
         self.process_control_section = ProcessControllSection(
             on_start_clicked=self.run_grouping,
-            on_stop_clicked=self.cancel_operation
+            on_stop_clicked=self.cancel_operation,
+            on_open_excel_clicked=self.open_excel_file 
         )
         self.status_item = ProgressStatusItem("جاهز لبدء العملية", "pending")
         self.results_section = ResultsAndSummarySection()
@@ -112,6 +135,7 @@ class RectPackApp(QWidget):
         main_layout = QVBoxLayout(self)
         main_layout.addWidget(scroll_area)
         content_layout.addWidget(self.results_section)
+        content_layout
 
     def load_config(self):
         try:
@@ -138,6 +162,7 @@ class RectPackApp(QWidget):
         open_excel_file(output_path, getattr(self, "log_append", None))
 
     def run_grouping(self):
+        start_timer(self)
         if self.is_running:
             QMessageBox.information(self, "معلومة", "العملية قيد التشغيل بالفعل.")
             return
@@ -156,6 +181,14 @@ class RectPackApp(QWidget):
             duration="—"
         )
         try:
+            min_w = int(self.measurement_section.min_input.input.text())
+            max_w = int(self.measurement_section.max_input.input.text())
+            tol = int(self.measurement_section.margin_input.input.text())
+        except ValueError:
+            QMessageBox.warning(self, "قيم خاطئة", "يرجى إدخال أرقام صحيحة في حقول القياسات.")
+            return
+        try:
+            self.timer.timeout.connect(self.update_duration_card)
             self.is_running = True
             self.process_control_section.enable_stop_only()
             self.measurement_section.set_inputs_enabled(False)
@@ -168,9 +201,9 @@ class RectPackApp(QWidget):
             self.worker = GroupingWorker(
                 input_path=input_path,
                 output_path=output_path,
-                min_width=int(self.measurement_section.min_input.input.text()),
-                max_width=int(self.measurement_section.max_input.input.text()),
-                tolerance_len=int(self.measurement_section.margin_input.input.text()),
+                min_width=min_w,
+                max_width=max_w,
+                tolerance_len=tol,
                 cfg=self.config
             )
 
@@ -209,35 +242,34 @@ class RectPackApp(QWidget):
         try:
             table_data = []
             for i, g in enumerate(groups, start=1):
-                table_data.append({
-                    "group_id": f"GRP-{i:03}",
-                    "carpet_id": getattr(g, "carpet_id", f"CPT-{100+i}"),
-                    "qty_used": getattr(g, "qty_used", 0),
-                    "qty_rem": getattr(g, "qty_rem", 0),
-                    "ref_height": getattr(g, "ref_height", 0.0),
-                })
+                for item in getattr(g, "items", []):
+                    table_data.append({
+                       "group_id": f"GRP-{getattr(g, 'group_id', '—'):03}",
+                        "qty_used": getattr(item, "qty_used", 0),
+                        "qty_rem": getattr(item, "qty_rem", 0),
+                        "ref_height": item.length_ref() if hasattr(item, "length_ref") else 0,
+                        "carpet": item.summary() if hasattr(item, "summary") else "-",
+                    })
 
-                self.results_section.groups_table.data = table_data
-                self.results_section.groups_table.total_pages = max(
-                    1, (len(table_data) + self.results_section.groups_table.rows_per_page - 1)
-                    // self.results_section.groups_table.rows_per_page
-                )
-                self.results_section.groups_table.current_page = 1
-                self.results_section.groups_table._populate_table()
+            self.results_section.groups_table.data = table_data
+            self.results_section.groups_table.total_pages = max(
+                1, (len(table_data) + self.results_section.groups_table.rows_per_page - 1)
+                // self.results_section.groups_table.rows_per_page
+            )
+            self.results_section.groups_table.current_page = 1
+            self.results_section.groups_table._populate_table()
 
-                total_original = stats.get("total_original", 0)
-                total_used = stats.get("total_used", 0)
-                total_remaining = stats.get("total_remaining", 0)
-                utilization = stats.get("utilization_percentage", 0)
-
-                self.results_section.update_summary(
-                    total_files= total_original,
-                    success_rate=utilization,
-                    failed_files=total_remaining,
-                    duration="_"
-                )
-
-                self.log_append("📊 تم تحديث قسم النتائج والملخص.")
+            total_original = stats.get("total_original", 0)
+            total_used = stats.get("total_used", 0)
+            total_remaining = stats.get("total_remaining", 0)
+            utilization = stats.get("utilization_percentage", 0)
+            self.results_section.update_summary(
+                total_files= total_original,
+                success_rate=utilization,
+                failed_files=total_remaining,
+                duration="_"
+            )
+            self.log_append("📊 تم تحديث قسم النتائج والملخص.")
         except Exception as e:
             self.log_append(f"⚠️ خطأ أثناء تحديث النتائج: {e}")
                 
@@ -246,10 +278,13 @@ class RectPackApp(QWidget):
         if success:
             self.status_item.set_text("✅ تمت العملية بنجاح")
             self.status_item.set_status("success")
+            self.process_control_section.show_open_excel_button(True)
         else:
             self.status_item.set_text("❌ حدث خطأ أثناء العملية")
             self.status_item.set_status("failed")
-
+            self.process_control_section.show_open_excel_button(False)
+        
+        stop_timer(self)
         self.reset_ui_state()
 
     def log_append(self, text):
@@ -267,11 +302,69 @@ class RectPackApp(QWidget):
             self.worker_thread = None
             self.worker = None
 
-        self.log_append("↩️ الواجهة عادت للحالة الافتراضية.")            
+        self.log_append("↩️ الواجهة عادت للحالة الافتراضية.")         
+
+    def change_background(self):
+        try:
+            file_path, _ = QFileDialog.getOpenFileName(
+                self,
+                "اختر صورة الخلفية",
+                "",
+                "صور (*.png *.jpg *.jpeg)"
+            )
+
+            if not file_path:
+                return
+
+            config_dir = os.path.join(os.getcwd(), "config", "backgrounds")
+            os.makedirs(config_dir, exist_ok=True)
+
+            file_name = os.path.basename(file_path)
+            target_path = os.path.join(config_dir, file_name)
+
+            shutil.copy(file_path, target_path)
+
+            self.config["background_image"] = target_path
+            with open(self.config_path, "w", encoding="utf-8") as f:
+                json.dump(self.config, f, ensure_ascii=False, indent=4)
+
+            self.apply_background(target_path)
+            self.log_append(f"🖼️ تم تعيين الصورة الجديدة كخلفية:\n{target_path}")
+
+        except Exception as e:
+            QMessageBox.critical(self, "خطأ", f"حدث خطأ أثناء تغيير الخلفية:\n{e}")
+            self.log_append(f"❌ خطأ أثناء تغيير الخلفية: {e}")   
+
+    def apply_background(self, image_path: str):
+        try:
+            if not os.path.exists(image_path):
+                return
+
+            pixmap = QPixmap(image_path)
+            if pixmap.isNull():
+                return
+
+            # ضبط حجم الصورة لتتناسب مع النافذة
+            scaled_pixmap = pixmap.scaled(
+                self.size(),
+                Qt.KeepAspectRatioByExpanding,
+                Qt.SmoothTransformation
+            )
+
+            palette = self.palette()
+            palette.setBrush(QPalette.Window, QBrush(scaled_pixmap))
+            self.setPalette(palette)
+            self.setAutoFillBackground(True)
+
+        except Exception as e:
+            self.log_append(f"❌ خطأ أثناء تغيير الخلفية: {e}")   
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = RectPackApp()
     window.show()
     sys.exit(app.exec())
+    
+
     

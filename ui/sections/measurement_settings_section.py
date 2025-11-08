@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel
 from PySide6.QtGui import QFont
 from PySide6.QtCore import Qt
-from .setting_input_field import SettingInputField 
+from ui.components.setting_input_field import SettingInputField 
 
 class MeasurementSettingsSection(QWidget):
     def __init__(self,
@@ -22,8 +22,8 @@ class MeasurementSettingsSection(QWidget):
 
     def _setup_ui(self):
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(15, 15, 15, 15)
-        main_layout.setSpacing(12)
+        main_layout.setContentsMargins(20, 20, 20, 20)
+        main_layout.setSpacing(18)
 
         title_label = QLabel(self.section_title_text)
         title_label.setFont(QFont("Segoe UI", 10, QFont.Bold))
@@ -32,17 +32,17 @@ class MeasurementSettingsSection(QWidget):
         main_layout.addWidget(title_label)
 
         fields_layout = QHBoxLayout()
-        fields_layout.setSpacing(16)
+        fields_layout.setSpacing(30)
 
         self.min_input = SettingInputField(
             label_text="Minimum Width",
-            input_value="370",
+            input_value=370,
             is_enabled= self.is_inputs_enabled
         )
 
         self.max_input = SettingInputField(
             label_text="Maximum Width",
-            input_value= "400",
+            input_value= 400,
             is_enabled= self.is_inputs_enabled
         )
 
@@ -51,11 +51,13 @@ class MeasurementSettingsSection(QWidget):
             input_value= 100,
             is_enabled=self.is_inputs_enabled
         )
+        
+        for widget in [self.min_input, self.max_input, self.margin_input]:
+            # widget.setMinimumWidth(200)
+            # widget.setMaximumWidth(250)
+            fields_layout.addWidget(widget, stretch=1)
 
-        fields_layout.addWidget(self.min_input)
-        fields_layout.addWidget(self.max_input)
-        fields_layout.addWidget(self.margin_input)
-        fields_layout.addStretch()
+        # fields_layout.addStretch()
 
         main_layout.addLayout(fields_layout)
 

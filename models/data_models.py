@@ -49,7 +49,7 @@ class CarpetUsed:
 
     def summary(self) -> str:
         """نص مختصر لوصف السجادة المستخدمة"""
-        return f"Carpet {self.carpet_id} | w={self.width} h={self.height} qty={self.qty_used}"
+        return f"Carpet: id {self.carpet_id} | w={self.width} * h={self.height}"
 
 @dataclass
 class GroupCarpet:

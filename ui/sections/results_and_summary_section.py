@@ -68,8 +68,8 @@ class ResultsAndSummarySection(QWidget):
 
         self.card_total_files = ProcessSummaryCard(
             title="TOTAL FILES",
-            main_value="248",
-            progress_percentage=100,
+            main_value="0",
+            progress_percentage=0,
             progress_arc_color="#0078D7",
             progress_track_color="#404040",
             **cards_props
@@ -77,8 +77,8 @@ class ResultsAndSummarySection(QWidget):
 
         self.card_success_rate = ProcessSummaryCard(
             title="SUCCESS RATE",
-            main_value="98.4%",
-            progress_percentage=98,
+            main_value="0.0%",
+            progress_percentage=0,
             progress_arc_color="#28A745",
             progress_track_color="#404040",
             **cards_props
@@ -86,8 +86,8 @@ class ResultsAndSummarySection(QWidget):
 
         self.card_failed = ProcessSummaryCard(
             title="FAILED FILES",
-            main_value="4",
-            progress_percentage=10,
+            main_value="0",
+            progress_percentage=0,
             progress_arc_color="#DC3545",
             progress_track_color="#404040",
             **cards_props
@@ -95,7 +95,7 @@ class ResultsAndSummarySection(QWidget):
 
         self.card_duration = ProcessSummaryCard(
             title="DURATION",
-            main_value="2m 34s",
+            main_value="0s",
             progress_percentage=0,
             show_percentage_text=False,
             progress_arc_color="#6C757D",

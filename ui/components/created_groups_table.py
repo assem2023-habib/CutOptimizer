@@ -34,7 +34,8 @@ class CreatedGroupsTable(QWidget):
 
         self.current_page= 1
         self.rows_per_page= 6
-        self.data= data or self._generate_sample_data()
+        # self.data= data or {self._generate_sample_data()}
+        self.data= data or ()
         self.total_pages= max(1, (len(self.data) + self.rows_per_page -1) // self.rows_per_page)
 
         self._setup_ui()
@@ -48,7 +49,7 @@ class CreatedGroupsTable(QWidget):
         self.table= QTableWidget()
         self.table.setColumnCount(5)
         self.table.setHorizontalHeaderLabels([
-            "Group ID", "Carpet ID", "Qty Used", "Qty Rem", "Ref Height"
+            "Group ID", "Qty Used", "Qty Rem", "Ref Height" ,"Carpet"
         ])
         self.table.setSortingEnabled(True)
         self.table.setAlternatingRowColors(True)
@@ -127,7 +128,7 @@ class CreatedGroupsTable(QWidget):
 
         for row_index, row_data in enumerate(page_data):
             self.table.insertRow(row_index)
-            for col_index, key in enumerate(["group_id", "carpet_id", "qty_used", "qty_rem", "ref_height"]):
+            for col_index, key in enumerate(["group_id", "qty_used", "qty_rem", "ref_height", "carpet"]):
                 item = QTableWidgetItem(str(row_data[key]))
                 item.setTextAlignment(Qt.AlignCenter)
                 self.table.setItem(row_index, col_index, item)
@@ -148,14 +149,14 @@ class CreatedGroupsTable(QWidget):
             self.current_page -= 1
             self._populate_table()
 
-    def _generate_sample_data(self):
-        return [
-            {
-                "group_id": f"GRP-{i:03}",
-                "carpet_id": f"CPT-{100+i}",
-                "qty_used": f"{i * 3}",
-                "qty_rem": f"{50 - i}",
-                "ref_height": f"{1.2 + i*0.1:.2f}",
-            }
-            for i in range(1, 26)
-        ]
+    # def _generate_sample_data(self):
+    #     return [
+    #         {
+    #             "group_id": f"GRP-{i:03}",
+    #             "qty_used": f"{i * 3}",
+    #             "qty_rem": f"{50 - i}",
+    #             "ref_height": f"{1.2 + i*0.1:.2f}",
+    #             "carpet": f"CPT-{100+i}",
+    #         }
+    #         for i in range(1, 26)
+    #     ]
