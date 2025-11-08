@@ -1,10 +1,12 @@
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSizePolicy
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel
 )
 from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QGraphicsBlurEffect
 
 from ui.components.created_groups_table import CreatedGroupsTable
 from ui.components.process_summary_card import ProcessSummaryCard
+import os
 
 class ResultsAndSummarySection(QWidget):
     def __init__(
@@ -20,6 +22,7 @@ class ResultsAndSummarySection(QWidget):
         self.summary_component_props = summary_component_props or {}
 
         self._setup_ui()
+        self._apply_styles()
 
     def _setup_ui(self):
         main_layout = QHBoxLayout(self)
@@ -67,7 +70,7 @@ class ResultsAndSummarySection(QWidget):
         }
 
         self.card_total_files = ProcessSummaryCard(
-            title="TOTAL FILES",
+            title="TOTAL CARPET",
             main_value="0",
             progress_percentage=0,
             progress_arc_color="#0078D7",
@@ -85,7 +88,7 @@ class ResultsAndSummarySection(QWidget):
         )
 
         self.card_failed = ProcessSummaryCard(
-            title="FAILED FILES",
+            title="CARPET REM",
             main_value="0",
             progress_percentage=0,
             progress_arc_color="#DC3545",
@@ -109,7 +112,23 @@ class ResultsAndSummarySection(QWidget):
         right_layout.addWidget(self.card_duration)
         right_layout.addStretch()
         main_layout.addWidget(right_container, 1)
-        
+
+        self.setAutoFillBackground(True)
+        self.setAttribute(Qt.WA_StyledBackground, True)
+
+        blur = QGraphicsBlurEffect()
+        blur.setBlurRadius(10)
+        self.setGraphicsEffect(blur)
+
+    def _apply_styles(self):
+        qss_path = os.path.join(os.path.dirname(__file__), "../styles/style.qss")
+        qss_path = os.path.abspath(qss_path)
+
+        if os.path.exists(qss_path):
+            with open(qss_path, "r", encoding="utf-8") as f:
+                self.setStyleSheet(f.read())
+        else:
+            print(f"⚠️ ملف التنسيقات غير موجود: {qss_path}")        
     def update_summary(self, total_files, success_rate, failed_files, duration):
         self.card_total_files.setValue(str(total_files))
         self.card_success_rate.setValue(f"{success_rate:.1f}%")

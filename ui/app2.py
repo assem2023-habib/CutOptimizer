@@ -2,22 +2,14 @@ import json
 import traceback
 import sys, os
 import shutil
-import copy
-import subprocess
-import platform
-from PySide6.QtWidgets import (QWidget,QApplication,QLineEdit, QPushButton, QVBoxLayout
-                               , QFileDialog, QLabel, QLineEdit,
+from PySide6.QtWidgets import (QWidget,QApplication, QVBoxLayout
+                               , QFileDialog, QLabel,
                                  QTextEdit, QHBoxLayout, QMessageBox, 
-                                 QTableWidget, QTableWidgetItem, 
-                                 QProgressBar, QHeaderView, QScrollArea)
-from PySide6.QtCore import Qt, QThread, Signal, QObject,QSize, QTimer, QTime
+                                 QScrollArea)
+from PySide6.QtCore import Qt, QSize
 
-from PySide6.QtGui import QFont, QIntValidator, QPixmap, QPalette, QBrush
-from data_io.excel_io import read_input_excel, write_output_excel
-from core.grouping_algorithm import build_groups
-from core.validation import validate_config, validate_carpets
-from .ui_utils import ( setup_button_animations,
-                       _create_section_card)
+from PySide6.QtGui import QFont, QPixmap, QPalette, QBrush
+
 from ui.sections.top_button_section import TopButtonSection
 from core.actions.file_actions import (
     browse_input_lineedit,
@@ -72,6 +64,12 @@ class RectPackApp(QWidget):
         """)
 
         content_widget = QWidget()
+        content_widget.setStyleSheet("""
+            QWidget {
+                background-color: rgba(0, 0, 0, 120); /* أسود شفاف */
+                border-radius: 10px;
+            }
+        """)
 
         content_layout = QVBoxLayout(content_widget)
         content_layout.setSpacing(18)
@@ -79,7 +77,7 @@ class RectPackApp(QWidget):
 
         header_layout = QHBoxLayout()
 
-        title_label = QLabel("🏠 تجميع السجاد")
+        title_label = QLabel("🏠")
         title_label.setFont(QFont("Segoe UI", 16, QFont.Bold))
         title_label.setStyleSheet("color: #007bff; margin: 0;")
 

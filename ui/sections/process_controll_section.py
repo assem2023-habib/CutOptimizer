@@ -1,6 +1,9 @@
 from PySide6.QtWidgets import QWidget, QHBoxLayout
 from PySide6.QtCore import QSize, Qt
+from PySide6.QtWidgets import QGraphicsBlurEffect
+
 from ui.components.app_button import AppButton
+import os
 
 class ProcessControllSection(QWidget):
     def __init__(
@@ -21,6 +24,8 @@ class ProcessControllSection(QWidget):
         self.is_stop_enabled = bool(is_stop_enabled)
 
         self._setup_ui()
+        self._apply_styles()
+        
 
     def _setup_ui(self):
         main_layout = QHBoxLayout(self)
@@ -68,15 +73,25 @@ class ProcessControllSection(QWidget):
         main_layout.addWidget(self.open_excel_btn)
         main_layout.addStretch(1)
         main_layout.addWidget(self.stop_btn)
-        # main_layout.addStretch()
+
         self.setLayout(main_layout)
 
-        self.setStyleSheet(f"""
-            QWidget {{
-                background-color: #F8F9FA;
-                border-radius: 8px;
-            }}
-        """)
+        self.setAutoFillBackground(True)
+        self.setAttribute(Qt.WA_StyledBackground, True)
+
+        blur = QGraphicsBlurEffect()
+        blur.setBlurRadius(10)
+        self.setGraphicsEffect(blur)
+
+    def _apply_styles(self):
+        qss_path = os.path.join(os.path.dirname(__file__), "../styles/style.qss")
+        qss_path = os.path.abspath(qss_path)
+
+        if os.path.exists(qss_path):
+            with open(qss_path, "r", encoding="utf-8") as f:
+                self.setStyleSheet(f.read())
+        else:
+            print(f"⚠️ ملف التنسيقات غير موجود: {qss_path}")
 
     def set_buttons_enabled(self, start_enabled: bool, stop_enabled: bool):
         self.start_btn.setEnabled(start_enabled)

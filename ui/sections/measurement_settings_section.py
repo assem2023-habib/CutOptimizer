@@ -1,7 +1,11 @@
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel
 from PySide6.QtGui import QFont
 from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QGraphicsBlurEffect,  QGraphicsDropShadowEffect
+
 from ui.components.setting_input_field import SettingInputField 
+
+import os
 
 class MeasurementSettingsSection(QWidget):
     def __init__(self,
@@ -19,6 +23,7 @@ class MeasurementSettingsSection(QWidget):
         self.is_inputs_enabled = is_inputs_enabled
 
         self._setup_ui()
+        self._apply_styles()
 
     def _setup_ui(self):
         main_layout = QVBoxLayout(self)
@@ -53,18 +58,32 @@ class MeasurementSettingsSection(QWidget):
         )
         
         for widget in [self.min_input, self.max_input, self.margin_input]:
-            # widget.setMinimumWidth(200)
-            # widget.setMaximumWidth(250)
             fields_layout.addWidget(widget, stretch=1)
-
-        # fields_layout.addStretch()
 
         main_layout.addLayout(fields_layout)
 
-        self.setStyleSheet(f"""
-            background-color: transparent;
-            border-radius: 8px;
-        """)
+        shadow = QGraphicsDropShadowEffect()
+        shadow.setBlurRadius(20)
+        shadow.setColor(Qt.black)
+        shadow.setOffset(0, 4)
+        self.setGraphicsEffect(shadow)
+
+        self.setAutoFillBackground(True)
+        self.setAttribute(Qt.WA_StyledBackground, True)
+
+        blur = QGraphicsBlurEffect()
+        blur.setBlurRadius(10)
+        self.setGraphicsEffect(blur)
+
+    def _apply_styles(self):
+        qss_path = os.path.join(os.path.dirname(__file__), "../styles/style.qss")
+        qss_path = os.path.abspath(qss_path)
+
+        if os.path.exists(qss_path):
+            with open(qss_path, "r", encoding="utf-8") as f:
+                self.setStyleSheet(f.read())
+        else:
+            print(f"⚠️ ملف التنسيقات غير موجود: {qss_path}")
 
     def set_inputs_enabled(self, enabled: bool):
         self.min_input.input.setEnabled(enabled)

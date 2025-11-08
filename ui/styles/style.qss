@@ -1,0 +1,26 @@
+QWidget {
+    background-color: rgba(0, 0, 0, 110);  /* خلفية زجاجية داكنة */
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+QLineEdit {
+    background-color: rgba(255, 255, 255, 30);
+    color: #FFFFFF;
+    padding: 8px 10px;
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 6px;
+    font-size: 10pt;
+}
+QLineEdit::placeholder {
+    color: #AAAAAA;
+}
+QLineEdit:focus {
+    border-color: #3399FF;
+    background-color: rgba(255,255,255,50);
+}
+QLabel {
+    color: #D0D0D0;
+    background-color: transparent;
+    font-weight: 600;
+    border: none;
+}

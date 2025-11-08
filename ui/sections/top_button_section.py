@@ -1,7 +1,10 @@
-from PySide6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout,QLineEdit, QPushButton, QLabel
-from PySide6.QtGui import QColor, QFont
-from PySide6.QtCore import Qt, QSize
+from PySide6.QtWidgets import QWidget, QHBoxLayout,QLineEdit
+from PySide6.QtWidgets import QGraphicsBlurEffect
+from PySide6.QtCore import Qt
+
 from ui.components.app_button import AppButton
+
+import os
 
 class TopButtonSection(QWidget):
     def __init__(self,
@@ -14,6 +17,7 @@ class TopButtonSection(QWidget):
         self.on_export_clicked = on_export_clicked
 
         self._setup_ui()
+        self._apply_styles()
 
     def _setup_ui(self):
 
@@ -60,22 +64,19 @@ class TopButtonSection(QWidget):
         main_layout.addLayout(input_layout)
         main_layout.addLayout(output_layout)
 
+        self.setAutoFillBackground(True)
+        self.setAttribute(Qt.WA_StyledBackground, True)
 
-        self.setStyleSheet("""
-            QWidget {
-                background-color: #F8F9FA;
-                border-radius: 8px;
-            }
-            QLineEdit {
-                padding: 8px 10px;
-                border: 1px solid #CCC;
-                border-radius: 5px;
-                font-size: 10pt;
-            }
-            QLineEdit:focus {
-                border-color: #0078D7;
-            }
-            QLabel {
-                color: #333;
-            }
-        """)
+        blur = QGraphicsBlurEffect()
+        blur.setBlurRadius(10)
+        self.setGraphicsEffect(blur)
+
+    def _apply_styles(self):
+            qss_path = os.path.join(os.path.dirname(__file__), "../styles/style.qss")
+            qss_path = os.path.abspath(qss_path)
+
+            if os.path.exists(qss_path):
+                with open(qss_path, "r", encoding="utf-8") as f:
+                    self.setStyleSheet(f.read())
+            else:
+                raise    
