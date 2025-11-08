@@ -1,5 +1,6 @@
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QTextEdit
 from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QGraphicsBlurEffect
 
 from ui.components.progress_status_item import ProgressStatusItem
 
@@ -16,7 +17,7 @@ class StatusAndLogSection(QWidget):
         layout.setAlignment(Qt.AlignTop)
         
         self.status_item = ProgressStatusItem("جاهز لبدء العملية", "pending")
-        self.status_item.setStyleSheet("background-color: transparent; color:#000000FF;")
+        self.status_item.setStyleSheet("background-color: transparent; color:white;")
 
         self.log = QTextEdit()
         self.log.setReadOnly(True)
@@ -26,15 +27,16 @@ class StatusAndLogSection(QWidget):
         layout.addWidget(self.status_item)
         layout.addWidget(self.log)
 
+        self.setAutoFillBackground(True)
+        self.setAttribute(Qt.WA_StyledBackground, True)
+
+        blur = QGraphicsBlurEffect()
+        blur.setBlurRadius(10)
+        self.setGraphicsEffect(blur)
+
     def _apply_style(self):
         self.setObjectName("statusLogContainer")
         self.setStyleSheet("""
-            QVBoxLayout {
-                background-color: rgba(0, 0, 0, 110);
-                border-radius: 10px;
-                border: none;
-            }
-
             #logBox {
                 background-color: rgba(255, 255, 255, 20);
                 color: #E0E0E0;
