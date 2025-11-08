@@ -77,7 +77,7 @@ class RectPackApp(QWidget):
 
         header_layout = QHBoxLayout()
 
-        title_label = QLabel("🏠")
+        title_label = QLabel("🧶")
         title_label.setFont(QFont("Segoe UI", 16, QFont.Bold))
         title_label.setStyleSheet("color: #007bff; margin: 0;")
 
