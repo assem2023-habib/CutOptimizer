@@ -58,15 +58,15 @@ def build_groups(
             if not partner_sets:
                 continue
             for partners in partner_sets:
-                same_id = False
+                # same_id = False
                 if not main.is_available():
                     break
-                if (len(partners) == 1):
-                    for carpet in partners:
-                        if carpet.id == main.id or carpet.width == main.width:
-                            same_id = True
-                if same_id:
-                    continue        
+                # if (len(partners) == 1):
+                #     for carpet in partners:
+                #         if carpet.id == main.id or carpet.width == main.width:
+                #             same_id = True
+                # if same_id:
+                #     continue        
                 result = process_partner_group(
                     main, partners, tolerance, group_id, min_width=min_width, max_width=max_width
                 )
@@ -74,24 +74,24 @@ def build_groups(
                     new_group, group_id = result
                     group.append(new_group)
 
-        if main.is_available():
-            if(main.width * 2 >= min_width and main.width * 2 <= max_width and main.rem_qty >= 2):
-                used_items = []
-                qty_used = main.rem_qty // 2
-                total_qty_used = qty_used * 2
-                for _ in range(2):
-                    main.consume(qty_used)
-                    used_items.append(
-                        CarpetUsed(
-                            carpet_id=main.id,
-                            width=main.width,
-                            height=main.height,
-                            qty_used=qty_used,
-                            qty_rem= main.rem_qty,
-                        )
-                    )
-                group.append(GroupCarpet(group_id=group_id, items=used_items))
-                group_id += 1
+        # if main.is_available():
+        #     if(main.width * 2 >= min_width and main.width * 2 <= max_width and main.rem_qty >= 2):
+        #         used_items = []
+        #         qty_used = main.rem_qty // 2
+        #         total_qty_used = qty_used * 2
+        #         for _ in range(2):
+        #             main.consume(qty_used)
+        #             used_items.append(
+        #                 CarpetUsed(
+        #                     carpet_id=main.id,
+        #                     width=main.width,
+        #                     height=main.height,
+        #                     qty_used=qty_used,
+        #                     qty_rem= main.rem_qty,
+        #                 )
+        #             )
+        #         group.append(GroupCarpet(group_id=group_id, items=used_items))
+        #         group_id += 1
 
         single_group = try_create_single_group(
                 main, min_width, max_width, group_id

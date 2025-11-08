@@ -22,6 +22,7 @@ from ui.sections.process_controll_section import ProcessControllSection
 from core.workers.grouping_worker import GroupingWorker
 from ui.components.progress_status_item import ProgressStatusItem
 from ui.sections.results_and_summary_section import ResultsAndSummarySection
+from ui.sections.status_and_log_section import StatusAndLogSection
 from core.utilies.timer_utils import init_timer, start_timer, stop_timer
 
 class RectPackApp(QWidget):
@@ -48,10 +49,10 @@ class RectPackApp(QWidget):
         window_size = self.frameGeometry()
         self.move(
             (screen.width() - window_size.width()) // 2,
-            (screen.height() - window_size.height()) // 2
+            (screen.height() - window_size.height()) // 3
         )
         self.setObjectName("mainWindow")
-        self.setWindowTitle("تجميع السجاد - نظام محسن")
+        self.setWindowTitle("تجميع السجاد")
 
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
@@ -66,7 +67,7 @@ class RectPackApp(QWidget):
         content_widget = QWidget()
         content_widget.setStyleSheet("""
             QWidget {
-                background-color: rgba(0, 0, 0, 120); /* أسود شفاف */
+                background-color: rgba(0, 0, 0, 120);
                 border-radius: 10px;
             }
         """)
@@ -79,16 +80,16 @@ class RectPackApp(QWidget):
 
         title_label = QLabel("🧶")
         title_label.setFont(QFont("Segoe UI", 16, QFont.Bold))
-        title_label.setStyleSheet("color: #007bff; margin: 0;")
+        title_label.setStyleSheet("color: #00FF91FF; margin: 0;background-color: transparent;")
 
         header_layout.addWidget(title_label)
         header_layout.addStretch()
         self.change_bg_btn = AppButton(
             text="🖼️",
-            color="#6f42c1",
-            hover_color="#8c68d4",
+            color="transparent",
+            hover_color="#0078D7",
             text_color="#FFFFFF",
-            fixed_size=QSize(50, 22)
+            fixed_size=QSize(40, 32)
         )
         self.change_bg_btn.clicked.connect(self.change_background)
         header_layout.addWidget(self.change_bg_btn)
@@ -107,33 +108,20 @@ class RectPackApp(QWidget):
             on_open_excel_clicked=self.open_excel_file 
         )
         self.status_item = ProgressStatusItem("جاهز لبدء العملية", "pending")
+
+        self.status_and_log_section = StatusAndLogSection()
+
         self.results_section = ResultsAndSummarySection()
 
         content_layout.addWidget(self.top_button_section)
         content_layout.addWidget(self.measurement_section)
         content_layout.addWidget(self.process_control_section)
-        content_layout.addWidget(self.status_item)
-
-        self.log = QTextEdit()
-        self.log.setReadOnly(True)
-        self.log.setMinimumHeight(150)
-        self.log.setStyleSheet("""
-            QTextEdit {
-                background-color: #1E1E1E;
-                color: #E0E0E0;
-                border: 1px solid #444;
-                border-radius: 6px;
-                padding: 6px;
-                font-family: Consolas;
-                font-size: 10pt;
-            }
-        """)
-        content_layout.addWidget(self.log)
+        content_layout.addWidget(self.status_and_log_section)
+        content_layout.addWidget(self.results_section)
         scroll_area.setWidget(content_widget)
+        
         main_layout = QVBoxLayout(self)
         main_layout.addWidget(scroll_area)
-        content_layout.addWidget(self.results_section)
-        content_layout
 
     def load_config(self):
         try:
@@ -160,7 +148,6 @@ class RectPackApp(QWidget):
         open_excel_file(output_path, getattr(self, "log_append", None))
 
     def run_grouping(self):
-        start_timer(self)
         if self.is_running:
             QMessageBox.information(self, "معلومة", "العملية قيد التشغيل بالفعل.")
             return
@@ -186,6 +173,7 @@ class RectPackApp(QWidget):
             QMessageBox.warning(self, "قيم خاطئة", "يرجى إدخال أرقام صحيحة في حقول القياسات.")
             return
         try:
+            start_timer(self)
             self.timer.timeout.connect(self.update_duration_card)
             self.is_running = True
             self.process_control_section.enable_stop_only()
@@ -210,6 +198,7 @@ class RectPackApp(QWidget):
             self.worker.signals.error.connect(lambda e: self.log_append(f"❌ خطأ:\n{e}"))
             self.worker.signals.data_ready.connect(self.on_worker_data_ready)
             self.worker.signals.finished.connect(self.on_worker_finished)
+            stop_timer(self)
             self.worker.start()
         except Exception as e:
             self.log_append(f"❌ خطأ أثناء بدء العملية: {e}")
@@ -225,6 +214,7 @@ class RectPackApp(QWidget):
             if self.worker:
                 self.worker.stop()
                 self.log_append("🛑 تم إرسال أمر الإلغاء...")
+                stop_timer(self)
 
             else:
                 self.log_append("⚠️ لا يوجد عامل نشط لإيقافه.")
@@ -286,7 +276,7 @@ class RectPackApp(QWidget):
         self.reset_ui_state()
 
     def log_append(self, text):
-        self.log.append(text)
+        self.status_and_log_section.append_log(text)
 
     def reset_ui_state(self):
         self.is_running = False
@@ -342,7 +332,6 @@ class RectPackApp(QWidget):
             if pixmap.isNull():
                 return
 
-            # ضبط حجم الصورة لتتناسب مع النافذة
             scaled_pixmap = pixmap.scaled(
                 self.size(),
                 Qt.KeepAspectRatioByExpanding,

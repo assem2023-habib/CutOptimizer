@@ -31,21 +31,21 @@ class GroupingWorker(QThread):
     def run(self):
         try:
             self._check_interrupt()
-            self.signals.progress.emit(5)
+            # self.signals.progress.emit(5)
             self.signals.log.emit("📖 بدء قراءة ملف البيانات...")
 
             carpets = read_input_excel(self.input_path)
             self.signals.log.emit(f"✅ تم قراءة {len(carpets)} نوع من السجاد")
 
             self._check_interrupt()
-            self.signals.progress.emit(15)
+            # self.signals.progress.emit(15)
 
             errs = validate_carpets(carpets)
             if errs:
                 for e in errs:
                     self.signals.log.emit(f"⚠️ {e}")
             
-            self.signals.progress.emit(30)
+            # self.signals.progress.emit(30)
             self.signals.log.emit("🔄 بدء تشكيل المجموعات...")
 
             original_carpets = copy.deepcopy(carpets)
@@ -61,7 +61,7 @@ class GroupingWorker(QThread):
             )
 
             self.signals.log.emit(f"✅ تم تشكيل {len(groups)} مجموعة")
-            self.signals.progress.emit(60)
+            # self.signals.progress.emit(60)
 
             self._check_interrupt()
             self.signals.log.emit("📦 حساب المتبقيات...")
@@ -78,7 +78,7 @@ class GroupingWorker(QThread):
                 "utilization_percentage": utilization
             }    
 
-            self.signals.progress.emit(80)
+            # self.signals.progress.emit(80)
             self._check_interrupt()
 
             self.signals.log.emit("💾 حفظ النتائج...")
@@ -92,7 +92,7 @@ class GroupingWorker(QThread):
             )
             
             self.signals.log.emit(f"✅ تم حفظ النتائج في: {self.output_path}")
-            self.signals.progress.emit(100)
+            # self.signals.progress.emit(100)
 
             self.signals.data_ready.emit(groups, remaining, stats)
             self.signals.finished.emit(True,"تمت العملية بنجاح ✅")
