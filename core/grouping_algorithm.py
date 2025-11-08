@@ -6,6 +6,8 @@ from core.group_helpers import (
     equal_products_solution,
     equal_products_solution_with_tolerance
 )
+import json
+import os
 
 def build_groups(
         carpets: List[Carpet],
@@ -14,6 +16,7 @@ def build_groups(
         max_partner: int = 7,
         tolerance: int = 0,
 ) -> List[GroupCarpet]:
+    selected_mode= load_selected_mode()
     carpets.sort(key=lambda c: (c.width, c.height, c.qty), reverse=True)
     group: List[GroupCarpet] = []
     group_id = 1
@@ -58,15 +61,16 @@ def build_groups(
             if not partner_sets:
                 continue
             for partners in partner_sets:
-                # same_id = False
+                same_id = False
                 if not main.is_available():
                     break
-                # if (len(partners) == 1):
-                #     for carpet in partners:
-                #         if carpet.id == main.id or carpet.width == main.width:
-                #             same_id = True
-                # if same_id:
-                #     continue        
+                if selected_mode == "same carpet group last":
+                    if (len(partners) == 1):
+                        for carpet in partners:
+                            if carpet.id == main.id or carpet.width == main.width:
+                                same_id = True
+                    if same_id:
+                        continue        
                 result = process_partner_group(
                     main, partners, tolerance, group_id, min_width=min_width, max_width=max_width
                 )
@@ -74,24 +78,25 @@ def build_groups(
                     new_group, group_id = result
                     group.append(new_group)
 
-        # if main.is_available():
-        #     if(main.width * 2 >= min_width and main.width * 2 <= max_width and main.rem_qty >= 2):
-        #         used_items = []
-        #         qty_used = main.rem_qty // 2
-        #         total_qty_used = qty_used * 2
-        #         for _ in range(2):
-        #             main.consume(qty_used)
-        #             used_items.append(
-        #                 CarpetUsed(
-        #                     carpet_id=main.id,
-        #                     width=main.width,
-        #                     height=main.height,
-        #                     qty_used=qty_used,
-        #                     qty_rem= main.rem_qty,
-        #                 )
-        #             )
-        #         group.append(GroupCarpet(group_id=group_id, items=used_items))
-        #         group_id += 1
+        if selected_mode == "same carpet group last":
+            if main.is_available():
+                if(main.width * 2 >= min_width and main.width * 2 <= max_width and main.rem_qty >= 2):
+                    used_items = []
+                    qty_used = main.rem_qty // 2
+                    total_qty_used = qty_used * 2
+                    for _ in range(2):
+                        main.consume(qty_used)
+                        used_items.append(
+                            CarpetUsed(
+                                carpet_id=main.id,
+                                width=main.width,
+                                height=main.height,
+                                qty_used=qty_used,
+                                qty_rem= main.rem_qty,
+                            )
+                        )
+                    group.append(GroupCarpet(group_id=group_id, items=used_items))
+                    group_id += 1
 
         single_group = try_create_single_group(
                 main, min_width, max_width, group_id
@@ -255,3 +260,17 @@ def try_create_single_group(
         return single_group
     
     return None
+
+def load_selected_mode()->str:
+    config_path= os.path.join(os.getcwd(), "config", "config.json")
+    if not os.path.exists(config_path):
+        return ""
+    
+    try:
+        with open(config_path, "r", encoding="utf-8") as f:
+            cfg= json.load(f)
+        
+        selected_mode= cfg.get("selected_mode", "").strip()
+        return selected_mode
+    except Exception as e:
+        return e
