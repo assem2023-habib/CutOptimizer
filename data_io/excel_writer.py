@@ -23,12 +23,10 @@ def write_output_excel(
     path: str,
     groups: List[GroupCarpet],
     remaining: List[Carpet],
-    remainder_groups: Optional[List[GroupCarpet]] = None,
     min_width: Optional[int] = None,
     max_width: Optional[int] = None,
     tolerance_length: Optional[int] = None,
     originals: Optional[List[Carpet]] = None,
-    enhanced_remainder_groups: Optional[List[GroupCarpet]] = None
 ) -> None:
     """
     كتابة النتائج إلى ملف Excel مع صفحات متعددة.
@@ -55,22 +53,22 @@ def write_output_excel(
         البيانات الأصلية للتدقيق
     """
     # إنشاء ورقة تفاصيل المجموعات
-    df1 = _create_group_details_sheet(groups, remainder_groups, enhanced_remainder_groups)
+    df1 = _create_group_details_sheet(groups)
 
     # إنشاء ورقة ملخص المجموعات
-    df2 = _create_group_summary_sheet(groups, remainder_groups, enhanced_remainder_groups)
+    df2 = _create_group_summary_sheet(groups)
 
     # إنشاء ورقة السجاد المتبقي
     df3 = _create_remaining_sheet(remaining)
 
     # إنشاء ورقة الإجماليات
-    totals_df = _create_totals_sheet(originals ,groups, remaining, remainder_groups, enhanced_remainder_groups)
+    totals_df = _create_totals_sheet(originals ,groups, remaining)
 
     # إنشاء ورقة إحصائيات المجموعات الإضافية
     waste_df = _generate_waste_sheet(groups, max_width) 
 
     # إنشاء ورقة التدقيق
-    df_audit = _create_audit_sheet(groups, remaining, remainder_groups, enhanced_remainder_groups, originals)
+    df_audit = _create_audit_sheet(groups, remaining, originals)
 
     _write_all_sheets_to_excel(
         path, df1, df2, df3, totals_df, df_audit, waste_df
@@ -121,10 +119,11 @@ def _auto_adjust_column_width(writer, df1, df2, df3, totals_df, df_audit, waste_
     workbook = writer.book
 
     header_format = _create_header_format(workbook)
-    total_format = _create_total_format(workbook)
     normal_format = _create_normal_format(workbook)
     number_format = _create_number_format(workbook)
-
+    summary_row_format = _create_summary_row_format(workbook)
+    first_col_border = _create_border_format_for_first_column(workbook)
+    
     sheet_dataframes = {}
 
     if not df1.empty:
@@ -155,9 +154,10 @@ def _auto_adjust_column_width(writer, df1, df2, df3, totals_df, df_audit, waste_
                     sheet_name,
                     df,
                     header_format,
-                    total_format,
                     normal_format,
-                    number_format
+                    number_format,
+                    summary_row_format,
+                    first_col_border
                 )
 
                 for i, col in enumerate(df.columns):
@@ -174,7 +174,15 @@ def _auto_adjust_column_width(writer, df1, df2, df3, totals_df, df_audit, waste_
             except Exception as e:
                 traceback.print_exc()
 
-def _apply_advanced_formatting(writer, sheet_name, df, header_format, total_format, normal_format, number_format):
+def _apply_advanced_formatting(
+        writer, 
+        sheet_name, 
+        df, 
+        header_format, 
+        normal_format, 
+        number_format, 
+        summary_row_format,
+        first_col_border):
     worksheet = writer.sheets[sheet_name]
 
     try:
@@ -192,77 +200,50 @@ def _apply_advanced_formatting(writer, sheet_name, df, header_format, total_form
         for col_num, col_name in enumerate(df.columns):
             worksheet.write(0, col_num, col_name, header_format)
 
-        df_with_summary = _add_summary_row(df)
-
         total_rows_found = set()
 
-        for row_num in range(len(df_with_summary)):
-            if row_num == len(df_with_summary) - 1 and len(df_with_summary) > 0:
+        for row_num in range(len(df)):
+            if row_num in total_rows_found:
+                continue
+
+            is_summary = _is_summary_row(df, row_num)
+            if is_summary:
                 excel_row = row_num + 1
-                num_cols = len(df_with_summary.columns)
-
-                for col_num in range(num_cols):
-                    col_name = df_with_summary.columns[col_num]
-                    cell_value = df_with_summary.iloc[row_num, col_num]
-
-                    summary_format = writer.book.add_format({
-                        'bold': True,
-                        'font_size': 11,
-                        'font_name': 'Arial',
-                        'bg_color': '#E6F3FF',
-                        'font_color': '#0066CC',
-                        'border': 2,
-                        'border_color': '#006400',
-                        'align': 'center',
-                        'valign': 'vcenter',
-                        'num_format': '#,##0.00'
-                    })
-
+                for col_num in range(len(df.columns)):
+                    col_name = df.columns[col_num]
+                    cell_value = df.iloc[row_num, col_num]
+                    
                     if col_name in numeric_cols:
-                        try:
-                            numeric_value = float(cell_value)
-                            worksheet.write(excel_row, col_num, numeric_value, summary_format)
-                        except (ValueError, TypeError):
-                            worksheet.write(excel_row, col_num, cell_value, summary_format)
+                        numeric_value = float(cell_value)
+                        worksheet.write(excel_row, col_num, numeric_value, summary_row_format)
                     else:
-                        worksheet.write(excel_row, col_num, cell_value, summary_format)
-            else:
-                if row_num in total_rows_found:
-                    continue
-
-                is_total_row = _is_total_row_simple(df_with_summary, row_num)
-
-                if is_total_row:
-                    _apply_total_row_formatting(worksheet, df_with_summary, row_num, total_format, total_rows_found)
+                        worksheet.write(excel_row, col_num, cell_value, summary_row_format)
+                
+                total_rows_found.add(row_num)
+                continue
+            
+            excel_row = row_num + 1
+            num_cols = len(df.columns)
+            for col_num in range(num_cols):
+                col_name = df.columns[col_num]
+                cell_value = df.iloc[row_num, col_num]
+                if col_name in numeric_cols:
+                    try:
+                        numeric_value = float(cell_value)
+                        worksheet.write(excel_row, col_num, numeric_value, number_format)
+                    except (ValueError, TypeError):
+                        worksheet.write(excel_row, col_num, cell_value, normal_format)
                 else:
-                    excel_row = row_num + 1
-                    num_cols = len(df_with_summary.columns)
+                    worksheet.write(excel_row, col_num, cell_value, normal_format)
 
-                    for col_num in range(num_cols):
-                        col_name = df_with_summary.columns[col_num]
-                        cell_value = df_with_summary.iloc[row_num, col_num]
-
-                        if col_name in numeric_cols:
-                            try:
-                                numeric_value = float(cell_value)
-                                worksheet.write(excel_row, col_num, numeric_value, number_format)
-                            except (ValueError, TypeError):
-                                worksheet.write(excel_row, col_num, cell_value, normal_format)
-                        else:
-                            worksheet.write(excel_row, col_num, cell_value, normal_format)
-
-        excel_rows = 1 + len(df_with_summary)
+        excel_rows = 1 + len(df)
         max_col = len(df.columns)
 
-        border_format = writer.book.add_format({
-            'border': 3,  
-            'border_color': '#006400',  
-            'bg_color': '#E8F5E8'  
-        })
+
 
         for row_num in range(excel_rows):
             for col_num in range(max_col):
-                if row_num == 0 or row_num == excel_rows - 1 or col_num == 0 or col_num == max_col:
+                if row_num == 0 or row_num == excel_rows or col_num == 0 or col_num == max_col:
                     if row_num == 0:
                         continue
                     else:
@@ -270,34 +251,12 @@ def _apply_advanced_formatting(writer, sheet_name, df, header_format, total_form
                             cell_value = df.iloc[row_num - 1, col_num]
                         else:
                             cell_value = ''
-                        worksheet.write(row_num, col_num, cell_value, border_format)
+                        worksheet.write(row_num, col_num, cell_value, first_col_border)
 
         add_conditional_formatting(writer, worksheet, df)
 
     except Exception as e:
-        traceback.print_exc()
         raise
-
-def _add_summary_row(df: pd.DataFrame) -> pd.DataFrame:
-    if df.empty:
-        return df
-    
-    df_with_summary= df.copy()
-
-    summary_row= {}
-
-    for col in df.columns:
-        if col == df.columns[0]:
-            summary_row[col] = "المجموع"
-        else:
-            if pd.api.types.is_numeric_dtype(df[col]):
-                total = df[col].sum()
-                summary_row[col] = total
-            else:
-                summary_row[col]= ""
-
-    df_with_summary= pd.concat([df_with_summary, pd.DataFrame([summary_row])], ignore_index=True)
-    return df_with_summary
 
 # =============================================================================
 # FORMAT CREATION FUNCTIONS - دوال إنشاء التنسيقات
@@ -325,6 +284,13 @@ def add_conditional_formatting(writer, worksheet, df: pd.DataFrame) -> None:
     except Exception as e:
         pass
     
+def _create_border_format_for_first_column(workbook):
+    return workbook.add_format({
+        'border': 3,  
+        'border_color': '#006400',  
+        'bg_color': '#E8F5E8'  
+    })
+
 def _create_header_format(workbook):
     """إنشاء تنسيق لعناوين الأعمدة."""
     return workbook.add_format({
@@ -339,9 +305,37 @@ def _create_header_format(workbook):
         'valign': 'vcenter'
     })
 
+def _create_normal_format(workbook):
+    """إنشاء تنسيق عام للبيانات النصية مع لون أخضر فاتح."""
+    return workbook.add_format({
+        'bold': True,
+        'font_size': 10,
+        'font_name': 'Arial',
+        'border': 2,
+        'border_color': '#006400',
+        'bg_color': '#E8F5E8',
+        'font_color': '#006400',
+        'align': 'center',
+        'valign': 'vcenter'
+    })
 
-def _create_total_format(workbook):
-    """إنشاء تنسيق لصفوف المجاميع."""
+
+def _create_number_format(workbook):
+    """إنشاء تنسيق خاص للأرقام مع لون أخضر فاتح."""
+    return workbook.add_format({
+        'bold': True, 
+        'font_size': 10,
+        'font_name': 'Arial',
+        'border': 2,
+        'border_color': '#006400',
+        'bg_color': '#E8F5E8', 
+        'font_color': '#006400',
+        'align': 'center',
+        'valign': 'vcenter',
+    })
+
+def _create_summary_row_format(workbook):
+    """إنشاء تنسيق مميز لسطر المجموع."""
     return workbook.add_format({
         'bold': True,
         'font_size': 11,
@@ -351,107 +345,24 @@ def _create_total_format(workbook):
         'border': 1,
         'border_color': 'black',
         'align': 'center',
-        'num_format': '#,##0.00'
     })
-
-
-def _create_normal_format(workbook):
-    """إنشاء تنسيق عام للبيانات النصية مع لون أخضر فاتح."""
-    return workbook.add_format({
-        'bold': True,  # خط غامق
-        'font_size': 10,
-        'font_name': 'Arial',
-        'border': 2,  # حواف أكثر سمكاً
-        'border_color': '#006400',  # أخضر داكن للحواف
-        'bg_color': '#E8F5E8',  # أخضر فاتح جداً للخلفية
-        'font_color': '#006400',  # أخضر داكن للنص,
-        'align': 'center',
-        'valign': 'vcenter'
-    })
-
-
-def _create_number_format(workbook):
-    """إنشاء تنسيق خاص للأرقام مع لون أخضر فاتح."""
-    return workbook.add_format({
-        'bold': True,  # خط غامق
-        'font_size': 10,
-        'font_name': 'Arial',
-        'border': 2,  # حواف أكثر سمكاً
-        'border_color': '#006400',  # أخضر داكن للحواف
-        'bg_color': '#E8F5E8',  # أخضر فاتح جداً للخلفية
-        'font_color': '#006400',  # أخضر داكن للنص
-        'align': 'center',
-        'valign': 'vcenter',
-    })
-
-
 # =============================================================================
 # HELPER FUNCTIONS - دوال مساعدة
 # =============================================================================
 
-def _is_total_row_simple(df, row_num):
-    """تحقق إذا كان الصف صف مجاميع."""
+def _is_summary_row(df, row_num):
+    """تحقق إذا كان الصف يبدأ بكلمة 'المجموع' في العمود الأول."""
     if row_num >= len(df):
         return False
-
-    # الأعمدة التي تدل على صفوف المجاميع
-    total_indicators = [
-        'العرض الإجمالي',
-        'الطول الإجمالي المرجعي (التقريبي)',
-        'المساحة الإجمالية'
-    ]
-
-    for col_name in total_indicators:
-        if col_name not in df.columns:
-            continue
-
-        try:
-            cell_value = df.iloc[row_num, df.columns.get_loc(col_name)]
-
-            if pd.isna(cell_value) or cell_value == '':
-                continue
-
-            # التحقق من القيم الرقمية الكبيرة
-            try:
-                numeric_val = float(str(cell_value).replace(',', ''))
-                if numeric_val > 1000:
-                    return True
-            except (ValueError, TypeError):
-                pass
-
-            if isinstance(cell_value, str):
-                total_keywords = ['مجموع', 'total', 'sum', 'إجمالي', 'كلي']
-                if any(keyword in cell_value.lower() for keyword in total_keywords):
-                    return True
-
-        except Exception:
-            continue
-
-    return False
-
-def _apply_total_row_formatting(worksheet, df, row_num, total_format, total_rows_found):
-    if row_num >= len(df):
-        return
-
-    total_rows_found.add(row_num)
-
-    excel_row = row_num + 1
     
-    for col_num in range(len(df.columns)):
-        try:
-            cell_value = df.iloc[row_num, col_num]
-
-            if pd.notna(cell_value) and cell_value != '':
-                try:
-                    numeric_value = float(cell_value)
-                    worksheet.write(excel_row, col_num, numeric_value, total_format)
-                except (ValueError, TypeError):
-                    worksheet.write(excel_row, col_num, str(cell_value), total_format)
-            else:
-                worksheet.write(excel_row, col_num, '', total_format)
-        except Exception:
-            try:
-                worksheet.write(excel_row, col_num, str(cell_value), total_format)
-            except:
-                worksheet.write(excel_row, col_num, '', total_format)
-
+    try:
+        first_col_value = df.iloc[row_num, 0]  # أول عمود في الصف
+        
+        if pd.isna(first_col_value):
+            return False
+        
+        first_col_str = str(first_col_value).strip()
+        return first_col_str in ['المجموع', 'مجموع', 'الإجمالي', 'إجمالي', 'Total', 'TOTAL']
+        
+    except Exception:
+        return False

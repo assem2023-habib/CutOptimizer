@@ -198,7 +198,6 @@ class RectPackApp(QWidget):
             self.worker.signals.error.connect(lambda e: self.log_append(f"❌ خطأ:\n{e}"))
             self.worker.signals.data_ready.connect(self.on_worker_data_ready)
             self.worker.signals.finished.connect(self.on_worker_finished)
-            stop_timer(self)
             self.worker.start()
         except Exception as e:
             self.log_append(f"❌ خطأ أثناء بدء العملية: {e}")

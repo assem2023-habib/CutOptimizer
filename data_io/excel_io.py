@@ -93,9 +93,9 @@ def write_output_excel(
     path: str,
     groups: List[GroupCarpet],
     remaining: List[Carpet],
-    remainder_groups: Optional[List[GroupCarpet]] = None,
     min_width: Optional[int] = None,
     max_width: Optional[int] = None,
+    tolerance_length: Optional[int] = None,
     originals: Optional[List[Carpet]] = None,
 ) -> None:
     """
@@ -128,5 +128,5 @@ def write_output_excel(
     """
     from .excel_writer import write_output_excel as _write_output_excel
     _write_output_excel(
-        path, groups, remaining, remainder_groups, min_width, max_width, originals
+        path, groups, remaining, min_width, max_width,tolerance_length , originals
     )

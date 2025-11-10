@@ -8,8 +8,6 @@ from models.data_models import Carpet, GroupCarpet, CarpetUsed
 
 def _create_group_details_sheet(
     groups: List[GroupCarpet],
-    remainder_groups: Optional[List[GroupCarpet]] = None,
-    enhanced_remainder_groups: Optional[List[GroupCarpet]] = None
 ) -> pd.DataFrame:
     rows = []
     total_width= 0
@@ -67,8 +65,6 @@ def _create_group_details_sheet(
 
 def _create_group_summary_sheet(
     groups: List[GroupCarpet],
-    remainder_groups: Optional[List[GroupCarpet]] = None,
-    enhanced_remainder_groups: Optional[List[GroupCarpet]] = None
 ) -> pd.DataFrame:
     """إنشاء ورقة ملخص المجموعات مع الإحصائيات."""
     summary = []
@@ -77,8 +73,6 @@ def _create_group_summary_sheet(
     total_area= 0
     items_count= 0
     total_qty_used= 0
-    total_wasteWidth= 0
-    total_pathLoss= 0
     for g in groups:
         types_count = len(g.items)
         summary.append({
@@ -163,8 +157,6 @@ def _create_totals_sheet(
     original_groups: List[Carpet],
     groups: List[GroupCarpet],
     remaining: List[Carpet],
-    remainder_groups: Optional[List[GroupCarpet]] = None,
-    enhanced_remainder_groups: Optional[List[GroupCarpet]] = None
 ) -> pd.DataFrame:
     total_original = 0
     if original_groups:
@@ -197,8 +189,6 @@ def _create_totals_sheet(
 def _create_audit_sheet(
     groups: List[GroupCarpet],
     remaining: List[Carpet],
-    remainder_groups: Optional[List[GroupCarpet]] = None,
-    enhanced_remainder_groups: Optional[List[GroupCarpet]] = None,
     originals: Optional[List[Carpet]] = None
 ) -> pd.DataFrame:
     used_totals: Dict[tuple, int] = {}
@@ -305,7 +295,6 @@ def _generate_waste_sheet(
     total_waste_maxPath= 0
     total_sumPathLoss= 0
     total_result= 0
-    total_result2= 0
 
     for g in groups:
         sumPathLoss= 0
@@ -334,6 +323,7 @@ def _generate_waste_sheet(
         total_sumPathLoss+= sumPathLoss
         total_result+= pathLoss * wasteWidth
         total_maxPath+= g.max_length_ref()
+
     summary.append({
         'رقم المجموعة': '',
         'العرض الإجمالي': '',

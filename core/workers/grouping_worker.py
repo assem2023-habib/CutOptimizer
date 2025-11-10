@@ -88,8 +88,9 @@ class GroupingWorker(QThread):
                 remaining=remaining,
                 min_width=self.min_width,
                 max_width=self.max_width,
+                tolerance_length= self.tolerance_len,
                 originals=original_carpets
-            )
+                )
             
             self.signals.log.emit(f"✅ تم حفظ النتائج في: {self.output_path}")
             # self.signals.progress.emit(100)
