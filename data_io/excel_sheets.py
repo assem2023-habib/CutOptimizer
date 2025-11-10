@@ -12,6 +12,12 @@ def _create_group_details_sheet(
     enhanced_remainder_groups: Optional[List[GroupCarpet]] = None
 ) -> pd.DataFrame:
     rows = []
+    total_width= 0
+    total_height= 0
+    total_qty_used= 0
+    total_length_ref= 0
+    total_qty= 0
+    total_qty_rem= 0
     for g in groups:
         for it in g.items:
             rows.append({
@@ -24,8 +30,36 @@ def _create_group_details_sheet(
                 'الكمية الاصلية' : it.qty_used + it.qty_rem,
                 'الكمية المتبقية': it.qty_rem
             })
+            total_qty+= it.qty_used + it.qty_rem
+            total_qty_rem+= it.qty_rem
 
-    # إنشاء DataFrame
+        total_width+= g.total_width()
+        total_height+= g.total_height()
+        total_qty_used+= g.total_qty()
+        total_length_ref+= g.total_length_ref()
+
+    rows.append({
+        'رقم المجموعة': '',
+        'معرف السجاد': '',
+        'العرض': '',
+        'الطول': '',
+        'الكمية المستخدمة': '',
+        'الطول الاجمالي للسجادة': '',
+        'الكمية الاصلية' : '',
+        'الكمية المتبقية': ''
+    })
+    
+    rows.append({
+        'رقم المجموعة': 'المجموع  ',
+        'معرف السجاد': '',
+        'العرض': total_width,
+        'الطول': total_height,
+        'الكمية المستخدمة': total_qty_used,
+        'الطول الاجمالي للسجادة': total_length_ref,
+        'الكمية الاصلية' : total_qty,
+        'الكمية المتبقية': total_qty_rem
+    })
+
     df = pd.DataFrame(rows)
 
     return df
@@ -66,6 +100,7 @@ def _create_group_summary_sheet(
         total_qty_used+= g.total_qty()
         total_wasteWidth+= wasteWidth
         total_pathLoss+= pathLoss
+
     summary.append({
         'رقم المجموعة': '',
         'العرض الإجمالي': '',
@@ -76,6 +111,7 @@ def _create_group_summary_sheet(
         'الهادر في العرض':  '',
         'الهادر في المسارات': '',
     })
+    
     summary.append({
         'رقم المجموعة': "المجموع",
         'العرض الإجمالي': total_width,
@@ -93,16 +129,16 @@ def _create_group_summary_sheet(
 
 
 def _create_remaining_sheet(remaining: List[Carpet]) -> pd.DataFrame:
-    """إنشاء ورقة السجاد المتبقي مع تجميع العناصر المتطابقة."""
-    # تجميع العناصر المتطابقة حسب المعرف والعرض والطول
     aggregated = {}
     for r in remaining:
         if r.rem_qty > 0:
             key = (r.id, r.width, r.height)
             aggregated[key] = aggregated.get(key, 0) + int(r.rem_qty)
 
-    # إنشاء صفوف البيانات
     rem_rows = []
+    total_width = 0
+    total_hieght = 0
+    total_rem_qty = 0
     for (rid, w, h), q in aggregated.items():
         rem_rows.append({
             'معرف السجادة': rid,
@@ -110,10 +146,26 @@ def _create_remaining_sheet(remaining: List[Carpet]) -> pd.DataFrame:
             'الطول': h,
             'الكمية المتبقية': q,
         })
+        total_width+= w
+        total_hieght+= h
+        total_rem_qty+= q
+
+    rem_rows.append({
+        'معرف السجادة': '',
+        'العرض': '',
+        'الطول': '',
+        'الكمية المتبقية': '',
+    })
+
+    rem_rows.append({
+        'معرف السجادة': 'المجموع  ',
+        'العرض': total_width,
+        'الطول': total_hieght,
+        'الكمية المتبقية': total_rem_qty,
+    })
 
     df = pd.DataFrame(rem_rows)
 
-    # تجميع البيانات وتنظيمها
     if not df.empty:
         df = df.sort_values(by=['الطول', 'العرض', 'معرف السجادة'])
 
@@ -127,7 +179,6 @@ def _create_totals_sheet(
     remainder_groups: Optional[List[GroupCarpet]] = None,
     enhanced_remainder_groups: Optional[List[GroupCarpet]] = None
 ) -> pd.DataFrame:
-    """إنشاء ورقة الإجماليات مع مقارنة قبل وبعد العملية."""
     total_original = 0
     if original_groups:
         for carpet in original_groups:
@@ -143,12 +194,17 @@ def _create_totals_sheet(
 
     total_used = total_original - total_remaining
 
-    return pd.DataFrame([{
+    rem_rows = [{
+        "":"",
         "الإجمالي الأصلي (cm²)": total_original,
         "المستهلك (cm²)": total_used,
         "المتبقي (cm²)": total_remaining,
         "نسبة الاستهلاك (%)": (total_used / total_original * 100) if total_original > 0 else 0
-    }])
+    }]
+
+    df = pd.DataFrame(rem_rows)
+
+    return df
 
 
 def _create_audit_sheet(
@@ -158,8 +214,6 @@ def _create_audit_sheet(
     enhanced_remainder_groups: Optional[List[GroupCarpet]] = None,
     originals: Optional[List[Carpet]] = None
 ) -> pd.DataFrame:
-    """إنشاء ورقة تدقيق الكميات."""
-    # تجميع المستخدم من جميع المجموعات
     used_totals: Dict[tuple, int] = {}
 
     def _accumulate_used(from_groups: Optional[List[GroupCarpet]]):
@@ -173,33 +227,42 @@ def _create_audit_sheet(
     _accumulate_used(remainder_groups)
     _accumulate_used(enhanced_remainder_groups)
 
-    # تجميع المتبقي
     remaining_totals: Dict[tuple, int] = {}
     for r in remaining:
         if r.rem_qty > 0:
             key = (r.id, r.width, r.height)
             remaining_totals[key] = remaining_totals.get(key, 0) + int(r.rem_qty)
 
-    # تجميع الأصلي
     original_totals: Dict[tuple, int] = {}
     if originals is not None:
         for r in originals:
             key = (r.id, r.width, r.height)
             original_totals[key] = original_totals.get(key, 0) + int(r.qty)
     else:
-        # استنتاج الأصلي من المستخدم + المتبقي
         all_keys = set(list(used_totals.keys()) + list(remaining_totals.keys()))
         for k in all_keys:
             original_totals[k] = used_totals.get(k, 0) + remaining_totals.get(k, 0)
 
-    # بناء جدول التدقيق
     audit_rows = []
     all_keys = set(list(original_totals.keys()) + list(used_totals.keys()) + list(remaining_totals.keys()))
+    total_width= 0
+    total_height= 0
+    total_original_qty= 0
+    total_used_qty= 0
+    total_rem_qty= 0
+    tota_diff_qty= 0
     for (rid, w, h) in sorted(all_keys, key=lambda x: (x[0] if x[0] is not None else -1, x[1], x[2])):
         orig = int(original_totals.get((rid, w, h), 0))
         used = int(used_totals.get((rid, w, h), 0))
         rem = int(remaining_totals.get((rid, w, h), 0))
         diff = used + rem - orig
+
+        total_width+= w
+        total_height+= h
+        total_original_qty+= orig
+        total_used_qty+= used
+        total_rem_qty+= rem
+        tota_diff_qty+= diff
         audit_rows.append({
             'معرف السجادة': rid,
             'العرض': w,
@@ -211,141 +274,70 @@ def _create_audit_sheet(
             'مطابق؟': '✅ نعم' if diff == 0 else '❌ لا'    
         })
 
-    # إنشاء DataFrame
+    audit_rows.append({
+        'معرف السجادة': '',
+        'العرض': '',
+        'الارتفاع': '',
+        'الكمية الأصلية': '',
+        'الكمية المستخدمة': '',
+        'الكمية المتبقية': '',
+        'فارق (المستخدم+المتبقي-الأصلي)': '',
+        'مطابق؟': '' 
+    })
+
+    is_same= '❌ لا'
+    if total_original_qty == total_used_qty + total_rem_qty:
+        is_same= '✅ نعم'
+    audit_rows.append({
+        'معرف السجادة': ' المجموع ',
+        'العرض': total_width,
+        'الارتفاع': total_height,
+        'الكمية الأصلية': total_original_qty,
+        'الكمية المستخدمة': total_used_qty,
+        'الكمية المتبقية': total_rem_qty,
+        'فارق (المستخدم+المتبقي-الأصلي)': tota_diff_qty,
+        'مطابق؟': is_same 
+    })
     df = pd.DataFrame(audit_rows)
 
     return df
 
 
-def _create_enhanced_stats_sheet(enhanced_remainder_groups: Optional[List[GroupCarpet]]) -> pd.DataFrame:
-    """إنشاء ورقة إحصائيات المجموعات الإضافية."""
-    if not enhanced_remainder_groups:
-        return pd.DataFrame(columns=[
-            'رقم المجموعة', 'عدد العناصر', 'العرض الإجمالي', 
-            'أقصى ارتفاع', 'المساحة الإجمالية'
-        ])
-
-    enhanced_stats = []
-    for g in enhanced_remainder_groups:
-        enhanced_stats.append({
-            'رقم المجموعة': f'المجموعة_{g.group_id}',
-            'عدد العناصر': len(g.items),
-            'العرض الإجمالي': g.total_width(),
-            'أقصى ارتفاع': g.total_height(),
-            'المساحة الإجمالية': g.total_area(),
-        })
-
-    # إنشاء DataFrame
-    df = pd.DataFrame(enhanced_stats)
-
-    return df
-
-
-def _create_ui_summary_sheet(
+def _generate_waste_sheet(
     groups: List[GroupCarpet],
-    remainder_groups: Optional[List[GroupCarpet]] = None,
-    enhanced_remainder_groups: Optional[List[GroupCarpet]] = None
+    max_width: int,
 ) -> pd.DataFrame:
-    """إنشاء ورقة ملخص الواجهة مع تصنيف المجموعات."""
-    ui_rows = []
+    summary = []
+    total_width= 0
+    total_wasteWidth= 0
+    total_pathLoss= 0
     for g in groups:
-        ui_rows.append({
-            'عدد الأنواع': len(g.items),
-            'الطول المرجعي': g.ref_height(),
+        wasteWidth = max_width - g.total_width()
+        pathLoss = g.max_length_ref() - g.min_length_ref()
+        summary.append({
+            'رقم المجموعة': f'المجموعة_{g.group_id}',
             'العرض الإجمالي': g.total_width(),
-            'رقم المجموعة': f'المجموعة_{g.id}',
+            'الهادر في العرض':  wasteWidth,
+            'الهادر في المسارات': pathLoss,
         })
+        total_width+= g.total_width()
+        total_wasteWidth+= wasteWidth
+        total_pathLoss+= pathLoss
 
-    # إنشاء DataFrame
-    df = pd.DataFrame(ui_rows)
-
-    return df
-
-def _create_suggestions_sheet(
-    remaining: List[Carpet],
-    min_width: Optional[int] = None,
-    max_width: Optional[int] = None,
-    tolerance_length: Optional[int] = None
-) -> pd.DataFrame:
-    """
-    إنشاء ورقة اقتراحات تشكيل المجموعات من المتبقيات.
+    summary.append({
+        'رقم المجموعة': '',
+        'العرض الإجمالي': '',
+        'الهادر في العرض':  '',
+        'الهادر في المسارات': '',
+    })
     
-    ملاحظة: هذه دالة مبسطة - يمكن تطويرها لاحقاً بخوارزميات أكثر تعقيداً
-    """
-  
-    eff_min_width = 370 if min_width is None else int(min_width)
-    eff_max_width = 400 if max_width is None else int(max_width)
-    eff_tolerance = 0 if tolerance_length is None else int(tolerance_length)
+    summary.append({
+        'رقم المجموعة': "المجموع",
+        'العرض الإجمالي': total_width,
+        'الهادر في العرض':  total_wasteWidth,
+        'الهادر في المسارات': total_pathLoss,
+    })
 
-    rows = []
-    
-    # تحليل بسيط للمتبقيات
-    if remaining:
-        remaining_with_qty = [r for r in remaining if r.rem_qty > 0]
-        
-        if remaining_with_qty:
-            for i, r in enumerate(remaining_with_qty[:10]):  # أول 10 عناصر
-                rows.append({
-                    'رقم الاقتراح': i + 1,
-                    'معرف السجادة': r.id,
-                    'العرض': r.width,
-                    'الطول': r.height,
-                    'الكمية المتبقية': r.rem_qty,
-                    'الاقتراح': f'يمكن دمجها مع سجادات عرض {eff_max_width - r.width} أو أقل',
-                    'ملاحظات': 'تحتاج تحليل يدوي'
-                })
-
-    if not rows:
-        rows.append({
-            'رقم الاقتراح': 0,
-            'معرف السجادة': 'N/A',
-            'العرض': 0,
-            'الارتفاع': 0,
-            'الكمية المتبقية': 0,
-            'الاقتراح': 'لا توجد متبقيات كافية للاقتراحات',
-            'ملاحظات': 'N/A'
-        })
-
-    return pd.DataFrame(rows)
-
-
-def _create_size_suggestions_sheet(
-    remaining: List[Carpet],
-    min_width: Optional[int] = None,
-    max_width: Optional[int] = None,
-    tolerance_length: Optional[int] = None
-) -> pd.DataFrame:
-    """
-    إنشاء ورقة اقتراحات المقاسات المطلوبة للبواقي.
-    """
-    data = []
-
-    if remaining:
-        for rect in remaining:
-            if rect.rem_qty > 0:
-                data.append({
-                    'المقاس الحالي': f"{rect.width}x{rect.height}",
-                    'الكمية': rect.rem_qty,
-                    'الطول الإجمالي': rect.height * rect.rem_qty,
-                    'نوع الاقتراح': 'تحليل',
-                    'العرض المطلوب': f"{min_width}-{max_width}" if min_width and max_width else 'غير محدد',
-                    'الاقتراح': f"مقاس متاح للتحليل",
-                    'الكفاءة': 'متوسطة'
-                })
-
-    # إذا لم توجد بيانات، إنشاء صف واحد فقط
-    if not data:
-        data.append({
-            'المقاس الحالي': 'لا توجد بيانات',
-            'الكمية': 0,
-            'الطول الإجمالي': 0,
-            'نوع الاقتراح': 'غير متاح',
-            'العرض المطلوب': 'غير متاح',
-            'الاقتراح': 'لا توجد اقتراحات',
-            'الكفاءة': 'غير متاح'
-        })
-
-    # إنشاء DataFrame
-    df = pd.DataFrame(data)
+    df = pd.DataFrame(summary)
 
     return df

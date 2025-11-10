@@ -62,6 +62,9 @@ class GroupCarpet:
     def total_height(self)->int:
         return sum(item.height for item in self.items)
     
+    def total_length_ref(self)->int:
+        return sum(item.length_ref() for item in self.items)
+    
     def max_height(self)->int:
         return max(item.height for item in self.items)
     
@@ -69,7 +72,7 @@ class GroupCarpet:
         return max(item.width for item in self.items)    
     
     def min_width(self)->int:
-        return max(item.width for item in self.items)
+        return min(item.width for item in self.items)
     
     def max_length_ref(self)->int:
         return max(item.length_ref() for item in self.items)
