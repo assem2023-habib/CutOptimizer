@@ -81,8 +81,6 @@ def _create_group_summary_sheet(
     total_pathLoss= 0
     for g in groups:
         types_count = len(g.items)
-        wasteWidth = g.max_width() - g.min_width()
-        pathLoss = g.max_length_ref() - g.min_length_ref()
         summary.append({
             'رقم المجموعة': f'المجموعة_{g.group_id}',
             'العرض الإجمالي': g.total_width(),
@@ -90,16 +88,12 @@ def _create_group_summary_sheet(
             'المساحة الإجمالية': g.total_area(),
             'الكمية المستخدمة الكلية': g.total_qty(),
             'عدد أنواع السجاد': types_count,
-            'الهادر في العرض':  wasteWidth,
-            'الهادر في المسارات': pathLoss,
         })
         total_width+= g.total_width()
         total_hieght+= g.total_height()
         total_area+= g.total_area()
         items_count+= types_count
         total_qty_used+= g.total_qty()
-        total_wasteWidth+= wasteWidth
-        total_pathLoss+= pathLoss
 
     summary.append({
         'رقم المجموعة': '',
@@ -108,8 +102,6 @@ def _create_group_summary_sheet(
         'المساحة الإجمالية': '',
         'الكمية المستخدمة الكلية': '',
         'عدد أنواع السجاد': '',
-        'الهادر في العرض':  '',
-        'الهادر في المسارات': '',
     })
     
     summary.append({
@@ -119,8 +111,6 @@ def _create_group_summary_sheet(
         'المساحة الإجمالية': total_area,
         'الكمية المستخدمة الكلية': total_qty_used,
         'عدد أنواع السجاد': items_count,
-        'الهادر في العرض':  total_wasteWidth,
-        'الهادر في المسارات': total_pathLoss,
     })
 
     df = pd.DataFrame(summary)
@@ -165,9 +155,6 @@ def _create_remaining_sheet(remaining: List[Carpet]) -> pd.DataFrame:
     })
 
     df = pd.DataFrame(rem_rows)
-
-    if not df.empty:
-        df = df.sort_values(by=['الطول', 'العرض', 'معرف السجادة'])
 
     return df
 
@@ -224,8 +211,6 @@ def _create_audit_sheet(
                     used_totals[key] = used_totals.get(key, 0) + int(it.qty_used)
 
     _accumulate_used(groups)
-    _accumulate_used(remainder_groups)
-    _accumulate_used(enhanced_remainder_groups)
 
     remaining_totals: Dict[tuple, int] = {}
     for r in remaining:
@@ -244,13 +229,16 @@ def _create_audit_sheet(
             original_totals[k] = used_totals.get(k, 0) + remaining_totals.get(k, 0)
 
     audit_rows = []
+
     all_keys = set(list(original_totals.keys()) + list(used_totals.keys()) + list(remaining_totals.keys()))
+
     total_width= 0
     total_height= 0
     total_original_qty= 0
     total_used_qty= 0
     total_rem_qty= 0
     tota_diff_qty= 0
+
     for (rid, w, h) in sorted(all_keys, key=lambda x: (x[0] if x[0] is not None else -1, x[1], x[2])):
         orig = int(original_totals.get((rid, w, h), 0))
         used = int(used_totals.get((rid, w, h), 0))
@@ -263,6 +251,7 @@ def _create_audit_sheet(
         total_used_qty+= used
         total_rem_qty+= rem
         tota_diff_qty+= diff
+        
         audit_rows.append({
             'معرف السجادة': rid,
             'العرض': w,
@@ -311,7 +300,13 @@ def _generate_waste_sheet(
     total_width= 0
     total_wasteWidth= 0
     total_pathLoss= 0
+    total_sumPathLoss= 0
+    total_result= 0
+    total_result2= 0
     for g in groups:
+        sumPathLoss= 0
+        for item in g.items:
+            sumPathLoss += g.max_length_ref() - item.length_ref()
         wasteWidth = max_width - g.total_width()
         pathLoss = g.max_length_ref() - g.min_length_ref()
         summary.append({
@@ -319,16 +314,25 @@ def _generate_waste_sheet(
             'العرض الإجمالي': g.total_width(),
             'الهادر في العرض':  wasteWidth,
             'الهادر في المسارات': pathLoss,
+            'نتيحة الجداء':pathLoss * wasteWidth,
+            'مجموع هادرالمسارات في المجموعة': sumPathLoss,
+            'النتيجة': sumPathLoss * wasteWidth,
         })
         total_width+= g.total_width()
         total_wasteWidth+= wasteWidth
         total_pathLoss+= pathLoss
+        total_sumPathLoss+= sumPathLoss
+        total_result+= pathLoss * wasteWidth
+        total_result2+= sumPathLoss * wasteWidth
 
     summary.append({
         'رقم المجموعة': '',
         'العرض الإجمالي': '',
         'الهادر في العرض':  '',
         'الهادر في المسارات': '',
+        'نتيحة الجداء':'',
+        'مجموع هادرالمسارات في المجموعة': '',
+        'النتيجة': '',
     })
     
     summary.append({
@@ -336,6 +340,9 @@ def _generate_waste_sheet(
         'العرض الإجمالي': total_width,
         'الهادر في العرض':  total_wasteWidth,
         'الهادر في المسارات': total_pathLoss,
+        'نتيحة الجداء': total_result,
+        'مجموع هادرالمسارات في المجموعة': total_sumPathLoss,
+        'النتيجة': total_result2,
     })
 
     df = pd.DataFrame(summary)
