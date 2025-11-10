@@ -62,8 +62,14 @@ class GroupCarpet:
     def total_height(self)->int:
         return sum(item.height for item in self.items)
     
-    def total_height(self)->int:
+    def max_height(self)->int:
         return max(item.height for item in self.items)
+    
+    def max_width(self)->int:
+        return max(item.width for item in self.items)    
+    
+    def min_width(self)->int:
+        return max(item.width for item in self.items)
     
     def total_qty(self)->int:
         return sum(item.qty_used for item in self.items)
@@ -84,8 +90,8 @@ class GroupCarpet:
             f"qty={self.total_qty()}, area={self.total_area():.2f}, "
             f"items=[{items_desc}]"
         )
+    
     def ref_height(self) -> int:
-        """إرجاع الطول المرجعي (طول أول عنصر في المجموعة)"""
         if not self.items:
-            return 0  # أو يمكنك رفع استثناء إذا كانت القائمة فارغة
+            return 0
         return self.items[0].length_ref()
