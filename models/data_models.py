@@ -71,6 +71,12 @@ class GroupCarpet:
     def min_width(self)->int:
         return max(item.width for item in self.items)
     
+    def max_length_ref(self)->int:
+        return max(item.length_ref() for item in self.items)
+    
+    def min_length_ref(self)->int:
+        return min(item.length_ref() for item in self.items)
+    
     def total_qty(self)->int:
         return sum(item.qty_used for item in self.items)
     
