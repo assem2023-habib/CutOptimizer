@@ -75,14 +75,8 @@ def write_output_excel(
     # إنشاء ورقة التدقيق
     df_audit = _create_audit_sheet(groups, remaining, remainder_groups, enhanced_remainder_groups, originals)
 
-    # إنشاء ورقة اقتراحات تشكيل المجموعات المحسنة
-    df_optimized = _create_optimized_remainder_groups_sheet(
-        remaining, originals, min_width, max_width, tolerance_length
-    )
-
-    # كتابة جميع الأوراق إلى الملف
     _write_all_sheets_to_excel(
-        path, df1, df2, df3, totals_df, df_enhanced_stats, df_audit, df_optimized
+        path, df1, df2, df3, totals_df, df_audit
     )
 
 # =============================================================================
@@ -95,14 +89,11 @@ def _write_all_sheets_to_excel(
     df2: pd.DataFrame,
     df3: pd.DataFrame,
     totals_df: pd.DataFrame,
-    df_enhanced_stats: pd.DataFrame,
     df_audit: pd.DataFrame,
-    df_optimized: pd.DataFrame,
 ) -> None:
     """كتابة جميع الأوراق إلى ملف Excel مع ضبط تلقائي لعرض الأعمدة."""
     try:
         with pd.ExcelWriter(path, engine='xlsxwriter') as writer:
-            # كتابة الأوراق الأساسية فقط لتجنب المشاكل
             if not df1.empty:
                 df1.to_excel(writer, sheet_name='تفاصيل المجموعات', index=False)
 
@@ -119,45 +110,24 @@ def _write_all_sheets_to_excel(
             if not df_audit.empty:
                 df_audit.to_excel(writer, sheet_name='تدقيق الكميات', index=False)
 
-            # كتابة المجموعات المحسنة
-            if not df_optimized.empty:
-                df_optimized.to_excel(writer, sheet_name='اقتراحات محسنة', index=False)
 
             # ضبط عرض الأعمدة تلقائياً لكل ورقة
             _auto_adjust_column_width(writer, df1, df2, df3, totals_df, df_audit)
 
-    except Exception as e:
-        try:
-            with pd.ExcelWriter(path, engine='xlsxwriter') as writer:
-                df1.to_excel(writer, sheet_name='تفاصيل المجموعات', index=False)
-                df2.to_excel(writer, sheet_name='ملخص المجموعات', index=False)
-                df3.to_excel(writer, sheet_name='السجاد المتبقي', index=False)
-                totals_df.to_excel(writer, sheet_name='الإجماليات', index=False)
-                df_audit.to_excel(writer, sheet_name='تدقيق الكميات', index=False)
-
-                # ضبط عرض الأعمدة تلقائياً للنسخة المبسطة
-                _auto_adjust_column_width(writer, df1, df2, df3, totals_df, df_audit)
-
-        except Exception as e2:
-            # If even the simplified version fails, just pass silently
-            raise
+    except Exception as e2:
+        raise
 
 
 def _auto_adjust_column_width(writer, df1, df2, df3, totals_df, df_audit):
-    """ضبط عرض الأعمدة تلقائياً وتطبيق التنسيقات الجمالية لجميع الأوراق في ملف Excel."""
-    # الحصول على workbook وإنشاء التنسيقات
     workbook = writer.book
 
-    # إنشاء التنسيقات
     header_format = _create_header_format(workbook)
     total_format = _create_total_format(workbook)
     normal_format = _create_normal_format(workbook)
     number_format = _create_number_format(workbook)
 
-    # قاموس يربط أسماء الأوراق بـ DataFrames الخاصة بها
     sheet_dataframes = {}
 
-    # إضافة الأوراق المكتوبة فقط
     if not df1.empty:
         sheet_dataframes['تفاصيل المجموعات'] = df1
 
@@ -174,13 +144,11 @@ def _auto_adjust_column_width(writer, df1, df2, df3, totals_df, df_audit):
         sheet_dataframes['تدقيق الكميات'] = df_audit
 
 
-    # تطبيق التنسيقات لكل ورقة
     for sheet_name, df in sheet_dataframes.items():
         if sheet_name in writer.sheets:
             worksheet = writer.sheets[sheet_name]
 
             try:
-                # تطبيق التنسيقات المتقدمة على الورقة
                 _apply_advanced_formatting(
                     writer,
                     sheet_name,
@@ -191,25 +159,21 @@ def _auto_adjust_column_width(writer, df1, df2, df3, totals_df, df_audit):
                     number_format
                 )
 
-                # ضبط عرض الأعمدة تلقائياً
                 for i, col in enumerate(df.columns):
                     try:
                         max_length = max(
-                            df[col].astype(str).apply(len).max(),  # أطول قيمة في العمود
-                            len(str(col))  # عنوان العمود
+                            df[col].astype(str).apply(len).max(),
+                            len(str(col))  
                         )
-                        # تحديد عرض عمود معقول
-                        column_width = min(max_length + 2, 50)  # حد أقصى للعرض 50 حرف
+                        column_width = min(max_length + 2, 50)
                         worksheet.set_column(i, i, column_width)
                     except Exception as e:
-                        # في حالة حدوث خطأ في ضبط عرض العمود، استمر بالعمود التالي
-                        worksheet.set_column(i, i, 15)  # عرض افتراضي
+                        worksheet.set_column(i, i, 15)
 
             except Exception as e:
                 traceback.print_exc()
 
 def _apply_advanced_formatting(writer, sheet_name, df, header_format, total_format, normal_format, number_format):
-    """تطبيق التنسيقات المتقدمة على الورقة مع حل مشكلة الصفوف المكررة."""
     worksheet = writer.sheets[sheet_name]
 
     try:

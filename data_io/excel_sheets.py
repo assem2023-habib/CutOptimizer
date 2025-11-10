@@ -38,23 +38,55 @@ def _create_group_summary_sheet(
 ) -> pd.DataFrame:
     """إنشاء ورقة ملخص المجموعات مع الإحصائيات."""
     summary = []
-    # المجموعات الأصلية
+    total_width= 0
+    total_hieght= 0
+    total_area= 0
+    items_count= 0
+    total_qty_used= 0
+    total_wasteWidth= 0
+    total_pathLoss= 0
     for g in groups:
         types_count = len(g.items)
         wasteWidth = g.max_width() - g.min_width()
         pathLoss = g.max_length_ref() - g.min_length_ref()
         summary.append({
             'رقم المجموعة': f'المجموعة_{g.group_id}',
-                'العرض الإجمالي': g.total_width(),
-                'أقصى ارتفاع': g.total_height(),
-                'المساحة الإجمالية': g.total_area(),
-                'الكمية المستخدمة الكلية': g.total_qty(),
-                'عدد أنواع السجاد': types_count,
-                'الهادر في العرض':  wasteWidth,
-                'الهادر في المسارات': pathLoss,
+            'العرض الإجمالي': g.total_width(),
+            'أقصى ارتفاع': g.total_height(),
+            'المساحة الإجمالية': g.total_area(),
+            'الكمية المستخدمة الكلية': g.total_qty(),
+            'عدد أنواع السجاد': types_count,
+            'الهادر في العرض':  wasteWidth,
+            'الهادر في المسارات': pathLoss,
         })
+        total_width+= g.total_width()
+        total_hieght+= g.total_height()
+        total_area+= g.total_area()
+        items_count+= types_count
+        total_qty_used+= g.total_qty()
+        total_wasteWidth+= wasteWidth
+        total_pathLoss+= pathLoss
+    summary.append({
+        'رقم المجموعة': '',
+        'العرض الإجمالي': '',
+        'أقصى ارتفاع': '',
+        'المساحة الإجمالية': '',
+        'الكمية المستخدمة الكلية': '',
+        'عدد أنواع السجاد': '',
+        'الهادر في العرض':  '',
+        'الهادر في المسارات': '',
+    })
+    summary.append({
+        'رقم المجموعة': "المجموع",
+        'العرض الإجمالي': total_width,
+        'أقصى ارتفاع': total_hieght,
+        'المساحة الإجمالية': total_area,
+        'الكمية المستخدمة الكلية': total_qty_used,
+        'عدد أنواع السجاد': items_count,
+        'الهادر في العرض':  total_wasteWidth,
+        'الهادر في المسارات': total_pathLoss,
+    })
 
-    # إنشاء DataFrame
     df = pd.DataFrame(summary)
 
     return df
