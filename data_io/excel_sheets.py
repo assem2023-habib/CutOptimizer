@@ -42,7 +42,7 @@ def _create_group_summary_sheet(
     for g in groups:
         types_count = len(g.items)
         wasteWidth = g.max_width() - g.min_width()
-        pathLoss = g.
+        # pathLoss = g.
         summary.append({
             'رقم المجموعة': f'المجموعة_{g.group_id}',
                 'العرض الإجمالي': g.total_width(),
@@ -51,7 +51,7 @@ def _create_group_summary_sheet(
                 'الكمية المستخدمة الكلية': g.total_qty(),
                 'عدد أنواع السجاد': len(g.items),
                 'الهادر في العرض':  wasteWidth,
-                'الهادر في المسارات': ,
+                'الهادر في المسارات': '',
         })
 
     # إنشاء DataFrame
