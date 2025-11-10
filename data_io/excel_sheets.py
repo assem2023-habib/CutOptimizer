@@ -85,13 +85,13 @@ def _create_group_summary_sheet(
             'رقم المجموعة': f'المجموعة_{g.group_id}',
             'العرض الإجمالي': g.total_width(),
             'أقصى ارتفاع': g.total_height(),
-            'المساحة الإجمالية': g.total_area(),
+            'المساحة الإجمالية': g.max_height(),
             'الكمية المستخدمة الكلية': g.total_qty(),
             'عدد أنواع السجاد': types_count,
         })
         total_width+= g.total_width()
         total_hieght+= g.total_height()
-        total_area+= g.total_area()
+        total_area+= g.max_height()
         items_count+= types_count
         total_qty_used+= g.total_qty()
 
@@ -148,7 +148,7 @@ def _create_remaining_sheet(remaining: List[Carpet]) -> pd.DataFrame:
     })
 
     rem_rows.append({
-        'معرف السجادة': 'المجموع  ',
+        'معرف السجادة': "المجموع",
         'العرض': total_width,
         'الطول': total_hieght,
         'الكمية المتبقية': total_rem_qty,
@@ -251,7 +251,7 @@ def _create_audit_sheet(
         total_used_qty+= used
         total_rem_qty+= rem
         tota_diff_qty+= diff
-        
+
         audit_rows.append({
             'معرف السجادة': rid,
             'العرض': w,
@@ -278,7 +278,7 @@ def _create_audit_sheet(
     if total_original_qty == total_used_qty + total_rem_qty:
         is_same= '✅ نعم'
     audit_rows.append({
-        'معرف السجادة': ' المجموع ',
+        'معرف السجادة': "المجموع",
         'العرض': total_width,
         'الارتفاع': total_height,
         'الكمية الأصلية': total_original_qty,
@@ -296,53 +296,64 @@ def _generate_waste_sheet(
     groups: List[GroupCarpet],
     max_width: int,
 ) -> pd.DataFrame:
+    
     summary = []
     total_width= 0
     total_wasteWidth= 0
     total_pathLoss= 0
+    total_maxPath= 0
+    total_waste_maxPath= 0
     total_sumPathLoss= 0
     total_result= 0
     total_result2= 0
+
     for g in groups:
         sumPathLoss= 0
+
         for item in g.items:
             sumPathLoss += g.max_length_ref() - item.length_ref()
+
         wasteWidth = max_width - g.total_width()
         pathLoss = g.max_length_ref() - g.min_length_ref()
+
         summary.append({
             'رقم المجموعة': f'المجموعة_{g.group_id}',
             'العرض الإجمالي': g.total_width(),
             'الهادر في العرض':  wasteWidth,
+            'اطول مسار': g.max_length_ref(),
+            'نتيجة الضرب': wasteWidth * g.max_length_ref(),
             'الهادر في المسارات': pathLoss,
-            'نتيحة الجداء':pathLoss * wasteWidth,
+            'نتيجة الجمع': wasteWidth * g.max_length_ref() + pathLoss,
             'مجموع هادرالمسارات في المجموعة': sumPathLoss,
-            'النتيجة': sumPathLoss * wasteWidth,
         })
+
         total_width+= g.total_width()
         total_wasteWidth+= wasteWidth
+        total_waste_maxPath+= wasteWidth * g.max_length_ref()
         total_pathLoss+= pathLoss
         total_sumPathLoss+= sumPathLoss
         total_result+= pathLoss * wasteWidth
-        total_result2+= sumPathLoss * wasteWidth
-
+        total_maxPath+= g.max_length_ref()
     summary.append({
         'رقم المجموعة': '',
         'العرض الإجمالي': '',
         'الهادر في العرض':  '',
+        'اطول مسار': '',
+        'نتيجة الضرب': '',
         'الهادر في المسارات': '',
-        'نتيحة الجداء':'',
+        'نتيجة الجمع':'',
         'مجموع هادرالمسارات في المجموعة': '',
-        'النتيجة': '',
     })
     
     summary.append({
         'رقم المجموعة': "المجموع",
         'العرض الإجمالي': total_width,
         'الهادر في العرض':  total_wasteWidth,
+        'اطول مسار': total_maxPath,
+        'نتيجة الضرب': total_waste_maxPath,
         'الهادر في المسارات': total_pathLoss,
-        'نتيحة الجداء': total_result,
+        'نتيجة الجمع': total_result,
         'مجموع هادرالمسارات في المجموعة': total_sumPathLoss,
-        'النتيجة': total_result2,
     })
 
     df = pd.DataFrame(summary)

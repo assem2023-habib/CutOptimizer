@@ -220,7 +220,7 @@ def _apply_advanced_formatting(writer, sheet_name, df, header_format, total_form
 
                     if col_name in numeric_cols:
                         try:
-                            numeric_value = float(cell_value) if cell_value != '' else 0
+                            numeric_value = float(cell_value)
                             worksheet.write(excel_row, col_num, numeric_value, summary_format)
                         except (ValueError, TypeError):
                             worksheet.write(excel_row, col_num, cell_value, summary_format)
@@ -244,7 +244,7 @@ def _apply_advanced_formatting(writer, sheet_name, df, header_format, total_form
 
                         if col_name in numeric_cols:
                             try:
-                                numeric_value = float(cell_value) if cell_value != '' else 0
+                                numeric_value = float(cell_value)
                                 worksheet.write(excel_row, col_num, numeric_value, number_format)
                             except (ValueError, TypeError):
                                 worksheet.write(excel_row, col_num, cell_value, normal_format)
