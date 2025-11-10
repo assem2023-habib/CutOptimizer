@@ -1,10 +1,10 @@
 import json
 import traceback
-import sys, os
+import os
 import shutil
 from PySide6.QtWidgets import (QWidget,QApplication, QVBoxLayout
                                , QFileDialog, QLabel,
-                                 QTextEdit, QHBoxLayout, QMessageBox, 
+                                 QHBoxLayout, QMessageBox, 
                                  QScrollArea)
 from PySide6.QtCore import Qt, QSize
 
@@ -214,7 +214,6 @@ class RectPackApp(QWidget):
             if self.worker:
                 self.worker.stop()
                 self.log_append("🛑 تم إرسال أمر الإلغاء...")
-                stop_timer(self)
 
             else:
                 self.log_append("⚠️ لا يوجد عامل نشط لإيقافه.")
@@ -345,13 +344,3 @@ class RectPackApp(QWidget):
 
         except Exception as e:
             self.log_append(f"❌ خطأ أثناء تغيير الخلفية: {e}")   
-
-
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    window = RectPackApp()
-    window.show()
-    sys.exit(app.exec())
-    
-
-    
