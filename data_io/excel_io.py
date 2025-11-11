@@ -1,11 +1,7 @@
 
 import pandas as pd
-from typing import List, Dict, Optional, Tuple
-from models.data_models import Carpet, CarpetUsed, GroupCarpet
-
-from pandas.api.types import is_numeric_dtype
-from xlsxwriter.utility import xl_col_to_name
-from collections import defaultdict
+from typing import List, Dict, Optional
+from models.data_models import Carpet, GroupCarpet
 
 # استيراد الوحدات المنفصلة
 from .excel_writer import write_output_excel as _write_output_excel
