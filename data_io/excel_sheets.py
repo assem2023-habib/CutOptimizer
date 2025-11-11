@@ -19,7 +19,7 @@ def _create_group_details_sheet(
     for g in groups:
         for it in g.items:
             rows.append({
-                'رقم المجموعة': f'المجموعة_{g.group_id}',
+                'رقم القصة': f'القصة_{g.group_id}',
                 'معرف السجاد': it.carpet_id,
                 'العرض': it.width,
                 'الطول': it.height,
@@ -37,7 +37,7 @@ def _create_group_details_sheet(
         total_length_ref+= g.total_length_ref()
 
     rows.append({
-        'رقم المجموعة': '',
+        'رقم القصة': '',
         'معرف السجاد': '',
         'العرض': '',
         'الطول': '',
@@ -48,7 +48,7 @@ def _create_group_details_sheet(
     })
     
     rows.append({
-        'رقم المجموعة': 'المجموع  ',
+        'رقم القصة': 'المجموع  ',
         'معرف السجاد': '',
         'العرض': total_width,
         'الطول': total_height,
@@ -73,38 +73,43 @@ def _create_group_summary_sheet(
     total_area= 0
     items_count= 0
     total_qty_used= 0
+    total_area_div= 0
     for g in groups:
         types_count = len(g.items)
         summary.append({
-            'رقم المجموعة': f'المجموعة_{g.group_id}',
+            'رقم القصة': f'القصة_{g.group_id}',
             'العرض الإجمالي': g.total_width(),
-            'أقصى ارتفاع': g.total_height(),
-            'المساحة الإجمالية': g.max_height(),
+            'أقصى ارتفاع': g.max_height(),
+            'المساحة الإجمالية': g.total_area(),
             'الكمية المستخدمة الكلية': g.total_qty(),
             'عدد أنواع السجاد': types_count,
+             'المساحة الإجمالية_2' :g.total_area() / 10000,
         })
         total_width+= g.total_width()
-        total_hieght+= g.total_height()
-        total_area+= g.max_height()
+        total_hieght+= g.max_height()
+        total_area+= g.total_area()
         items_count+= types_count
         total_qty_used+= g.total_qty()
+        total_area_div+= g.total_area() / 10000
 
     summary.append({
-        'رقم المجموعة': '',
+        'رقم القصة': '',
         'العرض الإجمالي': '',
         'أقصى ارتفاع': '',
         'المساحة الإجمالية': '',
         'الكمية المستخدمة الكلية': '',
         'عدد أنواع السجاد': '',
+        'المساحة الإجمالية_2':'',
     })
     
     summary.append({
-        'رقم المجموعة': "المجموع",
+        'رقم القصة': "المجموع",
         'العرض الإجمالي': total_width,
         'أقصى ارتفاع': total_hieght,
         'المساحة الإجمالية': total_area,
         'الكمية المستخدمة الكلية': total_qty_used,
         'عدد أنواع السجاد': items_count,
+         'المساحة الإجمالية_2':total_area_div,
     })
 
     df = pd.DataFrame(summary)
@@ -306,7 +311,7 @@ def _generate_waste_sheet(
         pathLoss = g.max_length_ref() - g.min_length_ref()
 
         summary.append({
-            'رقم المجموعة': f'المجموعة_{g.group_id}',
+            'رقم القصة': f'القصة_{g.group_id}',
             'العرض الإجمالي': g.total_width(),
             'الهادر في العرض':  wasteWidth,
             'اطول مسار': g.max_length_ref(),
@@ -325,7 +330,7 @@ def _generate_waste_sheet(
         total_maxPath+= g.max_length_ref()
 
     summary.append({
-        'رقم المجموعة': '',
+        'رقم القصة': '',
         'العرض الإجمالي': '',
         'الهادر في العرض':  '',
         'اطول مسار': '',
@@ -336,7 +341,7 @@ def _generate_waste_sheet(
     })
     
     summary.append({
-        'رقم المجموعة': "المجموع",
+        'رقم القصة': "المجموع",
         'العرض الإجمالي': total_width,
         'الهادر في العرض':  total_wasteWidth,
         'اطول مسار': total_maxPath,

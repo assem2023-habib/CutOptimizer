@@ -91,10 +91,10 @@ def _write_all_sheets_to_excel(
     try:
         with pd.ExcelWriter(path, engine='xlsxwriter') as writer:
             if not df1.empty:
-                df1.to_excel(writer, sheet_name='تفاصيل المجموعات', index=False)
+                df1.to_excel(writer, sheet_name='تفاصيل القصات', index=False)
 
             if not df2.empty:
-                df2.to_excel(writer, sheet_name='ملخص المجموعات', index=False)
+                df2.to_excel(writer, sheet_name='ملخص القصات', index=False)
 
             if not df3.empty:
                 df3.to_excel(writer, sheet_name='السجاد المتبقي', index=False)
@@ -108,7 +108,7 @@ def _write_all_sheets_to_excel(
 
             if not waste_df.empty:
                 waste_df.to_excel(writer, sheet_name='الهادر', index=False)
-            # ضبط عرض الأعمدة تلقائياً لكل ورقة
+
             _auto_adjust_column_width(writer, df1, df2, df3, totals_df, df_audit, waste_df)
 
     except Exception as e2:
@@ -127,10 +127,10 @@ def _auto_adjust_column_width(writer, df1, df2, df3, totals_df, df_audit, waste_
     sheet_dataframes = {}
 
     if not df1.empty:
-        sheet_dataframes['تفاصيل المجموعات'] = df1
+        sheet_dataframes['تفاصيل القصات'] = df1
 
     if not df2.empty:
-        sheet_dataframes['ملخص المجموعات'] = df2
+        sheet_dataframes['ملخص القصات'] = df2
 
     if not df3.empty:
         sheet_dataframes['السجاد المتبقي'] = df3
