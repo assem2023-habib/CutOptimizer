@@ -1,6 +1,6 @@
 import pandas as pd
 from typing import List, Dict, Optional, Tuple
-from models.data_models import Carpet, GroupCarpet, CarpetUsed
+from models.data_models import Carpet, GroupCarpet
 
 # =============================================================================
 # DATA CREATION FUNCTIONS - دوال إنشاء البيانات للصفحات
@@ -69,7 +69,7 @@ def _create_group_summary_sheet(
     """إنشاء ورقة ملخص المجموعات مع الإحصائيات."""
     summary = []
     total_width= 0
-    total_hieght= 0
+    total_height= 0
     total_area= 0
     items_count= 0
     total_qty_used= 0
@@ -86,7 +86,7 @@ def _create_group_summary_sheet(
              'المساحة الإجمالية_2' :g.total_area() / 10000,
         })
         total_width+= g.total_width()
-        total_hieght+= g.max_height()
+        total_height+= g.max_height()
         total_area+= g.total_area()
         items_count+= types_count
         total_qty_used+= g.total_qty()
@@ -105,7 +105,7 @@ def _create_group_summary_sheet(
     summary.append({
         'رقم القصة': "المجموع",
         'العرض الإجمالي': total_width,
-        'أقصى ارتفاع': total_hieght,
+        'أقصى ارتفاع': total_height,
         'المساحة الإجمالية': total_area,
         'الكمية المستخدمة الكلية': total_qty_used,
         'عدد أنواع السجاد': items_count,

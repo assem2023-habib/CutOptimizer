@@ -14,6 +14,16 @@ from .excel_sheets import (
     _generate_waste_sheet
 )
 
+from .excel_formatting import (
+    _create_header_format,
+    _create_normal_format,
+    _create_number_format,
+    _create_summary_row_format,
+    _create_border_format_for_first_column,
+    add_conditional_formatting,
+    _apply_row_highlight_on_selection,
+    _is_summary_row
+)
 
 # =============================================================================
 # MAIN FUNCTION - الدالة الرئيسية
@@ -254,115 +264,7 @@ def _apply_advanced_formatting(
                         worksheet.write(row_num, col_num, cell_value, first_col_border)
 
         add_conditional_formatting(writer, worksheet, df)
+        _apply_row_highlight_on_selection(writer, worksheet, df)
 
     except Exception as e:
         raise
-
-# =============================================================================
-# FORMAT CREATION FUNCTIONS - دوال إنشاء التنسيقات
-# =============================================================================
-
-def add_conditional_formatting(writer, worksheet, df: pd.DataFrame) -> None:
-    """إضافة تنسيقات شرطية لتمييز البيانات."""
-    try:
-        efficiency_col = None
-        for col_num, col_name in enumerate(df.columns):
-            if 'كفاءة' in col_name or 'كفاءة' in str(col_name):
-                efficiency_col = col_num
-                break
-
-        if efficiency_col is not None:
-            worksheet.conditional_format(2, efficiency_col, len(df) + 1, efficiency_col, {
-                'type': 'cell',
-                'criteria': '>',
-                'value': 80,
-                'format': writer.book.add_format({
-                    'bg_color': '#C6EFCE',  # أخضر فاتح للكفاءة العالية
-                    'font_color': '#006100'
-                })
-            })
-    except Exception as e:
-        pass
-    
-def _create_border_format_for_first_column(workbook):
-    return workbook.add_format({
-        'border': 3,  
-        'border_color': '#006400',  
-        'bg_color': '#E8F5E8'  
-    })
-
-def _create_header_format(workbook):
-    """إنشاء تنسيق لعناوين الأعمدة."""
-    return workbook.add_format({
-        'bold': True,
-        'font_size': 12,
-        'font_name': 'Arial',
-        'bg_color': '#4F81BD',
-        'font_color': 'white',
-        'border': 1,
-        'border_color': 'black',
-        'align': 'center',
-        'valign': 'vcenter'
-    })
-
-def _create_normal_format(workbook):
-    """إنشاء تنسيق عام للبيانات النصية مع لون أخضر فاتح."""
-    return workbook.add_format({
-        'bold': True,
-        'font_size': 10,
-        'font_name': 'Arial',
-        'border': 2,
-        'border_color': '#006400',
-        'bg_color': '#E8F5E8',
-        'font_color': '#006400',
-        'align': 'center',
-        'valign': 'vcenter'
-    })
-
-
-def _create_number_format(workbook):
-    """إنشاء تنسيق خاص للأرقام مع لون أخضر فاتح."""
-    return workbook.add_format({
-        'bold': True, 
-        'font_size': 10,
-        'font_name': 'Arial',
-        'border': 2,
-        'border_color': '#006400',
-        'bg_color': '#E8F5E8', 
-        'font_color': '#006400',
-        'align': 'center',
-        'valign': 'vcenter',
-    })
-
-def _create_summary_row_format(workbook):
-    """إنشاء تنسيق مميز لسطر المجموع."""
-    return workbook.add_format({
-        'bold': True,
-        'font_size': 11,
-        'font_name': 'Arial',
-        'bg_color': '#C6EFCE',  # أخضر فاتح
-        'font_color': '#006100',  # أخضر داكن
-        'border': 1,
-        'border_color': 'black',
-        'align': 'center',
-    })
-# =============================================================================
-# HELPER FUNCTIONS - دوال مساعدة
-# =============================================================================
-
-def _is_summary_row(df, row_num):
-    """تحقق إذا كان الصف يبدأ بكلمة 'المجموع' في العمود الأول."""
-    if row_num >= len(df):
-        return False
-    
-    try:
-        first_col_value = df.iloc[row_num, 0]  # أول عمود في الصف
-        
-        if pd.isna(first_col_value):
-            return False
-        
-        first_col_str = str(first_col_value).strip()
-        return first_col_str in ['المجموع', 'مجموع', 'الإجمالي', 'إجمالي', 'Total', 'TOTAL']
-        
-    except Exception:
-        return False
