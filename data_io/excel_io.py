@@ -8,8 +8,6 @@ from .excel_writer import write_output_excel as _write_output_excel
 # استيراد دوال القراءة
 from .excel_reader import (
     read_input_excel as _read_input_excel,
-    validate_excel_data as _validate_excel_data,
-    get_excel_summary as _get_excel_summary
 )
 
 # =============================================================================
@@ -38,52 +36,6 @@ def read_input_excel(path: str, sheet_name: int = 0) -> List[Carpet]:
     >>> print(f"تم قراءة {len(carpets)} نوع من السجاد")
     """
     return _read_input_excel(path, sheet_name)
-
-def validate_excel_data(carpets: List[Carpet]) -> bool:
-    """
-    التحقق من صحة البيانات المقروءة من Excel.
-    
-    المعاملات:
-    ----------
-    carpets : List[Carpet]
-        قائمة للتحقق منها
-        
-    الإرجاع:
-    -------
-    bool
-        True إذا كانت البيانات صحيحة
-        
-    أمثلة:
-    -------
-    >>> carpets = read_input_excel("data.xlsx")
-    >>> if validate_excel_data(carpets):
-    >>>     print("البيانات صحيحة")
-    """
-    return _validate_excel_data(carpets)
-
-
-def get_excel_summary(carpets: List[Carpet]) -> dict:
-    """
-    ملخص إحصائي للبيانات المقروءة.
-    
-    المعاملات:
-    ----------
-    carpets : List[Carpet]
-        قائمة كائنات Carpet
-        
-    الإرجاع:
-    -------
-    dict
-        إحصائيات البيانات
-        
-    أمثلة:
-    -------
-    >>> carpets = read_input_excel("data.xlsx")
-    >>> summary = get_excel_summary(carpets)
-    >>> print(f"إجمالي الكمية: {summary['total_quantity']}")
-    """
-    return _get_excel_summary(carpets)
-
 
 def write_output_excel(
     path: str,

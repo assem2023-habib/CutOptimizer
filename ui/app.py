@@ -24,6 +24,8 @@ from ui.components.progress_status_item import ProgressStatusItem
 from ui.sections.results_and_summary_section import ResultsAndSummarySection
 from ui.sections.status_and_log_section import StatusAndLogSection
 from core.utilies.timer_utils import init_timer, start_timer, stop_timer
+from core.utilies.background_utils import change_background, apply_background
+
 
 class RectPackApp(QWidget):
     def __init__(self, config_path='config/config.json'):
@@ -40,7 +42,7 @@ class RectPackApp(QWidget):
 
     def resizeEvent(self, event):
         if "background_image" in self.config:
-            self.apply_background(self.config["background_image"])
+            apply_background(self, self.config["background_image"])
         super().resizeEvent(event)
 
     def _setup_ui(self):
@@ -91,7 +93,7 @@ class RectPackApp(QWidget):
             text_color="#FFFFFF",
             fixed_size=QSize(40, 32)
         )
-        self.change_bg_btn.clicked.connect(self.change_background)
+        self.change_bg_btn.clicked.connect(lambda: change_background(self))
         header_layout.addWidget(self.change_bg_btn)
         content_layout.addLayout(header_layout)
 
@@ -201,7 +203,6 @@ class RectPackApp(QWidget):
             self.worker.start()
         except Exception as e:
             self.log_append(f"❌ خطأ أثناء بدء العملية: {e}")
-            traceback.print_exc()
             self.reset_ui_state()
 
     def cancel_operation(self):
@@ -289,57 +290,3 @@ class RectPackApp(QWidget):
             self.worker = None
 
         self.log_append("↩️ الواجهة عادت للحالة الافتراضية.")         
-
-    def change_background(self):
-        try:
-            file_path, _ = QFileDialog.getOpenFileName(
-                self,
-                "اختر صورة الخلفية",
-                "",
-                "صور (*.png *.jpg *.jpeg)"
-            )
-
-            if not file_path:
-                return
-
-            config_dir = os.path.join(os.getcwd(), "config", "backgrounds")
-            os.makedirs(config_dir, exist_ok=True)
-
-            file_name = os.path.basename(file_path)
-            target_path = os.path.join(config_dir, file_name)
-
-            shutil.copy(file_path, target_path)
-
-            self.config["background_image"] = target_path
-            with open(self.config_path, "w", encoding="utf-8") as f:
-                json.dump(self.config, f, ensure_ascii=False, indent=4)
-
-            self.apply_background(target_path)
-            self.log_append(f"🖼️ تم تعيين الصورة الجديدة كخلفية:\n{target_path}")
-
-        except Exception as e:
-            QMessageBox.critical(self, "خطأ", f"حدث خطأ أثناء تغيير الخلفية:\n{e}")
-            self.log_append(f"❌ خطأ أثناء تغيير الخلفية: {e}")   
-
-    def apply_background(self, image_path: str):
-        try:
-            if not os.path.exists(image_path):
-                return
-
-            pixmap = QPixmap(image_path)
-            if pixmap.isNull():
-                return
-
-            scaled_pixmap = pixmap.scaled(
-                self.size(),
-                Qt.KeepAspectRatioByExpanding,
-                Qt.SmoothTransformation
-            )
-
-            palette = self.palette()
-            palette.setBrush(QPalette.Window, QBrush(scaled_pixmap))
-            self.setPalette(palette)
-            self.setAutoFillBackground(True)
-
-        except Exception as e:
-            self.log_append(f"❌ خطأ أثناء تغيير الخلفية: {e}")   

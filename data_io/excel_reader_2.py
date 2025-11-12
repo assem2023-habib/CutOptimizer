@@ -29,24 +29,22 @@ def read_input_excel(path: str, sheet_name: int = 0) -> List[Carpet]:
     invalid_rows = []
     for idx, row in df.iterrows():
         try:
-            width = int(row[0])    
-            height = int(row[1])   
-            qty = int(row[2]) 
-            if width <= 0 or height <= 0 or qty <= 0:
-                invalid_rows.append(idx)
-                continue
+            width_height = int(row[0])    
+            qty = int(row[1])   
+            is_even = int(row[2]) 
+            type_car = int(row[3]) 
+            code = int(row[4]) 
             
-            carpet = Carpet(
-                id=idx + 1,  
-                width=width,
-                height=height,
-                qty=qty,
-            )
+            carpet = {
+                "width_height": width_height,
+                "qty": qty,
+                "is_even": is_even,
+                "type_car": type_car,
+                "code": code
+            }
             carpets.append(carpet)
-            
+            print(carpet, "\n")
         except (ValueError, TypeError, KeyError) as e:
             invalid_rows.append(idx + 1)
 
             continue
-            
-    return carpets
