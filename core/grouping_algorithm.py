@@ -6,8 +6,8 @@ from core.group_helpers import (
     equal_products_solution,
     equal_products_solution_with_tolerance
 )
-import json
-import os
+import json, os
+from core.Enums.grouping_mode import GroupingMode
 
 def build_groups(
         carpets: List[Carpet],
@@ -64,7 +64,7 @@ def build_groups(
                 same_id = False
                 if not main.is_available():
                     break
-                if selected_mode == "same carpet group last":
+                if selected_mode == GroupingMode.SAME_GROUP_LAST:
                     if (len(partners) == 1):
                         for carpet in partners:
                             if carpet.id == main.id or carpet.width == main.width:
@@ -78,7 +78,7 @@ def build_groups(
                     new_group, group_id = result
                     group.append(new_group)
 
-        if selected_mode == "same carpet group last":
+        if selected_mode == GroupingMode.SAME_GROUP_LAST:
             if main.is_available():
                 if(main.width * 2 >= min_width and main.width * 2 <= max_width and main.rem_qty >= 2):
                     used_items = []
@@ -261,16 +261,17 @@ def try_create_single_group(
     
     return None
 
-def load_selected_mode()->str:
+def load_selected_mode()->GroupingMode | None:
     config_path= os.path.join(os.getcwd(), "config", "config.json")
     if not os.path.exists(config_path):
-        return ""
+        return None
+    
+    
+    with open(config_path, "r", encoding="utf-8") as f:
+        cfg= json.load(f)
+        mode_text = cfg.get("selected_mode", "").strip()
     
     try:
-        with open(config_path, "r", encoding="utf-8") as f:
-            cfg= json.load(f)
-        
-        selected_mode= cfg.get("selected_mode", "").strip()
-        return selected_mode
-    except Exception as e:
-        return e
+        return GroupingMode(mode_text)
+    except ValueError:
+        return None

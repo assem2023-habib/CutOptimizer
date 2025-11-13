@@ -6,6 +6,7 @@ from PySide6.QtCore import Qt
 
 from ui.components.setting_input_field import SettingInputField 
 from ui.components.drop_down_list import DropDownList
+from core.Enums.grouping_mode import GroupingMode
 
 import os
 import json
@@ -44,7 +45,7 @@ class MeasurementSettingsSection(QWidget):
 
         self.mode_dropdown= DropDownList(
             selected_value_text="Default Mod",
-            options_list=["same carpet group first", "same carpet group last"],
+            options_list=GroupingMode.list(),
         )
         self.mode_dropdown.setFixedWidth(200)
 
