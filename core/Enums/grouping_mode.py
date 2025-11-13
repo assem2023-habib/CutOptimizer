@@ -1,8 +1,9 @@
 from enum import Enum
 
 class GroupingMode(Enum):
-    SAME_GROUP_FIRST = "same carpet group first"
-    SAME_GROUP_LAST = "same carpet group last"
+    ALL_COMBINATIONS = "all combinations (allow repetition and main)"
+    NO_MAIN_REPEAT = "combinations with repetition (exclude main)"
+    # PRIORITY_BY_QTY = "priority by quantity (respect width)"
 
     @classmethod
     def list(cls):

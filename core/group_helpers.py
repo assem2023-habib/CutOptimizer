@@ -127,6 +127,7 @@ def equal_products_solution_with_tolerance(a: List[int],
             return x_candidate, k_max
     return None, 0
 
+
 def generate_combinations(candidates: List[Carpet], n: int)-> Iterator[List[Carpet]]:
     for combo in combinations(candidates, n):
         yield list(combo)
@@ -143,6 +144,39 @@ def generate_combinations_with_repetition(candidates: List[Carpet], n: int)->Ite
         if valid:
             yield list(combo)
 
+def generate_combinations_exclude_main(
+        candidates: List[Carpet],
+        n: int,
+        main: Carpet
+    )->Iterator[List[Carpet]]:
+
+    filtered_candidates = [
+        c for c in candidates
+        if c.id != main.id and c.is_available() and c.width != main.width
+    ]
+    for combo in combinations(filtered_candidates, n):
+        yield list(combo)
+
+def generate_combinations_with_repetition_exclude_main(
+        candidates: List[Carpet],
+        n: int,
+        main: Carpet,    
+    )->Iterator[List[Carpet]]:
+    filtered_candidates = [
+        c for c in candidates
+        if c.id != main.id and c.is_available() and c.width != main.width
+    ]
+    for combo in combinations_with_replacement(filtered_candidates, n):
+        counts= Counter(c.id for c in combo)
+        valid = True
+        for cid, cnt in counts.items():
+            carpet= next((cand for cand in filtered_candidates if cand.id == cid), None)
+            if not carpet or carpet.rem_qty < cnt:
+                valid = False
+                break
+        if valid:
+            yield list(combo)
+
 def generate_valid_partner_combinations(
         main: Carpet,
         candidates: List[Carpet],
@@ -150,7 +184,8 @@ def generate_valid_partner_combinations(
         min_width: int,
         max_width: int,
         allow_repetation: bool = False,
-        start_index: int =0
+        start_index: int =0,
+        exclude_main: bool = False,
     )->List[List[Carpet]]:
     valid_group = []
     filtered_candidates = [
@@ -159,14 +194,20 @@ def generate_valid_partner_combinations(
     ]
     if not filtered_candidates:
         return valid_group
-    generator = (
-        generate_combinations_with_repetition if allow_repetation
-        else generate_combinations
-    )
-    for partners in generator(filtered_candidates, n):
+
+    if allow_repetation:
+        if exclude_main:
+            iterator  = generate_combinations_with_repetition_exclude_main(filtered_candidates, n, main)
+        else:
+            iterator  = generate_combinations_with_repetition(filtered_candidates, n)
+    else:
+        if exclude_main:
+            iterator  = generate_combinations_exclude_main(filtered_candidates, n, main)
+        else:
+            iterator  = generate_combinations(filtered_candidates, n) 
+
+    for partners in iterator :
         total_width = main.width + sum(p.width for p in partners)
         if min_width <= total_width <= max_width:
             valid_group.append(partners)
     return valid_group
-
-

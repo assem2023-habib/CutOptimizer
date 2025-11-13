@@ -50,53 +50,36 @@ def build_groups(
             if not main.is_available():
                 break
            
-            partner_sets = []
-            partner_sets += generate_valid_partner_combinations(
-                main, carpets, partner_level, min_width, max_width, allow_repetation=False, start_index=start_index
+            new_groups, group_id = generate_and_process_partners(
+                main=main,
+                carpets=carpets,
+                partner_level=partner_level,
+                min_width=min_width,
+                max_width=max_width,
+                tolerance=tolerance,
+                group_id=group_id,
+                selected_mode=selected_mode,
+                start_index=start_index
             )
-            partner_sets += generate_valid_partner_combinations(
-                main, carpets, partner_level, min_width, max_width, allow_repetation=True, start_index=start_index
-            )
+            group.extend(new_groups)
 
-            if not partner_sets:
-                continue
-            for partners in partner_sets:
-                same_id = False
+        if selected_mode == GroupingMode.NO_MAIN_REPEAT:
+            for partner_level in range(1, current_max_partner + 1):
                 if not main.is_available():
                     break
-                if selected_mode == GroupingMode.SAME_GROUP_LAST:
-                    if (len(partners) == 1):
-                        for carpet in partners:
-                            if carpet.id == main.id or carpet.width == main.width:
-                                same_id = True
-                    if same_id:
-                        continue        
-                result = process_partner_group(
-                    main, partners, tolerance, group_id, min_width=min_width, max_width=max_width
-                )
-                if result:
-                    new_group, group_id = result
-                    group.append(new_group)
 
-        if selected_mode == GroupingMode.SAME_GROUP_LAST:
-            if main.is_available():
-                if(main.width * 2 >= min_width and main.width * 2 <= max_width and main.rem_qty >= 2):
-                    used_items = []
-                    qty_used = main.rem_qty // 2
-                    total_qty_used = qty_used * 2
-                    for _ in range(2):
-                        main.consume(qty_used)
-                        used_items.append(
-                            CarpetUsed(
-                                carpet_id=main.id,
-                                width=main.width,
-                                height=main.height,
-                                qty_used=qty_used,
-                                qty_rem= main.rem_qty,
-                            )
-                        )
-                    group.append(GroupCarpet(group_id=group_id, items=used_items))
-                    group_id += 1
+                new_groups, group_id = generate_and_process_partners(
+                    main=main,
+                    carpets=carpets,
+                    partner_level=partner_level,
+                    min_width=min_width,
+                    max_width=max_width,
+                    tolerance=tolerance,
+                    group_id=group_id,
+                    selected_mode=GroupingMode.ALL_COMBINATIONS,
+                    start_index=start_index
+                )
+                group.extend(new_groups)
 
         single_group = try_create_single_group(
                 main, min_width, max_width, group_id
@@ -107,6 +90,57 @@ def build_groups(
             group_id += 1
     return group
 
+def generate_and_process_partners(
+        main: Carpet,
+        carpets: List[Carpet],
+        partner_level: int,
+        min_width: int,
+        max_width: int,
+        tolerance: int,
+        group_id: int,
+        selected_mode: GroupingMode,
+        start_index: int,
+    )->tuple[List[GroupCarpet], int]:
+
+    groups: list[GroupCarpet] = []
+    
+    if not main.is_available():
+        return groups,group_id
+    
+    partner_sets = []
+
+    if selected_mode == GroupingMode.NO_MAIN_REPEAT:
+        partner_sets += generate_valid_partner_combinations(
+            main, carpets, partner_level, min_width, max_width,
+            allow_repetation=False, start_index=start_index, exclude_main=True
+        )
+        partner_sets += generate_valid_partner_combinations(
+            main, carpets, partner_level, min_width, max_width,
+            allow_repetation=True, start_index=start_index, exclude_main=True
+        )
+
+    else:
+        partner_sets += generate_valid_partner_combinations(
+            main, carpets, partner_level, min_width, max_width,
+            allow_repetation=False, start_index=start_index
+        )
+        partner_sets += generate_valid_partner_combinations(
+            main, carpets, partner_level, min_width, max_width,
+            allow_repetation=True, start_index=start_index
+        )
+
+    for partners in partner_sets:
+        if not main.is_available():
+            break
+        result= process_partner_group(
+            main, partners, tolerance, group_id,
+            min_width= min_width, max_width=max_width
+        )
+        if result:
+            new_group, group_id =result
+            groups.append(new_group)
+
+    return groups, group_id
 
 def process_partner_group(
     main: Carpet,
@@ -116,18 +150,10 @@ def process_partner_group(
     min_width: int,
     max_width: int,
 ) -> Optional[tuple]:
-    """
-    معالجة مجموعة من الشركاء وإنشاء مجموعة إذا أمكن
-    
-    Returns:
-    --------
-    Optional[tuple]
-        (GroupCarpet, new_group_id) أو None
-    """
+
     elements = [main] + partners
     elements_counts = Counter(e.id for e in elements)
     
-    # بناء المدخلات
     a = []
     XMax = []
     unique_elements = []
@@ -156,7 +182,6 @@ def process_partner_group(
     if not x_vals or k_max <= 0:
         return None
     
-    # بناء العناصر المستخدمة
     used_items: List[CarpetUsed] = []
     all_valid = True
     
@@ -205,38 +230,13 @@ def try_create_single_group(
     max_width: int,
     group_id: int
 ) -> Optional[GroupCarpet]:
-    """
-    محاولة إنشاء مجموعة فردية من سجاد واحد
-    
-    Parameters:
-    -----------
-    carpet : Carpet
-        السجاد المراد إضافته كمجموعة فردية
-    min_width : int
-        الحد الأدنى للعرض
-    max_width : int
-        الحد الأقصى للعرض
-    group_id : int
-        معرّف المجموعة
-    
-    Returns:
-    --------
-    Optional[GroupCarpet]
-        المجموعة المُنشأة أو None إذا فشل الإنشاء
-        
-    Notes:
-    ------
-    - تستهلك هذه الدالة كامل الكمية المتبقية من السجاد
-    - تُعدّل كائن carpet مباشرة (side effect)
-    """
-    # التحقق من الشروط
+
     if not (carpet.width >= min_width and 
             carpet.width <= max_width and 
             carpet.is_available() and 
             carpet.rem_qty > 0):
         return None
     
-    # إنشاء عنصر واحد
     single_item = CarpetUsed(
         carpet_id=carpet.id,
         width=carpet.width,
@@ -245,17 +245,14 @@ def try_create_single_group(
         qty_rem=0
     )
     
-    # استهلاك الكمية
     qty_to_consume = carpet.rem_qty
     carpet.consume(qty_to_consume)
     
-    # إنشاء المجموعة
     single_group = GroupCarpet(
         group_id=group_id,
         items=[single_item]
     )
     
-    # التحقق من الصلاحية
     if single_group.is_valid(min_width, max_width):
         return single_group
     
