@@ -25,11 +25,7 @@ def build_groups(
             continue
         remaining_width = max_width - main.width
 
-        start_index = None
-        for j, c in enumerate(carpets):
-            if c.width <= remaining_width:
-                start_index = j
-                break
+        start_index = next((j for j, c in enumerate(carpets) if c.width <= remaining_width), None)
         if start_index is None:
             single_group = try_create_single_group(
                 main, min_width, max_width, group_id
