@@ -8,6 +8,6 @@
     "start_with_largest": true,
     "allow_split_rows": true,
     "theme": "dark",
-    "background_image": "C:\\Users\\RYZEN\\Desktop\\Task\\CutOptimizer\\config\\backgrounds\\wallpaper2.jpg",
-    "selected_mode": "combinations with repetition (exclude main)"
+    "background_image": "config\\backgrounds\\img1.jpg",
+    "selected_mode": "all combinations (allow repetition and main)"
 }

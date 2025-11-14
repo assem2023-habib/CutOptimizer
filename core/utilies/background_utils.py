@@ -10,35 +10,30 @@ def change_background(app_instance):
     """
     تغيير خلفية التطبيق وحفظ المسار في ملف الإعدادات.
     """
-    try:
-        file_path, _ = QFileDialog.getOpenFileName(
-            app_instance,
-            "اختر صورة الخلفية",
-            "",
-            "صور (*.png *.jpg *.jpeg)"
-        )
+    file_path, _ = QFileDialog.getOpenFileName(
+        app_instance,
+        "اختر صورة الخلفية",
+        "",
+        "صور (*.png *.jpg *.jpeg)"
+    )
+    if not file_path:
+        return
 
-        if not file_path:
-            return
+    config_dir = os.path.join("config", "backgrounds")
+    os.makedirs(config_dir, exist_ok=True)
 
-        config_dir = os.path.join(os.getcwd(), "config", "backgrounds")
-        os.makedirs(config_dir, exist_ok=True)
+    file_name = os.path.basename(file_path)
+    target_path = os.path.join(config_dir, file_name)
 
-        file_name = os.path.basename(file_path)
-        target_path = os.path.join(config_dir, file_name)
+    shutil.copy(file_path, target_path)
 
-        shutil.copy(file_path, target_path)
+    app_instance.config["background_image"] = target_path
+    with open(app_instance.config_path, "w", encoding="utf-8") as f:
+        json.dump(app_instance.config, f, ensure_ascii=False, indent=4)
 
-        app_instance.config["background_image"] = target_path
-        with open(app_instance.config_path, "w", encoding="utf-8") as f:
-            json.dump(app_instance.config, f, ensure_ascii=False, indent=4)
+    apply_background(app_instance, target_path)
+    app_instance.log_append(f"🖼️ تم تعيين الصورة الجديدة كخلفية:\n{target_path}")
 
-        apply_background(app_instance, target_path)
-        app_instance.log_append(f"🖼️ تم تعيين الصورة الجديدة كخلفية:\n{target_path}")
-
-    except Exception as e:
-        QMessageBox.critical(app_instance, "خطأ", f"حدث خطأ أثناء تغيير الخلفية:\n{e}")
-        app_instance.log_append(f"❌ خطأ أثناء تغيير الخلفية: {e}")
 
 
 def apply_background(app_instance, image_path: str):
