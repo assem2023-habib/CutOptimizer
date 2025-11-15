@@ -354,3 +354,64 @@ def _generate_waste_sheet(
     df = pd.DataFrame(summary)
 
     return df
+
+
+def _create_remaining_suggestion_sheet(remaining: List[Carpet], min_width, max_width, tolerance) -> pd.DataFrame:
+    aggregated = {}
+    for r in remaining:
+        if r.rem_qty > 0:
+            key = (r.id, r.width, r.height)
+            aggregated[key] = aggregated.get(key, 0) + int(r.rem_qty)
+
+    rem_rows = []
+    total_width = 0
+    total_hieght = 0
+    total_rem_qty = 0
+    total_missing_min_width= 0
+    total_missing_max_width= 0
+    total_min_height_ref= 0
+    total_max_height_ref= 0
+    for (rid, w, h), q in aggregated.items():
+        rem_rows.append({
+            'معرف السجادة': rid,
+            'العرض': w,
+            'الطول': h,
+            'الكمية المتبقية': q,
+            'اقل عرض مجموعة': min_width - w,
+            'أعلى عرض مجموعة': max_width - w,
+            'اقل طول مرجعي': h * q - tolerance,
+            'اكبر طول مرجعي': h * q + tolerance,
+        })
+        total_width+= w
+        total_hieght+= h
+        total_rem_qty+= q
+        total_missing_min_width+= min_width - w
+        total_missing_max_width+= max_width - w
+        total_min_height_ref+=  h * q - tolerance
+        total_max_height_ref+=  h * q + tolerance
+
+    rem_rows.append({
+        'معرف السجادة': '',
+        'العرض': '',
+        'الطول': '',
+        'الكمية المتبقية': '',
+        'اقل عرض مجموعة': '',
+        'أعلى عرض مجموعة': '',
+        'اقل طول مرجعي': '',
+        'اكبر طول مرجعي': '',
+    })
+
+    rem_rows.append({
+        'معرف السجادة': "المجموع",
+        'العرض': total_width,
+        'الطول': total_hieght,
+        'الكمية المتبقية': total_rem_qty,
+        'اقل عرض مجموعة': total_missing_min_width,
+        'أعلى عرض مجموعة': total_missing_max_width,
+        'اقل طول مرجعي': total_min_height_ref,
+        'اكبر طول مرجعي': total_max_height_ref,
+    })
+
+    df = pd.DataFrame(rem_rows)
+
+    return df

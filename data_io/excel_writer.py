@@ -11,7 +11,8 @@ from .excel_sheets import (
     _create_remaining_sheet,
     _create_totals_sheet,
     _create_audit_sheet,
-    _generate_waste_sheet
+    _generate_waste_sheet,
+    _create_remaining_suggestion_sheet
 )
 
 from .excel_formatting import (
@@ -80,8 +81,11 @@ def write_output_excel(
     # إنشاء ورقة التدقيق
     df_audit = _create_audit_sheet(groups, remaining, originals)
 
+    df_suggestion_group= _create_remaining_suggestion_sheet(remaining, min_width, max_width, tolerance_length)
+
+
     _write_all_sheets_to_excel(
-        path, df1, df2, df3, totals_df, df_audit, waste_df
+        path, df1, df2, df3, totals_df, df_audit, waste_df, df_suggestion_group
     )
 
 # =============================================================================
@@ -95,7 +99,8 @@ def _write_all_sheets_to_excel(
     df3: pd.DataFrame,
     totals_df: pd.DataFrame,
     df_audit: pd.DataFrame,
-    waste_df: pd.DataFrame
+    waste_df: pd.DataFrame,
+    df_suggestion_group: pd.DataFrame,
 ) -> None:
     """كتابة جميع الأوراق إلى ملف Excel مع ضبط تلقائي لعرض الأعمدة."""
     try:
@@ -119,13 +124,16 @@ def _write_all_sheets_to_excel(
             if not waste_df.empty:
                 waste_df.to_excel(writer, sheet_name='الهادر', index=False)
 
-            _auto_adjust_column_width(writer, df1, df2, df3, totals_df, df_audit, waste_df)
+            if not df_suggestion_group.empty:
+                df_suggestion_group.to_excel(writer, sheet_name='اقتراحات المتبقي', index=False)
+
+            _auto_adjust_column_width(writer, df1, df2, df3, totals_df, df_audit, waste_df, df_suggestion_group)
 
     except Exception as e2:
         raise
 
 
-def _auto_adjust_column_width(writer, df1, df2, df3, totals_df, df_audit, waste_df):
+def _auto_adjust_column_width(writer, df1, df2, df3, totals_df, df_audit, waste_df, df_suggestion_group):
     workbook = writer.book
 
     header_format = _create_header_format(workbook)
@@ -153,6 +161,9 @@ def _auto_adjust_column_width(writer, df1, df2, df3, totals_df, df_audit, waste_
 
     if not waste_df.empty:
         sheet_dataframes['الهادر'] = waste_df
+
+    if not df_suggestion_group.empty:
+        sheet_dataframes['اقتراحات المتبقي'] = df_suggestion_group
 
     for sheet_name, df in sheet_dataframes.items():
         if sheet_name in writer.sheets:
