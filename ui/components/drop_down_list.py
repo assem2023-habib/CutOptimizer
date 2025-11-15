@@ -48,7 +48,7 @@ class DropDownList(QWidget):
 
         self.arrow_label= QLabel()
         self.arrow_label.setPixmap(self._get_icon(self.indicator_icon_type, self.indicator_icon_color))
-        self.arrow_label.setFixedSize(16, 16)
+        self.arrow_label.setFixedSize(24, 24)
 
         btn_layout= QHBoxLayout()
         btn_layout.setContentsMargins(10, 0, 10, 0)

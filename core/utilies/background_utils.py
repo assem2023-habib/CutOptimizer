@@ -5,6 +5,7 @@ from PySide6.QtWidgets import QFileDialog, QMessageBox
 from PySide6.QtGui import QPixmap, QPalette, QBrush
 from PySide6.QtCore import Qt
 
+DEFAULT_BG_COLOR = "#FFFFFFFF"
 
 def change_background(app_instance):
     """
@@ -16,6 +17,7 @@ def change_background(app_instance):
         "",
         "صور (*.png *.jpg *.jpeg)"
     )
+    
     if not file_path:
         return
 
@@ -40,14 +42,18 @@ def apply_background(app_instance, image_path: str):
     """
     تطبيق الخلفية المحددة على واجهة التطبيق.
     """
-    try:
+    try:    
         if not os.path.exists(image_path):
+            app_instance.log_append(f"❌  خطأ أثناء تطبيق الخلفية لم يتم ايجاد الخلفية")
             return
+        
+        qss_path = image_path.replace("\\", "/")
 
-        pixmap = QPixmap(image_path)
+        pixmap = QPixmap(qss_path)
         if pixmap.isNull():
+            app_instance.log_append(f"❌ خطأ أثناء تطبيق الخلفية مشكلة في pixmap")
             return
-
+        
         scaled_pixmap = pixmap.scaled(
             app_instance.size(),
             Qt.KeepAspectRatioByExpanding,
@@ -58,6 +64,8 @@ def apply_background(app_instance, image_path: str):
         palette.setBrush(QPalette.Window, QBrush(scaled_pixmap))
         app_instance.setPalette(palette)
         app_instance.setAutoFillBackground(True)
+        
 
     except Exception as e:
         app_instance.log_append(f"❌ خطأ أثناء تطبيق الخلفية: {e}")
+
