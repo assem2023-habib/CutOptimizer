@@ -1,6 +1,7 @@
 import pandas as pd
 from typing import List, Dict, Optional, Tuple
-from models.data_models import Carpet, GroupCarpet
+from models.carpet import Carpet
+from models.group_carpet import GroupCarpet
 
 # =============================================================================
 # DATA CREATION FUNCTIONS - دوال إنشاء البيانات للصفحات
@@ -25,6 +26,7 @@ def _create_group_details_sheet(
             path_num+= 1
             rows.append({
                 'رقم القصة': f'القصة_{group_id}',
+                'امر العميل': it.client_order,
                 'معرف السجاد': it.carpet_id,
                 'العرض': it.width,
                 'الطول': it.height,
@@ -45,6 +47,7 @@ def _create_group_details_sheet(
 
     rows.append({
         'رقم القصة': '',
+        'امر العميل': '',
         'معرف السجاد': '',
         'العرض': '',
         'الطول': '',
@@ -57,6 +60,7 @@ def _create_group_details_sheet(
     
     rows.append({
         'رقم القصة': 'المجموع  ',
+        'امر العميل': '',
         'معرف السجاد': '',
         'العرض': total_width,
         'الطول': total_height,

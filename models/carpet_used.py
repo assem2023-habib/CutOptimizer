@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 @dataclass
 class CarpetUsed:
@@ -7,6 +7,7 @@ class CarpetUsed:
     height: int
     qty_used: int
     qty_rem: int
+    client_order: int
 
     def length_ref(self) -> int:
         """الطول المرجعي = الارتفاع * العدد المستخدم"""
@@ -25,6 +26,7 @@ class CarpetUsed:
             "qty_used": self.qty_used,
             "qty_rem": self.qty_rem,
             "length_ref": self.length_ref(),
+            "client_order": self.client_order,
         }
 
     def summary(self) -> str:

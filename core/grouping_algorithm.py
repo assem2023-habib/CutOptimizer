@@ -1,6 +1,8 @@
 from typing import List, Optional
 from collections import Counter
-from models.data_models import Carpet, CarpetUsed, GroupCarpet
+from models.carpet import Carpet
+from models.carpet_used import CarpetUsed
+from models.group_carpet import GroupCarpet
 from core.group_helpers import (
     generate_valid_partner_combinations,
     equal_products_solution,
@@ -232,7 +234,8 @@ def process_partner_group(
                     width=e.width,
                     height=e.height,
                     qty_used=qty_per_repetition,
-                    qty_rem=e.rem_qty
+                    qty_rem=e.rem_qty,
+                    client_order= e.client_order
                 )
             )
     
@@ -263,7 +266,8 @@ def try_create_single_group(
         width=carpet.width,
         height=carpet.height,
         qty_used=carpet.rem_qty,
-        qty_rem=0
+        qty_rem=0,
+        client_order= carpet.client_order,
     )
 
     single_group = GroupCarpet(

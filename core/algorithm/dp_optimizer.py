@@ -1,7 +1,9 @@
 import math
 from itertools import combinations
 from typing import List, Tuple, Optional
-from models.group_carpet import Carpet, CarpetUsed, GroupCarpet
+from models.carpet import Carpet
+from models.carpet_used import CarpetUsed
+from models.group_carpet import GroupCarpet
 
 class DPOptimizer:
     def __init__(

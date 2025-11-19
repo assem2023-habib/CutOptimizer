@@ -1,5 +1,5 @@
 from typing import List, Optional, Tuple, Iterator
-from models.data_models import Carpet, CarpetUsed, GroupCarpet
+from models.carpet import Carpet
 from math import floor, ceil 
 from collections import Counter
 from itertools import combinations, combinations_with_replacement
