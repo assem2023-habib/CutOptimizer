@@ -59,6 +59,7 @@ class GroupingWorker(QThread):
                 max_partner=self.cfg.get("max_partner", 7),
                 tolerance=self.tolerance_len,
             )
+            
 
             self.signals.log.emit(f"✅ تم تشكيل {len(groups)} مجموعة")
             # self.signals.progress.emit(60)
@@ -66,7 +67,8 @@ class GroupingWorker(QThread):
             self._check_interrupt()
             self.signals.log.emit("📦 حساب المتبقيات...")
 
-            remaining = [c for c in carpets if c.rem_qty > 0]
+            remaining = [c for c in carpets if c.rem_qty > -1]
+
             total_original = sum(c.qty for c in original_carpets)
             total_used = sum(g.total_qty() for g in groups)
             utilization = (total_used / total_original * 100) if total_original > 0 else 0

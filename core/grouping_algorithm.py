@@ -24,26 +24,30 @@ def build_groups(
     if selected_sort_type== SortType.SORT_BY_WIDTH:
         carpets.sort(key=lambda c: (c.width, c.height, c.qty), reverse=True)
     elif selected_sort_type == SortType.SORT_BY_QUANTITY:
-        carpets.sort(key=lambda c: (c.qty, c.height, c.width), reverse=True)
+        carpets.sort(key=lambda c: (c.rem_qty, c.height, c.width), reverse=True)
     elif selected_sort_type == SortType.SORT_BY_HEIGHT:
-        carpets.sort(ey=lambda c: (c.height, c.width, c.qty), reverse=True)
+        carpets.sort(key=lambda c: (c.height, c.width, c.qty), reverse=True)
 
     group: List[GroupCarpet] = []
     group_id = 1
     for main in carpets:
         if not main.is_available():
             continue
-        remaining_width = max_width - main.width
 
-        start_index = next((j for j, c in enumerate(carpets) if c.width <= remaining_width), None)
-        if start_index is None:
-            single_group = try_create_single_group(
-                main, min_width, max_width, group_id
-            )
-            if single_group:
-                group.append(single_group)
-                group_id += 1
-            continue
+        start_index = 0
+
+        if not selected_sort_type == SortType.SORT_BY_QUANTITY:
+            remaining_width = max_width - main.width
+            
+            start_index = next((j for j, c in enumerate(carpets) if c.width <= remaining_width), None)
+            if start_index is None:
+                single_group = try_create_single_group(
+                    main, min_width, max_width, group_id
+                )
+                if single_group:
+                    group.append(single_group)
+                    group_id += 1
+                continue
         current_max_partner = max_partner
         if min_width >= 370 and min_width <= 400 and main.width <= 70:
             current_max_partner = 10
@@ -55,7 +59,7 @@ def build_groups(
         for partner_level in range(1, current_max_partner + 1):
             if not main.is_available():
                 break
-           
+            rem_qty= main.rem_qty
             new_groups, group_id = generate_and_process_partners(
                 main=main,
                 carpets=carpets,
@@ -67,6 +71,11 @@ def build_groups(
                 selected_mode=selected_mode,
                 start_index=start_index
             )
+            if selected_sort_type == SortType.SORT_BY_QUANTITY:
+                if not new_groups:
+                    main.rem_qty= rem_qty
+                    continue
+
             group.extend(new_groups)
 
         if selected_mode == GroupingMode.NO_MAIN_REPEAT:
@@ -94,6 +103,12 @@ def build_groups(
         if single_group:
             group.append(single_group)
             group_id += 1
+
+    for g in group:
+        g.sort_items_by_width(reverse= True)
+
+    group.sort(key=lambda g: g.items[0].width if g.items else 0, reverse=True)
+
     return group
 
 def generate_and_process_partners(
@@ -250,19 +265,19 @@ def try_create_single_group(
         qty_used=carpet.rem_qty,
         qty_rem=0
     )
-    
-    qty_to_consume = carpet.rem_qty
-    carpet.consume(qty_to_consume)
-    
+
     single_group = GroupCarpet(
         group_id=group_id,
         items=[single_item]
     )
+
+    if not single_group.is_valid(min_width, max_width):
+        return None
     
-    if single_group.is_valid(min_width, max_width):
-        return single_group
+    qty_to_consume = carpet.rem_qty
+    carpet.consume(qty_to_consume)
     
-    return None
+    return single_group
 
 def load_selected_mode()->GroupingMode | None:
     config_path= os.path.join(os.getcwd(), "config", "config.json")

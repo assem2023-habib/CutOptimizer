@@ -104,3 +104,6 @@ class GroupCarpet:
         if not self.items:
             return 0
         return self.items[0].length_ref()
+    
+    def sort_items_by_width(self, reverse: bool = False) -> None:
+        self.items.sort(key=lambda item: item.width, reverse=reverse)
