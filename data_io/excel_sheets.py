@@ -28,7 +28,7 @@ def _create_group_details_sheet(
                 'معرف السجاد': it.carpet_id,
                 'العرض': it.width,
                 'الطول': it.height,
-                'رقم المسار': f"رقم المسار_{path_num}",
+                'رقم المسار': f"المسار_{path_num}",
                 'الكمية المستخدمة': it.qty_used,
                 'الطول الاجمالي للسجادة': it.length_ref(),
                 'الكمية الاصلية' : it.qty_used + it.qty_rem,
@@ -90,6 +90,7 @@ def _create_group_summary_sheet(
         summary.append({
             'رقم القصة': f'القصة_{group_id}',
             'العرض الإجمالي': g.total_width(),
+            'عدد المسارات': len(g.items),
             'أقصى ارتفاع': g.max_height(),
             'المساحة الإجمالية': g.total_area(),
             'الكمية المستخدمة الكلية': g.total_qty(),
@@ -106,6 +107,7 @@ def _create_group_summary_sheet(
     summary.append({
         'رقم القصة': '',
         'العرض الإجمالي': '',
+        'عدد المسارات': '',
         'أقصى ارتفاع': '',
         'المساحة الإجمالية': '',
         'الكمية المستخدمة الكلية': '',
@@ -116,6 +118,7 @@ def _create_group_summary_sheet(
     summary.append({
         'رقم القصة': "المجموع",
         'العرض الإجمالي': total_width,
+        'عدد المسارات': len(groups),
         'أقصى ارتفاع': total_height,
         'المساحة الإجمالية': total_area,
         'الكمية المستخدمة الكلية': total_qty_used,
