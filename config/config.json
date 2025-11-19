@@ -9,5 +9,5 @@
     "allow_split_rows": true,
     "theme": "dark",
     "background_image": "config\\backgrounds\\img1.jpg",
-    "selected_mode": "combinations with repetition (exclude main)"
+    "selected_mode": "all combinations"
 }
