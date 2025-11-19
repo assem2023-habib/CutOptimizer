@@ -139,16 +139,17 @@ def _create_remaining_sheet(remaining: List[Carpet]) -> pd.DataFrame:
     aggregated = {}
     for r in remaining:
         if r.rem_qty > 0:
-            key = (r.id, r.width, r.height)
+            key = (r.id, r.width, r.height, r.client_order)
             aggregated[key] = aggregated.get(key, 0) + int(r.rem_qty)
 
     rem_rows = []
     total_width = 0
     total_hieght = 0
     total_rem_qty = 0
-    for (rid, w, h), q in aggregated.items():
+    for (rid, w, h, co), q in aggregated.items():
         rem_rows.append({
             'معرف السجادة': rid,
+            'أمر العيل': co,
             'العرض': w,
             'الطول': h,
             'الكمية المتبقية': q,
@@ -159,6 +160,7 @@ def _create_remaining_sheet(remaining: List[Carpet]) -> pd.DataFrame:
 
     rem_rows.append({
         'معرف السجادة': '',
+        'أمر العيل': '',
         'العرض': '',
         'الطول': '',
         'الكمية المتبقية': '',
@@ -166,6 +168,7 @@ def _create_remaining_sheet(remaining: List[Carpet]) -> pd.DataFrame:
 
     rem_rows.append({
         'معرف السجادة': "المجموع",
+        'أمر العيل': '',
         'العرض': total_width,
         'الطول': total_hieght,
         'الكمية المتبقية': total_rem_qty,
@@ -220,7 +223,7 @@ def _create_audit_sheet(
         if from_groups:
             for g in from_groups:
                 for it in g.items:
-                    key = (it.carpet_id, it.width, it.height)
+                    key = (it.carpet_id, it.width, it.height, it.client_order)
                     used_totals[key] = used_totals.get(key, 0) + int(it.qty_used)
 
     _accumulate_used(groups)
@@ -228,13 +231,13 @@ def _create_audit_sheet(
     remaining_totals: Dict[tuple, int] = {}
     for r in remaining:
         if r.rem_qty > 0:
-            key = (r.id, r.width, r.height)
+            key = (r.id, r.width, r.height, r.client_order)
             remaining_totals[key] = remaining_totals.get(key, 0) + int(r.rem_qty)
 
     original_totals: Dict[tuple, int] = {}
     if originals is not None:
         for r in originals:
-            key = (r.id, r.width, r.height)
+            key = (r.id, r.width, r.height, r.client_order)
             original_totals[key] = original_totals.get(key, 0) + int(r.qty)
     else:
         all_keys = set(list(used_totals.keys()) + list(remaining_totals.keys()))
@@ -252,7 +255,7 @@ def _create_audit_sheet(
     total_rem_qty= 0
     tota_diff_qty= 0
 
-    for (rid, w, h) in sorted(all_keys, key=lambda x: (x[0] if x[0] is not None else -1, x[1], x[2])):
+    for (rid, w, h, co) in sorted(all_keys, key=lambda x: (x[0] if x[0] is not None else -1, x[1], x[2])):
         orig = int(original_totals.get((rid, w, h), 0))
         used = int(used_totals.get((rid, w, h), 0))
         rem = int(remaining_totals.get((rid, w, h), 0))
@@ -267,6 +270,7 @@ def _create_audit_sheet(
 
         audit_rows.append({
             'معرف السجادة': rid,
+            'أمر العميل': co,
             'العرض': w,
             'الارتفاع': h,
             'الكمية الأصلية': orig,
@@ -278,6 +282,7 @@ def _create_audit_sheet(
 
     audit_rows.append({
         'معرف السجادة': '',
+        'أمر العميل': '',
         'العرض': '',
         'الارتفاع': '',
         'الكمية الأصلية': '',
@@ -292,6 +297,7 @@ def _create_audit_sheet(
         is_same= '✅ نعم'
     audit_rows.append({
         'معرف السجادة': "المجموع",
+        'أمر العميل': '',
         'العرض': total_width,
         'الارتفاع': total_height,
         'الكمية الأصلية': total_original_qty,
@@ -380,7 +386,7 @@ def _create_remaining_suggestion_sheet(remaining: List[Carpet], min_width, max_w
     aggregated = {}
     for r in remaining:
         if r.rem_qty > 0:
-            key = (r.id, r.width, r.height)
+            key = (r.id, r.width, r.height, r.client_order)
             aggregated[key] = aggregated.get(key, 0) + int(r.rem_qty)
 
     rem_rows = []
@@ -391,9 +397,10 @@ def _create_remaining_suggestion_sheet(remaining: List[Carpet], min_width, max_w
     total_missing_max_width= 0
     total_min_height_ref= 0
     total_max_height_ref= 0
-    for (rid, w, h), q in aggregated.items():
+    for (rid, w, h, co), q in aggregated.items():
         rem_rows.append({
             'معرف السجادة': rid,
+            'أمر العميل': co,
             'العرض': w,
             'الطول': h,
             'الكمية المتبقية': q,
@@ -412,6 +419,7 @@ def _create_remaining_suggestion_sheet(remaining: List[Carpet], min_width, max_w
 
     rem_rows.append({
         'معرف السجادة': '',
+        'أمر العميل': '',
         'العرض': '',
         'الطول': '',
         'الكمية المتبقية': '',
@@ -423,6 +431,7 @@ def _create_remaining_suggestion_sheet(remaining: List[Carpet], min_width, max_w
 
     rem_rows.append({
         'معرف السجادة': "المجموع",
+        'أمر العميل': '',
         'العرض': total_width,
         'الطول': total_hieght,
         'الكمية المتبقية': total_rem_qty,
@@ -431,6 +440,78 @@ def _create_remaining_suggestion_sheet(remaining: List[Carpet], min_width, max_w
         'اقل طول مرجعي': total_min_height_ref,
         'اكبر طول مرجعي': total_max_height_ref,
     })
+
+    df = pd.DataFrame(rem_rows)
+
+    return df
+
+def _create_enhanset_remaining_suggestion_sheet(
+        suggested_groups: Optional[List[List[GroupCarpet]]], 
+        min_width, 
+        max_width, 
+        tolerance
+        ) -> pd.DataFrame:
+    for s in suggested_groups:
+        print(s ,"\n")
+        for el in s:
+            print(type(el), "\n")
+    aggregated = {}
+    # for r in remaining
+    #     if r.rem_qty > 0:
+    #         key = (r.id, r.width, r.height, r.client_order)
+    #         aggregated[key] = aggregated.get(key, 0) + int(r.rem_qty):
+
+    rem_rows = []
+    # total_width = 0
+    # total_hieght = 0
+    # total_rem_qty = 0
+    # total_missing_min_width= 0
+    # total_missing_max_width= 0
+    # total_min_height_ref= 0
+    # total_max_height_ref= 0
+    # for (rid, w, h, co), q in aggregated.items():
+    #     rem_rows.append({
+    #         'معرف السجادة': rid,
+    #         'أمر العميل': co,
+    #         'العرض': w,
+    #         'الطول': h,
+    #         'الكمية المتبقية': q,
+    #         'اقل عرض مجموعة': min_width - w,
+    #         'أعلى عرض مجموعة': max_width - w,
+    #         'اقل طول مرجعي': h * q - tolerance,
+    #         'اكبر طول مرجعي': h * q + tolerance,
+    #     })
+    #     total_width+= w
+    #     total_hieght+= h
+    #     total_rem_qty+= q
+    #     total_missing_min_width+= min_width - w
+    #     total_missing_max_width+= max_width - w
+    #     total_min_height_ref+=  h * q - tolerance
+    #     total_max_height_ref+=  h * q + tolerance
+
+    # rem_rows.append({
+    #     'معرف السجادة': '',
+    #     'أمر العميل': '',
+    #     'العرض': '',
+    #     'الطول': '',
+    #     'الكمية المتبقية': '',
+    #     'اقل عرض مجموعة': '',
+    #     'أعلى عرض مجموعة': '',
+    #     'اقل طول مرجعي': '',
+    #     'اكبر طول مرجعي': '',
+    # })
+
+    # rem_rows.append({
+    #     'معرف السجادة': "المجموع",
+    #     'أمر العميل': '',
+    #     'العرض': total_width,
+    #     'الطول': total_hieght,
+    #     'الكمية المتبقية': total_rem_qty,
+    #     'اقل عرض مجموعة': total_missing_min_width,
+    #     'أعلى عرض مجموعة': total_missing_max_width,
+    #     'اقل طول مرجعي': total_min_height_ref,
+    #     'اكبر طول مرجعي': total_max_height_ref,
+    # })
 
     df = pd.DataFrame(rem_rows)
 

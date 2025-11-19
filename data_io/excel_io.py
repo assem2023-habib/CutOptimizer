@@ -45,6 +45,7 @@ def write_output_excel(
     max_width: Optional[int] = None,
     tolerance_length: Optional[int] = None,
     originals: Optional[List[Carpet]] = None,
+    suggested_groups: Optional[List[List[GroupCarpet]]]= None
 ) -> None:
     """
     كتابة النتائج إلى ملف Excel.
@@ -76,5 +77,5 @@ def write_output_excel(
     """
     from .excel_writer import write_output_excel as _write_output_excel
     _write_output_excel(
-        path, groups, remaining, min_width, max_width,tolerance_length , originals
+        path, groups, remaining, min_width, max_width,tolerance_length , originals, suggested_groups
     )

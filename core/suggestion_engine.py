@@ -1,0 +1,42 @@
+import copy
+from typing import List
+from models.group_carpet import GroupCarpet
+from models.carpet import Carpet
+from core.grouping_algorithm import build_groups
+
+
+def generate_suggestions(
+        remaining: List[Carpet],
+        min_width: int,
+        max_width: int,
+        tolerance: int,
+        step: int= 10,    
+    )->List[List[GroupCarpet]]:
+
+    suggestions: List[List[GroupCarpet]]= []
+
+    min_remaining_width= min(c.width for c in remaining if c.rem_qty > 0)
+    work_copy= [copy.deepcopy(c) for c in remaining]
+
+    current_min= min_width
+    current_max= max_width
+
+    while current_max > min_remaining_width:
+        carpets_for_run= [copy.deepcopy(c) for c in work_copy]
+
+        groups= build_groups(
+            carpets= carpets_for_run,
+            min_width= current_min,
+            max_width= current_max,
+            max_partner= 9,
+            tolerance= tolerance,
+        )
+        if groups and not groups in suggestions:
+            suggestions.append(groups)
+
+        current_min -= step
+        current_max -= step
+
+        if current_min < 0:
+            current_min = 0
+    return suggestions

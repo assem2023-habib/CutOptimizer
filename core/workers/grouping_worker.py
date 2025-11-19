@@ -5,6 +5,7 @@ from PySide6.QtCore import QObject, QThread, Signal
 from data_io.excel_io import read_input_excel, write_output_excel
 from core.validation import validate_carpets
 from core.grouping_algorithm import build_groups
+from core.suggestion_engine import generate_suggestions
 
 class WorkerSignals(QObject):
     progress = Signal(int)
@@ -83,7 +84,17 @@ class GroupingWorker(QThread):
             # self.signals.progress.emit(80)
             self._check_interrupt()
 
+            suggested_groups = generate_suggestions(
+                remaining=remaining,
+                min_width=self.min_width,
+                max_width=self.max_width,
+                tolerance= self.tolerance_len
+            )
+
+            self._check_interrupt()
+
             self.signals.log.emit("💾 حفظ النتائج...")
+
             write_output_excel(
                 path=self.output_path,
                 groups=groups,
@@ -91,7 +102,8 @@ class GroupingWorker(QThread):
                 min_width=self.min_width,
                 max_width=self.max_width,
                 tolerance_length= self.tolerance_len,
-                originals=original_carpets
+                originals=original_carpets,
+                suggested_groups= suggested_groups,
                 )
             
             self.signals.log.emit(f"✅ تم حفظ النتائج في: {self.output_path}")

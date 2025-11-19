@@ -12,7 +12,8 @@ from .excel_sheets import (
     _create_totals_sheet,
     _create_audit_sheet,
     _generate_waste_sheet,
-    _create_remaining_suggestion_sheet
+    _create_remaining_suggestion_sheet,
+    _create_enhanset_remaining_suggestion_sheet
 )
 
 from .excel_formatting import (
@@ -38,6 +39,7 @@ def write_output_excel(
     max_width: Optional[int] = None,
     tolerance_length: Optional[int] = None,
     originals: Optional[List[Carpet]] = None,
+    suggested_groups: Optional[List[List[GroupCarpet]]]= None,
 ) -> None:
     """
     كتابة النتائج إلى ملف Excel مع صفحات متعددة.
@@ -83,9 +85,11 @@ def write_output_excel(
 
     df_suggestion_group= _create_remaining_suggestion_sheet(remaining, min_width, max_width, tolerance_length)
 
+    df_enhanset_remaining_suggestion_sheet= _create_enhanset_remaining_suggestion_sheet(suggested_groups= suggested_groups, min_width=min_width, max_width= max_width, tolerance= tolerance_length)
+
 
     _write_all_sheets_to_excel(
-        path, df1, df2, df3, totals_df, df_audit, waste_df, df_suggestion_group
+        path, df1, df2, df3, totals_df, df_audit, waste_df, df_suggestion_group, df_enhanset_remaining_suggestion_sheet
     )
 
 # =============================================================================
@@ -101,6 +105,7 @@ def _write_all_sheets_to_excel(
     df_audit: pd.DataFrame,
     waste_df: pd.DataFrame,
     df_suggestion_group: pd.DataFrame,
+    df_enhanset_remaining_suggestion_sheet: pd.DataFrame
 ) -> None:
     """كتابة جميع الأوراق إلى ملف Excel مع ضبط تلقائي لعرض الأعمدة."""
     try:
@@ -125,15 +130,18 @@ def _write_all_sheets_to_excel(
                 waste_df.to_excel(writer, sheet_name='الهادر', index=False)
 
             if not df_suggestion_group.empty:
-                df_suggestion_group.to_excel(writer, sheet_name='اقتراحات المتبقي', index=False)
+                df_suggestion_group.to_excel(writer, sheet_name='اقتراحات المتبقيات', index=False)
 
-            _auto_adjust_column_width(writer, df1, df2, df3, totals_df, df_audit, waste_df, df_suggestion_group)
+            if not df_enhanset_remaining_suggestion_sheet.empty:
+                df_enhanset_remaining_suggestion_sheet.to_excel(writer, sheet_name='اقتراحات المتبقيات المحسنة', index=False)
+
+            _auto_adjust_column_width(writer, df1, df2, df3, totals_df, df_audit, waste_df, df_suggestion_group, df_enhanset_remaining_suggestion_sheet)
 
     except Exception as e2:
         raise
 
 
-def _auto_adjust_column_width(writer, df1, df2, df3, totals_df, df_audit, waste_df, df_suggestion_group):
+def _auto_adjust_column_width(writer, df1, df2, df3, totals_df, df_audit, waste_df, df_suggestion_group, df_enhanset_remaining_suggestion_sheet):
     workbook = writer.book
 
     header_format = _create_header_format(workbook)
@@ -163,7 +171,10 @@ def _auto_adjust_column_width(writer, df1, df2, df3, totals_df, df_audit, waste_
         sheet_dataframes['الهادر'] = waste_df
 
     if not df_suggestion_group.empty:
-        sheet_dataframes['اقتراحات المتبقي'] = df_suggestion_group
+        sheet_dataframes['اقتراحات المتبقيات'] = df_suggestion_group
+        
+    if not df_enhanset_remaining_suggestion_sheet.empty:
+        sheet_dataframes['اقتراحات المتبقيات المحسنة'] = df_enhanset_remaining_suggestion_sheet
 
     for sheet_name, df in sheet_dataframes.items():
         if sheet_name in writer.sheets:
