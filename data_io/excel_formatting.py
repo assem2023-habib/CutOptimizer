@@ -91,9 +91,8 @@ def add_conditional_formatting(writer, worksheet, df: pd.DataFrame) -> None:
 
 
 def _apply_row_highlight_on_selection(writer, worksheet, df):
-    """تمييز الصف الذي ينقر عليه المستخدم (تفاعل ديناميكي)."""
     highlight_format = writer.book.add_format({
-        'bg_color': '#FFF2CC',  # لون أصفر باهت لتسليط الضوء
+        'bg_color': '#FFF2CC', 
     })
 
     last_row = len(df)

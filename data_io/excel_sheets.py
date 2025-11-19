@@ -17,12 +17,14 @@ def _create_group_details_sheet(
     total_qty= 0
     total_qty_rem= 0
     total_path= 0
+    group_id= 0
     for g in groups:
+        group_id+= 1
         path_num= 0
         for it in g.items:
             path_num+= 1
             rows.append({
-                'رقم القصة': f'القصة_{g.group_id}',
+                'رقم القصة': f'القصة_{group_id}',
                 'معرف السجاد': it.carpet_id,
                 'العرض': it.width,
                 'الطول': it.height,
@@ -81,10 +83,12 @@ def _create_group_summary_sheet(
     items_count= 0
     total_qty_used= 0
     total_area_div= 0
+    group_id= 0
     for g in groups:
+        group_id+= 1
         types_count = len(g.items)
         summary.append({
-            'رقم القصة': f'القصة_{g.group_id}',
+            'رقم القصة': f'القصة_{group_id}',
             'العرض الإجمالي': g.total_width(),
             'أقصى ارتفاع': g.max_height(),
             'المساحة الإجمالية': g.total_area(),
@@ -307,8 +311,10 @@ def _generate_waste_sheet(
     total_waste_maxPath= 0
     total_sumPathLoss= 0
     total_result= 0
+    group_id= 0
 
     for g in groups:
+        group_id+= 1
         sumPathLoss= 0
 
         for item in g.items:
@@ -318,7 +324,7 @@ def _generate_waste_sheet(
         pathLoss = g.max_length_ref() - g.min_length_ref()
 
         summary.append({
-            'رقم القصة': f'القصة_{g.group_id}',
+            'رقم القصة': f'القصة_{group_id}',
             'العرض الإجمالي': g.total_width(),
             'الهادر في العرض':  wasteWidth,
             'اطول مسار': g.max_length_ref(),
