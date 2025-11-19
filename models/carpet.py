@@ -6,6 +6,7 @@ class Carpet:
     width: int
     height: int
     qty: int
+    client_order: int
     rem_qty: int = field(init=False)
 
     def __post_init__(self):

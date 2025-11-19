@@ -21,17 +21,15 @@ def read_input_excel(path: str, sheet_name: int = 0)-> List[Carpet]:
 
     for idx, row in df.iterrows():
         try:
-            width = str(row[0]).strip()
-            height = str(row[1]).strip()
-            qty_raw = int(row[2])
-            single_pair = str(row[3]).strip().upper() if len(row) > 3 else ""
-            texture_type = str(row[4]).strip().upper() if len(row) > 4 else ""
-            prep_code = str(row[5]).strip().upper() if len(row) > 5 else ""
+            client_order = int(row[0])
+            width = int(str(row[1]).strip())
+            height = int(str(row[2]).strip())
+            qty_raw = int(row[3])
+            single_pair = str(row[4]).strip().upper() if len(row) > 4 else ""
+            texture_type = str(row[5]).strip().upper() if len(row) > 5 else ""
+            prep_code = str(row[6]).strip().upper() if len(row) > 6 else ""
 
-            width = int(width.strip())
-            height = int(height.strip())
-
-            if single_pair in ["A"]:
+            if single_pair == "A":
                 qty = max(1 , qty_raw // 2)
 
             else:
@@ -40,7 +38,7 @@ def read_input_excel(path: str, sheet_name: int = 0)-> List[Carpet]:
             if prep_code in prep_offset:
                 height += prep_offset[prep_code]
 
-            if texture_type in ["B"]:
+            if texture_type == "B":
                 width, height = height, width
                 
             if width <= 0 or height <= 0 or qty <= 0:
@@ -52,6 +50,7 @@ def read_input_excel(path: str, sheet_name: int = 0)-> List[Carpet]:
                 width=width,
                 height=height,
                 qty=qty,
+                client_order=client_order
             )
             carpets.append(carpet)
         except Exception as e:
