@@ -8,6 +8,8 @@ from core.group_helpers import (
 )
 import json, os
 from core.Enums.grouping_mode import GroupingMode
+from core.Enums.sort_type import SortType
+
 
 def build_groups(
         carpets: List[Carpet],
@@ -17,7 +19,15 @@ def build_groups(
         tolerance: int = 0,
 ) -> List[GroupCarpet]:
     selected_mode= load_selected_mode()
-    carpets.sort(key=lambda c: (c.width, c.height, c.qty), reverse=True)
+    selected_sort_type= load_saved_sort()
+
+    if selected_sort_type== SortType.SORT_BY_WIDTH:
+        carpets.sort(key=lambda c: (c.width, c.height, c.qty), reverse=True)
+    elif selected_sort_type == SortType.SORT_BY_QUANTITY:
+        carpets.sort(key=lambda c: (c.qty, c.height, c.width), reverse=True)
+    elif selected_sort_type == SortType.SORT_BY_HEIGHT:
+        carpets.sort(ey=lambda c: (c.height, c.width, c.qty), reverse=True)
+
     group: List[GroupCarpet] = []
     group_id = 1
     for main in carpets:
@@ -268,3 +278,16 @@ def load_selected_mode()->GroupingMode | None:
         return GroupingMode(mode_text)
     except ValueError:
         return None
+    
+ 
+def load_saved_sort():
+    config_path= os.path.join(os.getcwd(), "config", "config.json")
+    if not os.path.exists(config_path):
+        return None
+    
+    
+    with open(config_path, "r", encoding="utf-8") as f:
+        cfg= json.load(f)
+        mode_text = cfg.get("selected_sort_type", "").strip()
+
+    return SortType(mode_text)

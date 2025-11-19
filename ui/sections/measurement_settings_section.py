@@ -7,9 +7,9 @@ from PySide6.QtCore import Qt
 from ui.components.setting_input_field import SettingInputField 
 from ui.components.drop_down_list import DropDownList
 from core.Enums.grouping_mode import GroupingMode
+from core.Enums.sort_type import SortType
 
-import os
-import json
+import os, json
 
 class MeasurementSettingsSection(QWidget):
     def __init__(self,
@@ -49,14 +49,27 @@ class MeasurementSettingsSection(QWidget):
         )
         self.mode_dropdown.setFixedWidth(200)
 
+        self.sort_dropdown = DropDownList(
+            selected_value_text="Ascending",
+            options_list=SortType.list()
+        )
+        self.sort_dropdown.setFixedWidth(160)
+
         self.load_saved_mode()
+        self.load_saved_sort()
+
         self.mode_dropdown.list_widget.itemClicked.connect(
             lambda _: self.save_selected_mode()
         )
+        self.sort_dropdown.list_widget.itemClicked.connect(
+            lambda _: self.save_selected_sort()
+            )
 
         title_layout.addWidget(title_label)
         title_layout.addStretch()
-        title_layout.addWidget(self.mode_dropdown, alignment=Qt.AlignLeft)
+        # title_layout.addWidget(self.mode_dropdown, alignment=Qt.AlignLeft)
+        title_layout.addWidget(self.mode_dropdown)
+        title_layout.addWidget(self.sort_dropdown)
 
         main_layout.addLayout(title_layout)
 
@@ -151,3 +164,43 @@ class MeasurementSettingsSection(QWidget):
 
     def get_selected_mode(self) -> str:
         return self.mode_dropdown.selected_value_text
+    
+    def load_saved_sort(self):
+        config_file_path = os.path.join(os.getcwd(), "config", "config.json")
+        if not os.path.exists(config_file_path):
+            return
+
+        try:
+            with open(config_file_path, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+            saved_sort = cfg.get("selected_sort_type")
+            if saved_sort and saved_sort in self.sort_dropdown.options_list:
+                self.sort_dropdown.selected_value_text = saved_sort
+                self.sort_dropdown.selector_btn.setText(saved_sort)
+        except Exception as e:
+            raise e
+
+    def save_selected_sort(self):
+        try:
+            config_file_path = os.path.join(os.getcwd(), "config", "config.json")
+            sort_type = self.sort_dropdown.get_selected_value()
+
+            if os.path.exists(config_file_path):
+                with open(config_file_path, "r", encoding="utf-8") as f:
+                    cfg = json.load(f)
+            else:
+                cfg = {}
+
+            cfg["selected_sort_type"] = sort_type
+            os.makedirs(os.path.dirname(config_file_path), exist_ok=True)
+
+            with open(config_file_path, "w", encoding="utf-8") as f:
+                json.dump(cfg, f, ensure_ascii=False, indent=4)
+        except Exception as e:
+            raise e
+
+    def get_selected_mode(self) -> str:
+        return self.mode_dropdown.selected_value_text
+
+    def get_selected_sort(self) -> str:
+        return self.sort_dropdown.selected_value_text
