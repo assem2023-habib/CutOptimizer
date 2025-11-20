@@ -68,8 +68,9 @@ class GroupingWorker(QThread):
             self._check_interrupt()
             self.signals.log.emit("📦 حساب المتبقيات...")
 
-            remaining = [c for c in carpets if c.rem_qty > -1]
+            remaining = [c for c in carpets if c.rem_qty > 0]
 
+            total_rem= sum(c.rem_qty for c in remaining)
             total_original = sum(c.qty for c in original_carpets)
             total_used = sum(g.total_qty() for g in groups)
             utilization = (total_used / total_original * 100) if total_original > 0 else 0
@@ -77,7 +78,7 @@ class GroupingWorker(QThread):
             stats = {
                 "total_original": total_original,
                 "total_used": total_used,
-                "total_remaining": total_original - total_used,
+                "total_remaining": total_rem,
                 "utilization_percentage": utilization
             }    
 

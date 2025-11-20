@@ -24,18 +24,20 @@ def _create_group_details_sheet(
         path_num= 0
         for it in g.items:
             path_num+= 1
-            rows.append({
-                'رقم القصة': f'القصة_{group_id}',
-                'امر العميل': it.client_order,
-                'معرف السجاد': it.carpet_id,
-                'العرض': it.width,
-                'الطول': it.height,
-                'رقم المسار': f"المسار_{path_num}",
-                'الكمية المستخدمة': it.qty_used,
-                'الطول الاجمالي للسجادة': it.length_ref(),
-                'الكمية الاصلية' : it.qty_used + it.qty_rem,
-                'الكمية المتبقية': it.qty_rem
-            })
+            rows.append(
+                _detals_sheet_table(
+                    f'القصة_{group_id}',
+                    it.client_order,
+                    it.carpet_id,
+                    it.width,
+                    it.height,
+                    f"المسار_{path_num}",
+                    it.qty_used,
+                    it.length_ref(),
+                    it.qty_used + it.qty_rem,
+                    it.qty_rem
+                )
+            )
             total_qty+= it.qty_used + it.qty_rem
             total_qty_rem+= it.qty_rem
             total_path += path_num
@@ -45,31 +47,23 @@ def _create_group_details_sheet(
         total_qty_used+= g.total_qty()
         total_length_ref+= g.total_length_ref()
 
-    rows.append({
-        'رقم القصة': '',
-        'امر العميل': '',
-        'معرف السجاد': '',
-        'العرض': '',
-        'الطول': '',
-        'رقم المسار': '',
-        'الكمية المستخدمة': '',
-        'الطول الاجمالي للسجادة': '',
-        'الكمية الاصلية' : '',
-        'الكمية المتبقية': ''
-    })
-    
-    rows.append({
-        'رقم القصة': 'المجموع  ',
-        'امر العميل': '',
-        'معرف السجاد': '',
-        'العرض': total_width,
-        'الطول': total_height,
-        'رقم المسار': '',
-        'الكمية المستخدمة': total_qty_used,
-        'الطول الاجمالي للسجادة': total_length_ref,
-        'الكمية الاصلية' : total_qty,
-        'الكمية المتبقية': total_qty_rem
-    })
+    rows.append(
+        _detals_sheet_table()
+    )
+    rows.append(
+        _detals_sheet_table(
+            '',
+            'المجموع',
+            '',
+            total_width,
+            total_height,
+            '',
+            total_qty_used,
+            total_length_ref,
+            total_qty,
+            total_qty_rem,
+        )
+    )
 
     df = pd.DataFrame(rows)
 
@@ -91,16 +85,18 @@ def _create_group_summary_sheet(
     for g in groups:
         group_id+= 1
         types_count = len(g.items)
-        summary.append({
-            'رقم القصة': f'القصة_{group_id}',
-            'العرض الإجمالي': g.total_width(),
-            'عدد المسارات': len(g.items),
-            'أقصى ارتفاع': g.max_height(),
-            'المساحة الإجمالية': g.total_area(),
-            'الكمية المستخدمة الكلية': g.total_qty(),
-            'عدد أنواع السجاد': types_count,
-             'المساحة الإجمالية_2' :g.total_area() / 10000,
-        })
+        summary.append(
+            _summary_sheet_table(
+                f'القصة_{group_id}',
+                g.total_width(),
+                len(g.items),
+                g.max_height(),
+                g.total_area(),
+                g.total_qty(),
+                types_count,
+                g.total_area() / 10000,
+            )
+        )
         total_width+= g.total_width()
         total_height+= g.max_height()
         total_area+= g.total_area()
@@ -108,27 +104,20 @@ def _create_group_summary_sheet(
         total_qty_used+= g.total_qty()
         total_area_div+= g.total_area() / 10000
 
-    summary.append({
-        'رقم القصة': '',
-        'العرض الإجمالي': '',
-        'عدد المسارات': '',
-        'أقصى ارتفاع': '',
-        'المساحة الإجمالية': '',
-        'الكمية المستخدمة الكلية': '',
-        'عدد أنواع السجاد': '',
-        'المساحة الإجمالية_2':'',
-    })
+    summary.append(_summary_sheet_table())
     
-    summary.append({
-        'رقم القصة': "المجموع",
-        'العرض الإجمالي': total_width,
-        'عدد المسارات': len(groups),
-        'أقصى ارتفاع': total_height,
-        'المساحة الإجمالية': total_area,
-        'الكمية المستخدمة الكلية': total_qty_used,
-        'عدد أنواع السجاد': items_count,
-         'المساحة الإجمالية_2':total_area_div,
-    })
+    summary.append(
+        _summary_sheet_table(
+            "المجموع",
+            total_width,
+            len(groups),
+            total_height,
+            total_area,
+            total_qty_used,
+            items_count,
+            total_area_div
+        )
+    )
 
     df = pd.DataFrame(summary)
 
@@ -147,32 +136,30 @@ def _create_remaining_sheet(remaining: List[Carpet]) -> pd.DataFrame:
     total_hieght = 0
     total_rem_qty = 0
     for (rid, w, h, co), q in aggregated.items():
-        rem_rows.append({
-            'معرف السجادة': rid,
-            'أمر العيل': co,
-            'العرض': w,
-            'الطول': h,
-            'الكمية المتبقية': q,
-        })
+        rem_rows.append(
+            _remaining_sheet_table(
+                rid,
+                co,
+                w,
+                h,
+                q
+            )
+        )
         total_width+= w
         total_hieght+= h
         total_rem_qty+= q
 
-    rem_rows.append({
-        'معرف السجادة': '',
-        'أمر العيل': '',
-        'العرض': '',
-        'الطول': '',
-        'الكمية المتبقية': '',
-    })
+    rem_rows.append(_remaining_sheet_table())
 
-    rem_rows.append({
-        'معرف السجادة': "المجموع",
-        'أمر العيل': '',
-        'العرض': total_width,
-        'الطول': total_hieght,
-        'الكمية المتبقية': total_rem_qty,
-    })
+    rem_rows.append(
+        _remaining_sheet_table(
+            'المجموع',
+            '',
+            total_width,
+            total_hieght,
+            total_rem_qty
+        )
+    )
 
     df = pd.DataFrame(rem_rows)
 
@@ -253,7 +240,7 @@ def _create_audit_sheet(
     total_original_qty= 0
     total_used_qty= 0
     total_rem_qty= 0
-    tota_diff_qty= 0
+    total_diff_qty= 0
 
     for (rid, w, h, co) in sorted(all_keys, key=lambda x: (x[0] if x[0] is not None else -1, x[1], x[2])):
         orig = int(original_totals.get((rid, w, h), 0))
@@ -266,46 +253,41 @@ def _create_audit_sheet(
         total_original_qty+= orig
         total_used_qty+= used
         total_rem_qty+= rem
-        tota_diff_qty+= diff
+        total_diff_qty+= diff
 
-        audit_rows.append({
-            'معرف السجادة': rid,
-            'أمر العميل': co,
-            'العرض': w,
-            'الارتفاع': h,
-            'الكمية الأصلية': orig,
-            'الكمية المستخدمة': used,
-            'الكمية المتبقية': rem,
-            'فارق (المستخدم+المتبقي-الأصلي)': diff,
-            'مطابق؟': '✅ نعم' if diff == 0 else '❌ لا'    
-        })
+        audit_rows.append(
+            _audit_sheet_table(
+                rid,
+                co,
+                w,
+                h,
+                orig,
+                used,
+                rem,
+                diff,
+                '✅ نعم' if diff == 0 else '❌ لا'
+            )
+        )
 
-    audit_rows.append({
-        'معرف السجادة': '',
-        'أمر العميل': '',
-        'العرض': '',
-        'الارتفاع': '',
-        'الكمية الأصلية': '',
-        'الكمية المستخدمة': '',
-        'الكمية المتبقية': '',
-        'فارق (المستخدم+المتبقي-الأصلي)': '',
-        'مطابق؟': '' 
-    })
+    audit_rows.append(_audit_sheet_table())
 
     is_same= '❌ لا'
     if total_original_qty == total_used_qty + total_rem_qty:
         is_same= '✅ نعم'
-    audit_rows.append({
-        'معرف السجادة': "المجموع",
-        'أمر العميل': '',
-        'العرض': total_width,
-        'الارتفاع': total_height,
-        'الكمية الأصلية': total_original_qty,
-        'الكمية المستخدمة': total_used_qty,
-        'الكمية المتبقية': total_rem_qty,
-        'فارق (المستخدم+المتبقي-الأصلي)': tota_diff_qty,
-        'مطابق؟': is_same 
-    })
+
+    audit_rows.append(
+        _audit_sheet_table(
+            'المجموع',
+            '',
+            total_width,
+            total_height,
+            total_original_qty,
+            total_used_qty,
+            total_rem_qty,
+            total_diff_qty,
+            is_same
+        )
+    )
     df = pd.DataFrame(audit_rows)
 
     return df
@@ -526,3 +508,108 @@ def _create_enhanset_remaining_suggestion_sheet(
     df = pd.DataFrame(rem_rows)
 
     return df
+
+def _detals_sheet_table(
+        group_id= '',
+        client_order= '',
+        carpet_id= '',
+        width= '',
+        height= '',
+        path_num= '',
+        qty_used= '',
+        path_length= '',
+        original_qty= '',
+        qty_rem= '',
+    ):
+    return ({
+        'امر العميل': client_order,
+        'رقم القصة': group_id,
+        'العرض': width,
+        'الطول': height,
+        'رقم المسار': path_num,
+        'الكمية المستخدمة': qty_used,
+        'طول المسار': path_length,
+        'الكمية الاصلية' : original_qty,
+        'الكمية المتبقية': qty_rem,
+        'معرف السجاد': carpet_id,
+        })
+
+def _summary_sheet_table(
+        group_id= '',
+        total_width= '',
+        path_count= '',
+        max_height= '',
+        total_area= '',
+        total_qty_used= '',
+        carpet_count= '',
+        total_area_2= '',
+    ):
+    return ({
+        'رقم القصة': group_id,
+        'العرض الإجمالي': total_width,
+        'عدد المسارات': path_count,
+        'أقصى ارتفاع': max_height,
+        'المساحة الإجمالية': total_area,
+        'الكمية المستخدمة الكلية': total_qty_used,
+        'عدد أنواع السجاد': carpet_count,
+         'المساحة الإجمالية_2' : total_area_2,
+        })
+
+def _remaining_sheet_table(
+        carpet_id= '',
+        client_order= '',
+        width= '',
+        height= '',
+        qty_rem= '',
+    ):
+    return ({
+            'معرف السجادة': carpet_id,
+            'أمر العيل': client_order,
+            'العرض': width,
+            'الطول': height,
+            'الكمية المتبقية': qty_rem,
+        })
+
+def _audit_sheet_table(
+    carpet_id= '',
+    client_order= '',
+    width= '',
+    height= '',
+    original_qty= '',
+    used_qty= '',
+    rem_qty= '',
+    difference= '',
+    is_difference= '',
+    ):
+    return ({
+            'معرف السجادة': carpet_id,
+            'أمر العميل': client_order,
+            'العرض': width,
+            'الارتفاع': height,
+            'الكمية الأصلية': original_qty,
+            'الكمية المستخدمة': used_qty,
+            'الكمية المتبقية': rem_qty,
+            'فارق (المستخدم+المتبقي-الأصلي)': difference,
+            'مطابق؟': is_difference,    
+        })
+
+def _waste_sheet_table(
+        group_id= '',
+        total_width= '',
+        waste_width= '',
+        max_length_ref= '',
+        result_1= '',
+        path_loss= '',
+        result_2= '',
+        sum_path_loss= '',
+    ):
+    return ({
+            'رقم القصة': group_id,
+            'العرض الإجمالي': total_width,
+            'الهادر في العرض':  waste_width,
+            'اطول مسار': max_length_ref,
+            'نتيجة الضرب': result_1,
+            'الهادر في المسارات': path_loss,
+            'نتيجة الجمع': result_2,
+            'مجموع هادرالمسارات في المجموعة': sum_path_loss,
+        })
