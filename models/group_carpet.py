@@ -34,6 +34,9 @@ class GroupCarpet:
     def total_qty(self)->int:
         return sum(item.qty_used for item in self.items)
     
+    def total_rem_qty(self)->int:
+        return sum(item.qty_rem for item in self.items)
+    
     def total_area(self)->int:
         return sum(item.area() for item in self.items)
     
