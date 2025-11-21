@@ -524,9 +524,9 @@ def _detals_sheet_table(
     return ({
         'امر العميل': client_order,
         'رقم القصة': group_id,
+        'رقم المسار': path_num,
         'العرض': width,
         'الطول': height,
-        'رقم المسار': path_num,
         'الكمية المستخدمة': qty_used,
         'طول المسار': path_length,
         'الكمية الاصلية' : original_qty,
