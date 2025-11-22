@@ -56,7 +56,7 @@ class GroupingWorker(QThread):
             self._check_interrupt()
 
             carpets = self.merge_duplicate_carpets(carpets)
-
+            
             groups = build_groups(
                 carpets= carpets,
                 min_width=self.min_width,
@@ -88,14 +88,12 @@ class GroupingWorker(QThread):
 
             # self.signals.progress.emit(80)
             self._check_interrupt()
-
             suggested_groups = generate_suggestions(
                 remaining=remaining,
                 min_width=self.min_width,
                 max_width=self.max_width,
                 tolerance= self.tolerance_len
             )
-
             self._check_interrupt()
 
             self.signals.log.emit("💾 حفظ النتائج...")
@@ -150,13 +148,13 @@ class GroupingWorker(QThread):
                         "id": original.id,
                         "qty_original":original.qty,
                         "qty_rem":original.qty,
-                        "qty": original.qty,
+                        "qty": 0,
                         "client_order": original.client_order
                     })
 
                 original.repeated.append({
                     "id": carpet.id,
-                    "qty": carpet.qty,
+                    "qty": 0,
                     "qty_original":carpet.qty,
                     "qty_rem":carpet.qty,
                     "client_order": carpet.client_order
@@ -164,5 +162,4 @@ class GroupingWorker(QThread):
 
                 original.qty += carpet.qty
                 original.rem_qty += carpet.qty
-        
         return list(merged.values())

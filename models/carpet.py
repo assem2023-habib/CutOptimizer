@@ -36,26 +36,50 @@ class Carpet:
         consumed = []
         remaining = qty_needed
 
-        for rep in list(self.repeated):  # نستخدم list حتى نعدّل أثناء التكرار
+        for rep in list(self.repeated):
             if remaining <= 0:
                 break
 
-            take = min(rep["qty"], remaining)
+            take = min(rep["qty_rem"], remaining)
 
             if take > 0:
                 consumed.append({
                     "id": rep["id"],
                     "qty": take,
-                    "qty_original":rep["qty"] ,
-                    "qty_rem": rep["qty"] - take,
+                    "qty_original":rep["qty_original"] ,
+                    "qty_rem": rep["qty_rem"] - take,
                     "client_order": rep["client_order"]
                 })
 
-                rep["qty"] -= take
+                rep["qty_rem"] -= take
                 remaining -= take
 
-            # إزالة العناصر التي انتهت كميتها
-            if rep["qty"] == 0:
+            if rep["qty_rem"] == 0:
                 self.repeated.remove(rep)
-
         return consumed
+    
+    def restore_repeated(self, consumed_list: list[dict]) -> None:
+        """
+        ✅ إعادة الكميات المستهلكة من repeated
+        تُستخدم عند التراجع عن استهلاك فاشل
+        """
+        for consumed_item in consumed_list:
+            consumed_id = consumed_item["id"]
+            qty_to_restore = consumed_item["qty"]
+            
+            # البحث عن العنصر في repeated
+            found = False
+            for rep in self.repeated:
+                if rep["id"] == consumed_id:
+                    rep["qty_rem"] += qty_to_restore
+                    found = True
+                    break
+            
+            # إذا لم يُعثر عليه (تم حذفه لأن qty_rem كان 0)، نعيد إضافته
+            if not found:
+                self.repeated.append({
+                    "id": consumed_id,
+                    "qty_original": consumed_item["qty_original"],
+                    "qty_rem": qty_to_restore,
+                    "client_order": consumed_item["client_order"]
+                })

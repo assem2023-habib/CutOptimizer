@@ -23,8 +23,6 @@ def build_groups(
     selected_mode= load_selected_mode()
     selected_sort_type= load_saved_sort()
 
-
-    
     if selected_sort_type== SortType.SORT_BY_WIDTH:
         carpets.sort(key=lambda c: (c.width, c.height, c.qty), reverse=True)
     elif selected_sort_type == SortType.SORT_BY_QUANTITY:
@@ -209,7 +207,7 @@ def process_partner_group(
     
     used_items: List[CarpetUsed] = []
     all_valid = True
-    
+    rollback_data = []
     for e, x in zip(unique_elements, x_vals):
         if x <= 0:
             all_valid = False
@@ -230,9 +228,16 @@ def process_partner_group(
         
         for _ in range(repetition_count):
             result= []
-            e.consume(qty_per_repetition)
             if hasattr(e, "repeated") and e.repeated:
                 result= e.consume_from_repeated(qty_per_repetition)
+            e.consume(qty_per_repetition)
+
+            rollback_data.append({
+                "carpet": e,
+                "qty": qty_per_repetition,
+                "consumed_repeated": result
+            })
+            
             used_items.append(
                 CarpetUsed(
                     carpet_id=e.id,
@@ -246,11 +251,14 @@ def process_partner_group(
             )
     
     if not all_valid or len(used_items) < 2:
+        rollback_consumption(rollback_data)
         return None
     
     new_group = GroupCarpet(group_id=current_group_id, items=used_items)
     if new_group.is_valid(min_width, max_width):
         return new_group, current_group_id + 1
+    
+    rollback_consumption(rollback_data)
     return None
     
 
@@ -268,7 +276,7 @@ def try_create_single_group(
         return None
     result= []
     if hasattr(carpet, "repeated") and carpet.repeated:
-                result= carpet.consume_from_repeated(carpet.rem_qty)
+        result= carpet.consume_from_repeated(carpet.rem_qty)
     single_item = CarpetUsed(
         carpet_id=carpet.id,
         width=carpet.width,
@@ -318,3 +326,20 @@ def load_saved_sort():
         mode_text = cfg.get("selected_sort_type", "").strip()
 
     return SortType(mode_text)
+
+def rollback_consumption(rollback_data: list[dict]) -> None:
+    """
+    ✅ إرجاع جميع الكميات المستهلكة
+    يتم استدعاؤها عندما تفشل المجموعة في التحقق
+    """
+    for item in rollback_data:
+        carpet = item["carpet"]
+        qty = item["qty"]
+        consumed_repeated = item["consumed_repeated"]
+        
+        # إرجاع الكمية الرئيسية
+        carpet.rem_qty += qty
+        
+        # إرجاع الكميات من repeated
+        if consumed_repeated and hasattr(carpet, "restore_repeated"):
+            carpet.restore_repeated(consumed_repeated)

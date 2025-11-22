@@ -25,10 +25,8 @@ def _create_group_details_sheet(
         for it in g.items:
             path_num+= 1
             if it.repeated:
-                qty_rem= 0
                 ref_lenth= 0
                 for rep in it.repeated:
-                    qty_rem+= rep.get('qty')
                     ref_lenth+= rep.get('qty') * it.height
                     rows.append(
                         _detals_sheet_table(
@@ -150,8 +148,15 @@ def _create_remaining_sheet(remaining: List[Carpet]) -> pd.DataFrame:
     aggregated = {}
     for r in remaining:
         if r.rem_qty > 0:
-            key = (r.id, r.width, r.height, r.client_order)
-            aggregated[key] = aggregated.get(key, 0) + int(r.rem_qty)
+            if r.repeated:
+                for rep in r.repeated:
+                    if rep.get("qty_rem") > 0:
+                        key = (rep.get("id"), r.width, r.height, rep.get("client_order"))
+                        aggregated[key] = aggregated.get(key, 0) + int(rep.get("qty_rem"))
+            else:
+                if r.rem_qty > 0:
+                    key = (r.id, r.width, r.height, r.client_order)
+                    aggregated[key] = aggregated.get(key, 0) + int(r.rem_qty)
 
     rem_rows = []
     total_width = 0
@@ -248,7 +253,7 @@ def _create_audit_sheet(
             for rep in r.repeated:
                 if rep.get("qty_rem") > 0:
                     key = (rep.get("id"), r.width, r.height, rep.get("client_order"))
-                    remaining_totals[key] = remaining_totals.get(key, 0) + int(rep.get("rem_qty"))
+                    remaining_totals[key] = remaining_totals.get(key, 0) + int(rep.get("qty_rem"))
         else:
             if r.rem_qty > 0:
                 key = (r.id, r.width, r.height, r.client_order)
@@ -273,7 +278,6 @@ def _create_audit_sheet(
     total_used_qty= 0
     total_rem_qty= 0
     total_diff_qty= 0
-    print(remaining_totals)
 
     for (rid, w, h, co) in sorted(all_keys, key=lambda x: (x[0] if x[0] is not None else -1, x[1], x[2])):
         key = (rid, w, h, co)
@@ -281,7 +285,6 @@ def _create_audit_sheet(
         used = int(used_totals.get(key, 0))
         rem  = int(remaining_totals.get(key, 0))
         diff = used + rem - orig
-        print(orig, ", ", used, ", ", rem, ", ", diff, "\n")
 
         total_width+= w
         total_height+= h
@@ -498,19 +501,38 @@ def _create_enhanset_remaining_suggestion_sheet(
             total_local_max_tolerance+= local_max_tolerance
 
             for item in group.items:
-                rem_rows.append({
-                    'الاقتراح':f"الاقتراح_{suggested_id}",
-                    'معرف السجادة': item.carpet_id,
-                    'أمر العميل': item.client_order,
-                    'العرض': item.width,
-                    'الطول': item.height,
-                    'الكمية المستخدمة':item.qty_used,
-                    'الكمية المتبقية': item.qty_rem,
-                    'اقل عرض مجموعة مسموح': local_min_width,
-                    'أكبر عرض مجموعة مسموح': local_max_width,
-                    'اقل طول مسار': local_min_tolerance,
-                    'اكبر طول مسار': local_max_tolerance,
-                })
+                if item.repeated:
+                    ref_lenth= 0
+                    for rep in item.repeated:
+                        ref_lenth+= rep.get('qty') * item.height
+                        rem_rows.append({
+                                'الاقتراح':f"الاقتراح_{suggested_id}",
+                                'معرف السجادة': item.carpet_id,
+                                'أمر العميل': rep.get('client_order'),
+                                'العرض': item.width,
+                                'الطول': item.height,
+                                'الكمية المستخدمة':rep.get('qty'),
+                                'الكمية المتبقية': rep.get('qty_rem'),
+                                'اقل عرض مجموعة مسموح': local_min_width,
+                                'أكبر عرض مجموعة مسموح': local_max_width,
+                                'اقل طول مسار': local_min_tolerance,
+                                'اكبر طول مسار': local_max_tolerance,
+                            }
+                        )
+                else:
+                    rem_rows.append({
+                        'الاقتراح':f"الاقتراح_{suggested_id}",
+                        'معرف السجادة': item.carpet_id,
+                        'أمر العميل': item.client_order,
+                        'العرض': item.width,
+                        'الطول': item.height,
+                        'الكمية المستخدمة':item.qty_used,
+                        'الكمية المتبقية': item.qty_rem,
+                        'اقل عرض مجموعة مسموح': local_min_width,
+                        'أكبر عرض مجموعة مسموح': local_max_width,
+                        'اقل طول مسار': local_min_tolerance,
+                        'اكبر طول مسار': local_max_tolerance,
+                    })
         rem_rows.append({
             'الاقتراح':'',
             'معرف السجادة': '',
