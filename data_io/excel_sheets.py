@@ -24,20 +24,42 @@ def _create_group_details_sheet(
         path_num= 0
         for it in g.items:
             path_num+= 1
-            rows.append(
-                _detals_sheet_table(
-                    f'القصة_{group_id}',
-                    it.client_order,
-                    it.carpet_id,
-                    it.width,
-                    it.height,
-                    f"المسار_{path_num}",
-                    it.qty_used,
-                    it.length_ref(),
-                    it.qty_used + it.qty_rem,
-                    it.qty_rem
+            if it.repeated:
+                qty_rem= 0
+                ref_lenth= 0
+                for rep in it.repeated:
+                    qty_rem+= rep.get('qty')
+                    ref_lenth+= rep.get('qty') * it.height
+                    rows.append(
+                        _detals_sheet_table(
+                            f'القصة_{group_id}',
+                            rep.get('client_order'),
+                            it.carpet_id,
+                            it.width,
+                            it.height,
+                            f"المسار_{path_num}",
+                            rep.get('qty'),
+                            ref_lenth,
+                            rep.get("qty_original"),
+                            rep.get("qty_rem")
+                        )
+                    )
+            else:
+                rows.append(
+                    _detals_sheet_table(
+                        f'القصة_{group_id}',
+                        it.client_order,
+                        it.carpet_id,
+                        it.width,
+                        it.height,
+                        f"المسار_{path_num}",
+                        it.qty_used,
+                        it.length_ref(),
+                        it.qty_used + it.qty_rem,
+                        it.qty_rem
+                    )
                 )
-            )
+
             total_qty+= it.qty_used + it.qty_rem
             total_qty_rem+= it.qty_rem
             total_path += path_num
@@ -210,16 +232,27 @@ def _create_audit_sheet(
         if from_groups:
             for g in from_groups:
                 for it in g.items:
-                    key = (it.carpet_id, it.width, it.height, it.client_order)
-                    used_totals[key] = used_totals.get(key, 0) + int(it.qty_used)
+                    if it.repeated:
+                        for rep in it.repeated:
+                            key = (rep.get("id"), it.width, it.height, rep.get("client_order"))
+                            used_totals[key] = used_totals.get(key, 0) + int(rep.get("qty"))
+                    else:
+                        key = (it.carpet_id, it.width, it.height, it.client_order)
+                        used_totals[key] = used_totals.get(key, 0) + int(it.qty_used)
 
     _accumulate_used(groups)
 
     remaining_totals: Dict[tuple, int] = {}
     for r in remaining:
-        if r.rem_qty > 0:
-            key = (r.id, r.width, r.height, r.client_order)
-            remaining_totals[key] = remaining_totals.get(key, 0) + int(r.rem_qty)
+        if r.repeated:
+            for rep in r.repeated:
+                if rep.get("qty_rem") > 0:
+                    key = (rep.get("id"), r.width, r.height, rep.get("client_order"))
+                    remaining_totals[key] = remaining_totals.get(key, 0) + int(rep.get("rem_qty"))
+        else:
+            if r.rem_qty > 0:
+                key = (r.id, r.width, r.height, r.client_order)
+                remaining_totals[key] = remaining_totals.get(key, 0) + int(r.rem_qty)
 
     original_totals: Dict[tuple, int] = {}
     if originals is not None:
@@ -232,7 +265,6 @@ def _create_audit_sheet(
             original_totals[k] = used_totals.get(k, 0) + remaining_totals.get(k, 0)
 
     audit_rows = []
-
     all_keys = set(list(original_totals.keys()) + list(used_totals.keys()) + list(remaining_totals.keys()))
 
     total_width= 0
@@ -241,12 +273,15 @@ def _create_audit_sheet(
     total_used_qty= 0
     total_rem_qty= 0
     total_diff_qty= 0
+    print(remaining_totals)
 
     for (rid, w, h, co) in sorted(all_keys, key=lambda x: (x[0] if x[0] is not None else -1, x[1], x[2])):
-        orig = int(original_totals.get((rid, w, h), 0))
-        used = int(used_totals.get((rid, w, h), 0))
-        rem = int(remaining_totals.get((rid, w, h), 0))
+        key = (rid, w, h, co)
+        orig = int(original_totals.get(key, 0))
+        used = int(used_totals.get(key, 0))
+        rem  = int(remaining_totals.get(key, 0))
         diff = used + rem - orig
+        print(orig, ", ", used, ", ", rem, ", ", diff, "\n")
 
         total_width+= w
         total_height+= h

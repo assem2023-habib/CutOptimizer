@@ -1,7 +1,8 @@
 
 import pandas as pd
 from typing import List, Dict, Optional, Tuple
-from models.data_models import Carpet, GroupCarpet, CarpetUsed
+from models.carpet import Carpet
+from models.group_carpet import GroupCarpet
 import traceback
 
 # استيراد دوال إنشاء الصفحات من الملف المنفصل

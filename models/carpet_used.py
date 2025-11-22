@@ -8,7 +8,9 @@ class CarpetUsed:
     qty_used: int
     qty_rem: int
     client_order: int
-
+    
+    repeated: list[dict] = field(default_factory=list)
+                                 
     def length_ref(self) -> int:
         """الطول المرجعي = الارتفاع * العدد المستخدم"""
         return self.height * self.qty_used

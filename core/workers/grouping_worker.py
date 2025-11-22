@@ -1,6 +1,8 @@
 import copy
 import traceback
 from PySide6.QtCore import QObject, QThread, Signal
+from typing import List
+from models.carpet import Carpet
 
 from data_io.excel_io import read_input_excel, write_output_excel
 from core.validation import validate_carpets
@@ -52,6 +54,8 @@ class GroupingWorker(QThread):
             original_carpets = copy.deepcopy(carpets)
 
             self._check_interrupt()
+
+            carpets = self.merge_duplicate_carpets(carpets)
 
             groups = build_groups(
                 carpets= carpets,
@@ -128,3 +132,37 @@ class GroupingWorker(QThread):
     def stop(self):
         self._is_interrupted = True
         self.signals.log.emit("⚠️ تم إرسال أمر إيقاف العامل.")
+
+        
+    def merge_duplicate_carpets(self, carpets: List[Carpet]) -> List[Carpet]:
+        merged = {}
+        
+        for carpet in carpets:
+            key = (carpet.width, carpet.height)
+
+            if key not in merged:
+                merged[key] = carpet
+            else:
+                original = merged[key]
+
+                if not original.repeated:
+                    original.repeated.append({
+                        "id": original.id,
+                        "qty_original":original.qty,
+                        "qty_rem":original.qty,
+                        "qty": original.qty,
+                        "client_order": original.client_order
+                    })
+
+                original.repeated.append({
+                    "id": carpet.id,
+                    "qty": carpet.qty,
+                    "qty_original":carpet.qty,
+                    "qty_rem":carpet.qty,
+                    "client_order": carpet.client_order
+                })
+
+                original.qty += carpet.qty
+                original.rem_qty += carpet.qty
+        
+        return list(merged.values())

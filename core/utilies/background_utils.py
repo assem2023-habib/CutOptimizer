@@ -1,10 +1,11 @@
-import os, json, shutil
+import os, json, shutil, sys
 
 from PySide6.QtWidgets import QFileDialog, QMessageBox
 from PySide6.QtGui import QPixmap, QPalette, QBrush
 from PySide6.QtCore import Qt
 
 DEFAULT_BG_COLOR = "#FFFFFFFF"
+DEFAULT_BG_PATH = "config/backgrounds/img1.jpg"
 
 def change_background(app_instance):
     """
@@ -125,16 +126,36 @@ def remove_background(app_instance):
         app_instance.log_append(f"❌ خطأ أثناء إزالة الخلفية: {e}")
 
 
+
 def reset_to_default_background(app_instance):
-    """إعادة تعيين الخلفية إلى اللون الافتراضي."""
+    """تطبيق الخلفية الافتراضية (الصورة)."""
     try:
+        bg_path = resource_path(DEFAULT_BG_PATH)
+        app_instance.log_append(f"🔍 تحميل الخلفية الافتراضية من: {bg_path}")
+
+        if os.path.exists(bg_path):
+            pixmap = QPixmap(bg_path)
+            if not pixmap.isNull():
+                scaled = pixmap.scaled(
+                    app_instance.size(),
+                    Qt.KeepAspectRatioByExpanding,
+                    Qt.SmoothTransformation
+                )
+                palette = app_instance.palette()
+                palette.setBrush(QPalette.Window, QBrush(scaled))
+                app_instance.setPalette(palette)
+                app_instance.setAutoFillBackground(True)
+                app_instance.log_append("✅ تم تعيين الخلفية الافتراضية بنجاح")
+                return
+        
+        # fallback — في حال فشل تحميل الصورة
         palette = app_instance.palette()
         palette.setBrush(QPalette.Window, QBrush(Qt.white))
         app_instance.setPalette(palette)
-        app_instance.setAutoFillBackground(True)
-    except Exception as e:
-        app_instance.log_append(f"❌ خطأ في إعادة تعيين الخلفية الافتراضية: {e}")
+        app_instance.log_append("⚠️ فشل تحميل الخلفية الافتراضية، تم استخدام اللون الافتراضي.")
 
+    except Exception as e:
+        app_instance.log_append(f"❌ خطأ أثناء تعيين الخلفية الافتراضية: {e}")
 
 def validate_image(file_path: str) -> bool:
     """التحقق من صحة ملف الصورة."""
@@ -150,3 +171,9 @@ def validate_image(file_path: str) -> bool:
     # محاولة تحميل الصورة للتأكد من صحتها
     pixmap = QPixmap(file_path)
     return not pixmap.isNull()
+
+
+def resource_path(relative_path):
+    """يدعم التشغيل من PyInstaller onefile."""
+    if hasattr(sys, "_MEIPASS"):
+        return os.path.join(sys._MEIPASS, relative_path)

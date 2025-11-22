@@ -23,6 +23,8 @@ def build_groups(
     selected_mode= load_selected_mode()
     selected_sort_type= load_saved_sort()
 
+
+    
     if selected_sort_type== SortType.SORT_BY_WIDTH:
         carpets.sort(key=lambda c: (c.width, c.height, c.qty), reverse=True)
     elif selected_sort_type == SortType.SORT_BY_QUANTITY:
@@ -227,7 +229,10 @@ def process_partner_group(
             break
         
         for _ in range(repetition_count):
+            result= []
             e.consume(qty_per_repetition)
+            if hasattr(e, "repeated") and e.repeated:
+                result= e.consume_from_repeated(qty_per_repetition)
             used_items.append(
                 CarpetUsed(
                     carpet_id=e.id,
@@ -235,7 +240,8 @@ def process_partner_group(
                     height=e.height,
                     qty_used=qty_per_repetition,
                     qty_rem=e.rem_qty,
-                    client_order= e.client_order
+                    client_order= e.client_order,
+                    repeated= result
                 )
             )
     
@@ -260,7 +266,9 @@ def try_create_single_group(
             carpet.is_available() and 
             carpet.rem_qty > 0):
         return None
-    
+    result= []
+    if hasattr(carpet, "repeated") and carpet.repeated:
+                result= carpet.consume_from_repeated(carpet.rem_qty)
     single_item = CarpetUsed(
         carpet_id=carpet.id,
         width=carpet.width,
