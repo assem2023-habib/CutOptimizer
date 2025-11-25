@@ -45,28 +45,24 @@ def _generate_waste_sheet(
         sumPathLoss= 0
 
         for item in g.items:
-            sumPathLoss += g.max_length_ref() - item.length_ref()
+            
+            sumPathLoss += (g.max_length_ref() - item.length_ref()) * item.width
 
         wasteWidth = max_width - g.total_width()
-        pathLoss = g.max_length_ref() - g.min_length_ref()
 
         summary.append({
             'رقم القصة': f'القصة_{group_id}',
             'العرض الإجمالي': g.total_width(),
             'الهادر في العرض':  wasteWidth,
             'اطول مسار': g.max_length_ref(),
-            'نتيجة الضرب': wasteWidth * g.max_length_ref(),
-            'الهادر في المسارات': pathLoss,
-            'نتيجة الجمع': wasteWidth * g.max_length_ref() + pathLoss,
-            'مجموع هادرالمسارات في المجموعة': sumPathLoss,
+            'حاصل جمع هادر المسارات': sumPathLoss,
+            'نتيجة الجمع': sumPathLoss + wasteWidth,
         })
 
         total_width+= g.total_width()
         total_wasteWidth+= wasteWidth
-        total_waste_maxPath+= wasteWidth * g.max_length_ref()
-        total_pathLoss+= pathLoss
-        total_sumPathLoss+= sumPathLoss
-        total_result+= pathLoss * wasteWidth
+        total_pathLoss+= sumPathLoss
+        total_result+= sumPathLoss + wasteWidth
         total_maxPath+= g.max_length_ref()
 
     summary.append({
@@ -74,10 +70,8 @@ def _generate_waste_sheet(
         'العرض الإجمالي': '',
         'الهادر في العرض':  '',
         'اطول مسار': '',
-        'نتيجة الضرب': '',
-        'الهادر في المسارات': '',
+        'حاصل جمع هادر المسارات': '',
         'نتيجة الجمع':'',
-        'مجموع هادرالمسارات في المجموعة': '',
     })
     
     summary.append({
@@ -85,10 +79,8 @@ def _generate_waste_sheet(
         'العرض الإجمالي': total_width,
         'الهادر في العرض':  total_wasteWidth,
         'اطول مسار': total_maxPath,
-        'نتيجة الضرب': total_waste_maxPath,
-        'الهادر في المسارات': total_pathLoss,
+        'حاصل جمع هادر المسارات': total_pathLoss,
         'نتيجة الجمع': total_result,
-        'مجموع هادرالمسارات في المجموعة': total_sumPathLoss,
     })
 
     df = pd.DataFrame(summary)
