@@ -29,6 +29,50 @@ from .excel_formatting import (
 )
 
 # =============================================================================
+# COLOR GENERATION - توليد الألوان
+# =============================================================================
+
+def _generate_readable_colors(num_colors):
+    """
+    توليد ألوان متنوعة وقابلة للقراءة لكل قصة.
+    
+    المعاملات:
+    ----------
+    num_colors : int
+        عدد الألوان المطلوبة
+        
+    Returns:
+    --------
+    list
+        قائمة من الألوان بصيغة hex
+    """
+    import colorsys
+    
+    colors = []
+    for i in range(num_colors):
+        # استخدام HSL لتوليد ألوان متنوعة
+        # Hue: توزيع متساوي على دائرة الألوان
+        hue = i / num_colors
+        # Saturation: تشبع متوسط لألوان هادئة
+        saturation = 0.35 + (i % 3) * 0.1  # تنويع بسيط بين 0.35 و 0.55
+        # Lightness: فاتح للخلفية مع قابلية القراءة
+        lightness = 0.85 + (i % 2) * 0.05  # بين 0.85 و 0.90
+        
+        # تحويل HSL إلى RGB
+        r, g, b = colorsys.hls_to_rgb(hue, lightness, saturation)
+        
+        # تحويل إلى hex
+        hex_color = '#{:02X}{:02X}{:02X}'.format(
+            int(r * 255),
+            int(g * 255),
+            int(b * 255)
+        )
+        colors.append(hex_color)
+    
+    return colors
+
+
+# =============================================================================
 # MAIN FUNCTION - الدالة الرئيسية
 # =============================================================================
 
@@ -234,6 +278,56 @@ def _apply_advanced_formatting(
             worksheet.write(0, col_num, col_name, header_format)
 
         total_rows_found = set()
+        
+        # إعداد ألوان القصات (فقط لورقة تفاصيل القصات)
+        cut_colors = {}
+        cut_formats = {}
+        cut_number_formats = {}
+        
+        if sheet_name == 'تفاصيل القصات' and 'رقم القصة' in df.columns:
+            # استخراج أرقام القصات الفريدة
+            cut_col_idx = df.columns.get_loc('رقم القصة')
+            unique_cuts = []
+            for val in df.iloc[:, cut_col_idx]:
+                val_str = str(val).strip()
+                if val_str and val_str not in ['', 'nan', 'المجموع'] and val_str not in unique_cuts:
+                    unique_cuts.append(val_str)
+            
+            # توليد ألوان لكل قصة
+            num_cuts = len(unique_cuts)
+            if num_cuts > 0:
+                colors = _generate_readable_colors(num_cuts)
+                
+                # ربط كل قصة بلون
+                for idx, cut_name in enumerate(unique_cuts):
+                    bg_color = colors[idx]
+                    cut_colors[cut_name] = bg_color
+                    
+                    # إنشاء format خاص لكل قصة (للنص العادي)
+                    cut_formats[cut_name] = writer.book.add_format({
+                        'bold': True,
+                        'font_size': 10,
+                        'font_name': 'Arial',
+                        'border': 2,
+                        'border_color': '#006400',
+                        'bg_color': bg_color,
+                        'font_color': '#2C3E50',  # لون نص داكن للقراءة
+                        'align': 'center',
+                        'valign': 'vcenter'
+                    })
+                    
+                    # إنشاء format للأرقام
+                    cut_number_formats[cut_name] = writer.book.add_format({
+                        'bold': True,
+                        'font_size': 10,
+                        'font_name': 'Arial',
+                        'border': 2,
+                        'border_color': '#006400',
+                        'bg_color': bg_color,
+                        'font_color': '#2C3E50',
+                        'align': 'center',
+                        'valign': 'vcenter',
+                    })
 
         for row_num in range(len(df)):
             if row_num in total_rows_found:
@@ -255,6 +349,19 @@ def _apply_advanced_formatting(
                 total_rows_found.add(row_num)
                 continue
             
+            # تحديد لون القصة الحالية
+            current_cut = None
+            current_cut_format = normal_format
+            current_cut_number_format = number_format
+            
+            if sheet_name == 'تفاصيل القصات' and 'رقم القصة' in df.columns:
+                cut_col_idx = df.columns.get_loc('رقم القصة')
+                cut_value = str(df.iloc[row_num, cut_col_idx]).strip()
+                if cut_value in cut_formats:
+                    current_cut = cut_value
+                    current_cut_format = cut_formats[cut_value]
+                    current_cut_number_format = cut_number_formats[cut_value]
+            
             excel_row = row_num + 1
             num_cols = len(df.columns)
             for col_num in range(num_cols):
@@ -263,11 +370,12 @@ def _apply_advanced_formatting(
                 if col_name in numeric_cols:
                     try:
                         numeric_value = float(cell_value)
-                        worksheet.write(excel_row, col_num, numeric_value, number_format)
+                        worksheet.write(excel_row, col_num, numeric_value, current_cut_number_format)
                     except (ValueError, TypeError):
-                        worksheet.write(excel_row, col_num, cell_value, normal_format)
+                        worksheet.write(excel_row, col_num, cell_value, current_cut_format)
                 else:
-                    worksheet.write(excel_row, col_num, cell_value, normal_format)
+                    worksheet.write(excel_row, col_num, cell_value, current_cut_format)
+
 
         excel_rows = 1 + len(df)
         max_col = len(df.columns)

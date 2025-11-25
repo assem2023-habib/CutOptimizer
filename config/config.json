@@ -13,11 +13,6 @@
     "selected_sort_type": "sort carpet by quantity",
     "machine_sizes": [
         {
-            "name": "mes3",
-            "min_width": 570,
-            "max_width": 600
-        },
-        {
             "name": "mes2",
             "min_width": 470,
             "max_width": 500
