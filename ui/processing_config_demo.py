@@ -1,5 +1,7 @@
 import sys
 from PySide6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget
+from PySide6.QtGui import QPalette, QLinearGradient, QColor, QBrush
+from PySide6.QtCore import Qt
 from ui.sections.processing_config_section import ProcessingConfigSection
 
 def main():
@@ -9,7 +11,16 @@ def main():
     window = QMainWindow()
     window.setWindowTitle("Processing Configuration Demo")
     window.resize(1000, 600)
-    window.setStyleSheet("background-color: #F0F0F0;") # Light gray background
+    
+    # Create gradient background
+    palette = QPalette()
+    gradient = QLinearGradient(0, 0, 0, 600)
+    gradient.setColorAt(0.0, QColor("#E3F2FD"))  # Light Blue
+    gradient.setColorAt(0.5, QColor("#F3E5F5"))  # Light Purple
+    gradient.setColorAt(1.0, QColor("#E8F5E9"))  # Light Green
+    palette.setBrush(QPalette.Window, QBrush(gradient))
+    window.setPalette(palette)
+    window.setAutoFillBackground(True)
     
     # Central widget
     central_widget = QWidget()

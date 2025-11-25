@@ -62,69 +62,112 @@ class ProcessingConfigSection(GlassCardLayout):
         self.panel_c = self._create_panel_c()
         self.add_content_widget(self.panel_c)
 
-    def _create_panel_style(self, bg_color):
+    def _create_panel_style(self, bg_color, accent_color):
         return f"""
             QFrame {{
                 background-color: {bg_color};
                 border-radius: 12px;
                 padding: 15px;
+                border: 1px solid rgba(255, 255, 255, 0.3);
             }}
             QLabel {{
-                color: #333333;
+                color: #2C3E50;
                 font-family: 'Segoe UI', sans-serif;
+                background-color: transparent;
+                font-size: 13px;
+                border: none;
+                padding: 0px;
             }}
             QLineEdit {{
-                background-color: #FFFFFF;
-                border: 1px solid #E0E0E0;
+                background-color: rgba(255, 255, 255, 0.9);
+                border: 2px solid {accent_color};
                 border-radius: 8px;
-                padding: 8px;
-                color: #333333;
+                padding: 10px;
+                color: #2C3E50;
+                font-size: 13px;
+            }}
+            QLineEdit:focus {{
+                border: 2px solid {accent_color};
+                background-color: #FFFFFF;
             }}
             QRadioButton, QCheckBox {{
-                color: #333333;
+                color: #2C3E50;
                 font-size: 13px;
                 spacing: 8px;
+                background-color: transparent;
+                font-weight: 500;
+            }}
+            QRadioButton::indicator, QCheckBox::indicator {{
+                width: 18px;
+                height: 18px;
+                border-radius: 9px;
+                border: 2px solid {accent_color};
+                background-color: rgba(255, 255, 255, 0.9);
+            }}
+            QRadioButton::indicator:checked {{
+                background-color: {accent_color};
+                border: 2px solid {accent_color};
+            }}
+            QCheckBox::indicator {{
+                border-radius: 4px;
+            }}
+            QCheckBox::indicator:checked {{
+                background-color: {accent_color};
+                border: 2px solid {accent_color};
             }}
         """
 
     def _create_panel_a(self):
         """Panel A: Measurement Constraints (Left)"""
         panel = QFrame()
-        panel.setStyleSheet(self._create_panel_style("#F3F6FF")) # Light Lavender
+        panel.setStyleSheet(self._create_panel_style("rgba(138, 180, 248, 0.15)", "#6B9EF5")) # Soft Blue
         layout = QVBoxLayout(panel)
         layout.setSpacing(15)
 
         # Header
         header_layout = QHBoxLayout()
+        header_layout.setSpacing(5)  # Reduced spacing between icon and title
         icon_label = QLabel("📏") # Ruler icon placeholder
-        icon_label.setFont(QFont("Segoe UI", 14))
+        icon_label.setFont(QFont("Segoe UI Emoji", 24, QFont.Bold))
+        icon_label.setFixedSize(40, 40)
+        icon_label.setAlignment(Qt.AlignCenter)
+        icon_label.setContentsMargins(0, 0, 0, 0)
+        icon_label.setStyleSheet("background-color: transparent; font-size: 22px; padding: 0px; margin: 0px;")
         title_label = QLabel("Measurement Constraints")
-        title_label.setFont(QFont("Segoe UI", 12, QFont.Bold))
+        title_label.setFont(QFont("Segoe UI", 13, QFont.Bold))
+        title_label.setStyleSheet("color: #2C3E50; background-color: transparent;")
         header_layout.addWidget(icon_label)
-        header_layout.addWidget(title_label)
+        header_layout.addWidget(title_label, 0, Qt.AlignLeft)
         header_layout.addStretch()
         layout.addLayout(header_layout)
 
         # Content
         # Machine Size Dropdown
-        layout.addWidget(QLabel("Machine Size:"))
+        label_size = QLabel("Machine Size:")
+        label_size.setStyleSheet("color: #2C3E50; background-color: transparent; font-weight: 600;")
+        layout.addWidget(label_size)
         
         options = [f"{size['name']} ({size['min_width']}-{size['max_width']})" for size in self.machine_sizes]
         self.size_dropdown = DropDownList(
             selected_value_text="Select Size...",
             options_list=options,
-            dropdown_background_color="#FFFFFF",
-            dropdown_border_color="#E0E0E0",
-            selected_value_text_color="#333333",
-            option_text_color="#333333",
-            option_hover_color="#F0F0F0",
-            indicator_icon_color="#666666"
+            dropdown_background_color="rgba(255, 255, 255, 0.95)",
+            dropdown_border_color="#6B9EF5",
+            selected_value_text_color="#2C3E50",
+            option_text_color="#2C3E50",
+            option_hover_color="rgba(107, 158, 245, 0.2)",
+            indicator_icon_color="#6B9EF5",
+            custom_height=32
         )
         layout.addWidget(self.size_dropdown)
 
         # Tolerance Input
-        layout.addWidget(QLabel("Tolerance:"))
+        label_tolerance = QLabel("Tolerance:")
+        label_tolerance.setStyleSheet("color: #2C3E50; background-color: transparent; font-weight: 600;")
+        layout.addWidget(label_tolerance)
         self.tolerance_input = QLineEdit("5")
+        self.tolerance_input.setMaximumHeight(30)
+        self.tolerance_input.setStyleSheet("padding: none;")
         layout.addWidget(self.tolerance_input)
 
         layout.addStretch()
@@ -133,18 +176,24 @@ class ProcessingConfigSection(GlassCardLayout):
     def _create_panel_b(self):
         """Panel B: Sort Configuration (Center)"""
         panel = QFrame()
-        panel.setStyleSheet(self._create_panel_style("#FFF5F8")) # Light Pale Pink
+        panel.setStyleSheet(self._create_panel_style("rgba(255, 183, 77, 0.12)", "#FF9800")) # Light Orange
         layout = QVBoxLayout(panel)
         layout.setSpacing(15)
 
         # Header
         header_layout = QHBoxLayout()
+        header_layout.setSpacing(5)  # Reduced spacing between icon and title
         icon_label = QLabel("⇅") # Sort icon placeholder
-        icon_label.setFont(QFont("Segoe UI", 14))
+        icon_label.setFont(QFont("Segoe UI Emoji", 24, QFont.Bold))
+        icon_label.setFixedSize(40, 40)
+        icon_label.setAlignment(Qt.AlignCenter)
+        icon_label.setContentsMargins(0, 0, 0, 0)
+        icon_label.setStyleSheet("background-color: transparent; font-size: 22px; padding: 0px; margin: 0px;")
         title_label = QLabel("Sort Configuration")
-        title_label.setFont(QFont("Segoe UI", 12, QFont.Bold))
+        title_label.setFont(QFont("Segoe UI", 13, QFont.Bold))
+        title_label.setStyleSheet("color: #2C3E50; background-color: transparent;")
         header_layout.addWidget(icon_label)
-        header_layout.addWidget(title_label)
+        header_layout.addWidget(title_label, 0, Qt.AlignLeft)
         header_layout.addStretch()
         layout.addLayout(header_layout)
 
@@ -171,18 +220,24 @@ class ProcessingConfigSection(GlassCardLayout):
     def _create_panel_c(self):
         """Panel C: Processing Options (Right)"""
         panel = QFrame()
-        panel.setStyleSheet(self._create_panel_style("#F0FFF4")) # Light Mint Green
+        panel.setStyleSheet(self._create_panel_style("rgba(132, 229, 183, 0.15)", "#4ECDC4")) # Soft Teal/Mint
         layout = QVBoxLayout(panel)
         layout.setSpacing(15)
 
         # Header
         header_layout = QHBoxLayout()
+        header_layout.setSpacing(5)  # Reduced spacing between icon and title
         icon_label = QLabel("⚙️") # Gears icon placeholder
-        icon_label.setFont(QFont("Segoe UI", 14))
+        icon_label.setFont(QFont("Segoe UI Emoji", 24, QFont.Bold))
+        icon_label.setFixedSize(40, 40)
+        icon_label.setAlignment(Qt.AlignCenter)
+        icon_label.setContentsMargins(0, 0, 0, 0)
+        icon_label.setStyleSheet("background-color: transparent; font-size: 22px; padding: 0px; margin: 0px;")
         title_label = QLabel("Processing Options")
-        title_label.setFont(QFont("Segoe UI", 12, QFont.Bold))
+        title_label.setFont(QFont("Segoe UI", 13, QFont.Bold))
+        title_label.setStyleSheet("color: #2C3E50; background-color: transparent;")
         header_layout.addWidget(icon_label)
-        header_layout.addWidget(title_label)
+        header_layout.addWidget(title_label, 0, Qt.AlignLeft)
         header_layout.addStretch()
         layout.addLayout(header_layout)
 
@@ -190,13 +245,6 @@ class ProcessingConfigSection(GlassCardLayout):
         # Advanced Grouping (Maps to GroupingMode)
         self.check_advanced = QCheckBox("Advanced Grouping")
         self.check_advanced.setToolTip("Checked: All Combinations, Unchecked: No Main Repeat")
-        
-        # Optimize Results (Visual only as per prompt, or maybe logic?)
-        # Prompt said: "Optimize Results" (Checked) - Show a checkmark in the box.
-        # But user update said: "Implement a single Checkbox for 'Advanced Grouping'... Checked: Maps to GroupingMode.ALL_COMBINATIONS..."
-        # I will keep 'Optimize Results' as a visual element if needed, but the logic focus is on Advanced Grouping.
-        # Actually, the user update replaced the previous list. I will follow the user update strictly for the logic, 
-        # but I'll add 'Generate Report' as requested.
         
         self.check_report = QCheckBox("Generate Report")
 

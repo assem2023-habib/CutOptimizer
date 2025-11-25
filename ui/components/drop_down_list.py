@@ -18,6 +18,7 @@ class DropDownList(QWidget):
                  option_text_color="#FFFFFF",
                  option_hover_color="#505050",
                  is_enabled=True,
+                 custom_height=40,
                  parent=None,
                  ):
         super().__init__(parent)
@@ -31,6 +32,7 @@ class DropDownList(QWidget):
         self.option_text_color = option_text_color
         self.option_hover_color = option_hover_color
         self.is_enabled = is_enabled
+        self.custom_height = custom_height
 
         self._menu_visible = False
         self._setup_ui()
@@ -40,12 +42,12 @@ class DropDownList(QWidget):
         QApplication.instance().installEventFilter(self)
 
     def _setup_ui(self):
-        self.setFixedHeight(40)
+        self.setFixedHeight(self.custom_height)
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
 
         self.selector_btn = QPushButton(self.selected_value_text)
-        self.selector_btn.setFixedHeight(40)
+        self.selector_btn.setFixedHeight(self.custom_height)
         self.selector_btn.setCursor(Qt.PointingHandCursor)
         self.selector_btn.clicked.connect(self.toggle_menu)
 
