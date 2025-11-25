@@ -1,14 +1,10 @@
-"""
-قسم إدارة الملفات - File Management Section
-يتضمن منطقة رفع ملفات Excel ومعاينة معلومات الملف
-"""
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
-                               QPushButton, QFileDialog, QFrame, 
-                               QGraphicsBlurEffect, QGraphicsDropShadowEffect)
+                               QPushButton, QFileDialog, QFrame)
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QFont, QColor, QDragEnterEvent, QDropEvent
+from PySide6.QtGui import QFont, QDragEnterEvent, QDropEvent, QPixmap, QPainter
+from PySide6.QtSvg import QSvgRenderer
 import os
-
+from ui.components.glass_card_layout import GlassCardLayout
 
 class FileManagementSection(QWidget):
     """قسم إدارة الملفات مع منطقة السحب والإفلات ومعاينة الملف"""
@@ -34,33 +30,7 @@ class FileManagementSection(QWidget):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
         
-        # Create background blur layer for glass effect
-        self.blur_background = QFrame()
-        self.blur_background.setObjectName("blurBackground")
-        self.blur_background.setMinimumHeight(450)
-        
-        # Apply blur effect to background
-        blur_effect = QGraphicsBlurEffect()
-        blur_effect.setBlurRadius(15)
-        blur_effect.setBlurHints(QGraphicsBlurEffect.QualityHint)
-        self.blur_background.setGraphicsEffect(blur_effect)
-        
-        # Card container with vertical layout
-        self.card = QFrame()
-        self.card.setObjectName("fileManagementCard")
-        card_main_layout = QVBoxLayout(self.card)
-        card_main_layout.setContentsMargins(30, 25, 30, 30)
-        card_main_layout.setSpacing(20)
-        
-        # Main Title - File Management (inside card now)
-        title_layout = QHBoxLayout()
-        title_layout.setSpacing(10)
-        
-        # Excel file icon (SVG implementation)
-        icon_label = QLabel()
-        icon_label.setAlignment(Qt.AlignCenter)
-        
-        # Create Excel icon SVG
+        # Excel icon SVG
         excel_svg = """
         <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <!-- Excel file background -->
@@ -77,43 +47,18 @@ class FileManagementSection(QWidget):
         </svg>
         """
         
-        from PySide6.QtSvg import QSvgRenderer
-        from PySide6.QtGui import QPixmap, QPainter
+        # Create Glass Card Layout
+        self.glass_layout = GlassCardLayout("File Management", excel_svg)
         
-        renderer = QSvgRenderer(excel_svg.encode())
-        pixmap = QPixmap(24, 24)
-        pixmap.fill(Qt.transparent)
-        painter = QPainter(pixmap)
-        renderer.render(painter)
-        painter.end()
-        
-        icon_label.setPixmap(pixmap)
-        title_layout.addWidget(icon_label)
-        
-        # Title
-        title = QLabel("File Management")
-        title.setObjectName("mainTitle")
-        title.setFont(QFont("Segoe UI", 16, QFont.Bold))
-        title_layout.addWidget(title)
-        title_layout.addStretch()
-        
-        card_main_layout.addLayout(title_layout)
-        
-        # Horizontal layout for the two boxes
-        boxes_layout = QHBoxLayout()
-        boxes_layout.setSpacing(40)
-        
-        # Left box - Upload area only (no title)
+        # Left box - Upload area
         left_box = self._create_upload_box()
-        boxes_layout.addWidget(left_box, 1)
+        self.glass_layout.add_content_widget(left_box)
         
         # Right box - File Preview
         right_box = self._create_preview_section()
-        boxes_layout.addWidget(right_box, 1)
+        self.glass_layout.add_content_widget(right_box)
         
-        card_main_layout.addLayout(boxes_layout)
-        
-        main_layout.addWidget(self.card)
+        main_layout.addWidget(self.glass_layout)
         
     def _create_upload_box(self):
         """إنشاء مربع رفع الملفات (بدون عنوان)"""
@@ -153,9 +98,6 @@ class FileManagementSection(QWidget):
         </svg>
         """
         
-        from PySide6.QtSvg import QSvgRenderer
-        from PySide6.QtGui import QPixmap, QPainter
-        
         # Render SVG to pixmap
         renderer = QSvgRenderer(svg_data.encode())
         pixmap = QPixmap(100, 80)
@@ -185,7 +127,7 @@ class FileManagementSection(QWidget):
         # Choose File button
         self.choose_button = QPushButton("Choose File")
         self.choose_button.setObjectName("chooseFileButton")
-        self.choose_button.setFont(QFont("Segoe UI", 8, QFont.Bold))
+        self.choose_button.setFont(QFont("Segoe UI", 10, QFont.Bold))
         self.choose_button.setMinimumHeight(35)
         self.choose_button.setMinimumWidth(120)
         self.choose_button.setCursor(Qt.PointingHandCursor)
@@ -366,41 +308,8 @@ class FileManagementSection(QWidget):
                     event.acceptProposedAction()
                     
     def _apply_styles(self):
-        """تطبيق الأنماط CSS مع تأثير Glassmorphism"""
-        # Add soft shadow effect for the card
-        shadow = QGraphicsDropShadowEffect()
-        shadow.setBlurRadius(35)
-        shadow.setXOffset(0)
-        shadow.setYOffset(15)
-        shadow.setColor(QColor(107, 78, 235, 60))  # Purple shadow matching theme
-        self.card.setGraphicsEffect(shadow)
-        
+        """تطبيق الأنماط CSS الخاصة بالمكونات الداخلية"""
         self.setStyleSheet("""
-            /* Blur background layer */
-            #blurBackground {
-                background-color: rgba(255, 255, 255, 0.1);
-                border-radius: 18px;
-            }
-            
-            /* Card container with Glassmorphism effect - Softer borders */
-            #fileManagementCard {
-                background-color: rgba(255, 255, 255, 0.25);
-                border-radius: 18px;
-                border: 0.5px solid rgba(255, 255, 255, 0.4);
-            }
-            
-            /* Main Title (outside card) */
-            #mainTitle {
-                color: #1a1a1a;
-                font-weight: 700;
-            }
-            
-            /* Section titles */
-            #sectionTitle {
-                color: #1a1a1a;
-                font-weight: 600;
-            }
-            
             /* Preview subtitle (smaller) */
             #previewSubtitle {
                 color: #4a4a4a;
@@ -447,37 +356,33 @@ class FileManagementSection(QWidget):
             }
             
             #uploadSecondaryText {
-                color: #4a4a4a;
+                color: #666666;
             }
             
-            /* Choose file button with glass effect */
+            /* Choose File Button */
             #chooseFileButton {
                 background-color: rgba(107, 78, 235, 0.9);
-                color: #FFFFFF;
+                color: white;
                 border: 1px solid rgba(255, 255, 255, 0.3);
-                border-radius: 10px;
-                padding: 12px 30px;
-                font-weight: 600;
+                border-radius: 8px;
+                padding: 8px 16px;
             }
             
             #chooseFileButton:hover {
-                background-color: rgba(90, 61, 217, 0.95);
-                border: 1px solid rgba(255, 255, 255, 0.5);
+                background-color: rgba(90, 61, 217, 1.0);
             }
             
             #chooseFileButton:pressed {
-                background-color: rgba(75, 46, 199, 1);
-                border: 1px solid rgba(255, 255, 255, 0.2);
+                background-color: rgba(75, 46, 199, 1.0);
             }
             
             /* Info labels */
             #infoLabel {
-                color: #2a2a2a;
+                color: #555555;
             }
             
             #infoValue {
-                color: #1a1a1a;
-                font-weight: 600;
+                color: #222222;
             }
         """)
         
