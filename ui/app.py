@@ -2,10 +2,10 @@ import json
 import traceback
 import os
 import shutil
-from PySide6.QtWidgets import (QWidget,QApplication, QVBoxLayout
-                               , QFileDialog, QLabel,
-                                 QHBoxLayout, QMessageBox, 
-                                 QScrollArea)
+from PySide6.QtWidgets import (QWidget, QApplication, QVBoxLayout,
+                               QFileDialog, QLabel,
+                               QHBoxLayout, QMessageBox, 
+                               QScrollArea)
 from PySide6.QtCore import Qt, QSize
 
 from PySide6.QtGui import QFont, QPixmap, QPalette, QBrush
@@ -24,7 +24,8 @@ from ui.components.progress_status_item import ProgressStatusItem
 from ui.sections.results_and_summary_section import ResultsAndSummarySection
 from ui.sections.status_and_log_section import StatusAndLogSection
 from core.utilies.timer_utils import init_timer, start_timer, stop_timer
-from core.utilies.background_utils import change_background, apply_background
+from core.utilies.background_utils import apply_background
+from ui.settings_view import SettingsView
 
 
 class RectPackApp(QWidget):
@@ -86,20 +87,22 @@ class RectPackApp(QWidget):
 
         header_layout.addWidget(title_label)
         header_layout.addStretch()
-        self.change_bg_btn = AppButton(
-            text="🖼️",
+        
+        # زر الإعدادات (ترس)
+        self.settings_btn = AppButton(
+            text="⚙️",
             color="transparent",
             hover_color="#0078D7",
             text_color="#FFFFFF",
             fixed_size=QSize(40, 32)
         )
-        self.change_bg_btn.clicked.connect(lambda: change_background(self))
-        header_layout.addWidget(self.change_bg_btn)
+        self.settings_btn.clicked.connect(self._open_settings)
+        header_layout.addWidget(self.settings_btn)
         content_layout.addLayout(header_layout)
 
         self.top_button_section = TopButtonSection(
-            on_import_clicked= self.browse_input,
-            on_export_clicked= self.browse_output
+            on_import_clicked=self.browse_input,
+            on_export_clicked=self.browse_output
         )
 
         self.measurement_section = MeasurementSettingsSection()
@@ -124,6 +127,14 @@ class RectPackApp(QWidget):
         
         main_layout = QVBoxLayout(self)
         main_layout.addWidget(scroll_area)
+
+    def _open_settings(self):
+        """فتح نافذة الإعدادات"""
+        settings_dialog = SettingsView(parent=self)
+        settings_dialog.exec()
+        # تحديث قائمة المقاسات بعد إغلاق الإعدادات
+        self.measurement_section.size_dropdown.options_list = self.measurement_section._load_machine_sizes_list()
+        self.measurement_section._load_saved_size()
 
     def load_config(self):
         try:
@@ -159,7 +170,7 @@ class RectPackApp(QWidget):
         if not input_path or not output_path:
             QMessageBox.warning(self, "تحذير", "الرجاء تحديد ملف الإدخال والإخراج أولاً.")
             return
-        self.results_section.groups_table.data= []
+        self.results_section.groups_table.data = []
         self.results_section.groups_table._populate_table()
         self.results_section.update_summary(
             total_files=0,
@@ -168,8 +179,8 @@ class RectPackApp(QWidget):
             duration="—"
         )
         try:
-            min_w = int(self.measurement_section.min_input.input.text())
-            max_w = int(self.measurement_section.max_input.input.text())
+            min_w = self.measurement_section.get_min_width()
+            max_w = self.measurement_section.get_max_width()
             tol = int(self.measurement_section.margin_input.input.text())
         except ValueError:
             QMessageBox.warning(self, "قيم خاطئة", "يرجى إدخال أرقام صحيحة في حقول القياسات.")
@@ -251,7 +262,7 @@ class RectPackApp(QWidget):
             total_remaining = stats.get("total_remaining", 0)
             utilization = stats.get("utilization_percentage", 0)
             self.results_section.update_summary(
-                total_files= total_original,
+                total_files=total_original,
                 success_rate=utilization,
                 failed_files=total_remaining,
                 duration="_"
@@ -261,7 +272,7 @@ class RectPackApp(QWidget):
             self.log_append(f"⚠️ خطأ أثناء تحديث النتائج: {e}")
                 
 
-    def on_worker_finished(self, success= True, message= "تمت العملية بنجاح."):
+    def on_worker_finished(self, success=True, message="تمت العملية بنجاح."):
         if success:
             self.status_item.set_text("✅ تمت العملية بنجاح")
             self.status_item.set_status("success")
@@ -289,4 +300,4 @@ class RectPackApp(QWidget):
             self.worker_thread = None
             self.worker = None
 
-        self.log_append("↩️ الواجهة عادت للحالة الافتراضية.")         
+        self.log_append("↩️ الواجهة عادت للحالة الافتراضية.")

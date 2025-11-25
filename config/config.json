@@ -10,5 +10,23 @@
     "theme": "dark",
     "background_image": "config\\backgrounds\\img1.jpg",
     "selected_mode": "all combinations",
-    "selected_sort_type": "sort carpet by width"
+    "selected_sort_type": "sort carpet by quantity",
+    "machine_sizes": [
+        {
+            "name": "mes3",
+            "min_width": 570,
+            "max_width": 600
+        },
+        {
+            "name": "mes2",
+            "min_width": 470,
+            "max_width": 500
+        },
+        {
+            "name": "20",
+            "min_width": 370,
+            "max_width": 400
+        }
+    ],
+    "selected_machine_size": "mes3"
 }
