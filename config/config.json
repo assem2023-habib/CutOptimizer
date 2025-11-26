@@ -9,8 +9,8 @@
     "allow_split_rows": true,
     "theme": "dark",
     "background_image": "config\\backgrounds\\wallpaper2.jpg",
-    "selected_mode": "all combinations",
-    "selected_sort_type": "sort carpet by quantity",
+    "selected_mode": "combinations rep exclude main",
+    "selected_sort_type": "sort carpet by height",
     "machine_sizes": [
         {
             "name": "mes2",
