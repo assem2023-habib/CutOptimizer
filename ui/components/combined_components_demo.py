@@ -155,10 +155,24 @@ class CombinedDemoWindow(QMainWindow):
             h, m = divmod(m, 60)
             elapsed_str = f"{h:02d}:{m:02d}:{s:02d}"
             
+            # Calculate remaining time based on current progress
+            current_progress = self.operations_section.progress_widget.progress_bar.value()
+            remaining_str = "--:--:--"
+            if current_progress > 0:
+                elapsed_ms = self.start_time.elapsed()
+                total_estimated_ms = (elapsed_ms / current_progress) * 100
+                remaining_ms = total_estimated_ms - elapsed_ms
+                if remaining_ms > 0:
+                    rem_seconds = remaining_ms // 1000
+                    rm, rs = divmod(rem_seconds, 60)
+                    rh, rm = divmod(rm, 60)
+                    remaining_str = f"{int(rh):02d}:{int(rm):02d}:{int(rs):02d}"
+
             # Update UI
             self.operations_section.update_progress(
-                percentage=self.operations_section.progress_widget.progress_bar.value(),
-                elapsed=elapsed_str
+                percentage=current_progress,
+                elapsed=elapsed_str,
+                remaining=remaining_str
             )
             self.elapsed_str = elapsed_str
 
@@ -282,11 +296,27 @@ class CombinedDemoWindow(QMainWindow):
             self.reset_ui_state()
 
     def on_worker_progress(self, value):
-        # We might want to pass more info here if available, but for now just update percentage
+        # Calculate estimated remaining time
+        elapsed_str = getattr(self, "elapsed_str", "00:00:00")
+        remaining_str = "--:--:--"
+        
+        if self.start_time and value > 0:
+            elapsed_ms = self.start_time.elapsed()
+            total_estimated_ms = (elapsed_ms / value) * 100
+            remaining_ms = total_estimated_ms - elapsed_ms
+            
+            seconds = remaining_ms // 1000
+            m, s = divmod(seconds, 60)
+            h, m = divmod(m, 60)
+            remaining_str = f"{int(h):02d}:{int(m):02d}:{int(s):02d}"
+
+        # Update progress with details
         self.operations_section.update_progress(
             percentage=value,
             current_step="Processing...",
-            elapsed=getattr(self, "elapsed_str", "00:00:00")
+            processed=f"{value}%", # Using percentage as proxy for processed count for now
+            elapsed=elapsed_str,
+            remaining=remaining_str
         )
 
     def on_worker_error(self, error_msg):
