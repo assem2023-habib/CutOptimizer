@@ -120,7 +120,7 @@ class ProcessingConfigSection(GlassCardLayout):
     def _create_panel_a(self):
         """Panel A: Measurement Constraints (Left)"""
         panel = QFrame()
-        panel.setStyleSheet(self._create_panel_style("rgba(138, 180, 248, 0.15)", "#6B9EF5")) # Soft Blue
+        panel.setStyleSheet(self._create_panel_style("rgba(255, 255, 255, 0.6)", "#6B9EF5")) # Soft Blue
         layout = QVBoxLayout(panel)
         layout.setSpacing(15)
 
@@ -176,7 +176,7 @@ class ProcessingConfigSection(GlassCardLayout):
     def _create_panel_b(self):
         """Panel B: Sort Configuration (Center)"""
         panel = QFrame()
-        panel.setStyleSheet(self._create_panel_style("rgba(255, 183, 77, 0.12)", "#FF9800")) # Light Orange
+        panel.setStyleSheet(self._create_panel_style("rgba(255, 255, 255, 0.6)", "#FF9800")) # Light Orange
         layout = QVBoxLayout(panel)
         layout.setSpacing(15)
 
@@ -220,7 +220,7 @@ class ProcessingConfigSection(GlassCardLayout):
     def _create_panel_c(self):
         """Panel C: Processing Options (Right)"""
         panel = QFrame()
-        panel.setStyleSheet(self._create_panel_style("rgba(132, 229, 183, 0.15)", "#4ECDC4")) # Soft Teal/Mint
+        panel.setStyleSheet(self._create_panel_style("rgba(255, 255, 255, 0.6)", "#4ECDC4")) # Soft Teal/Mint
         layout = QVBoxLayout(panel)
         layout.setSpacing(15)
 

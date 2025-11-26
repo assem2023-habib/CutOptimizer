@@ -19,6 +19,11 @@ from ui.sections.processing_config_section import ProcessingConfigSection
 from ui.sections.current_operations_section import CurrentOperationsSection
 from ui.components.summary_statistics_component import SummaryStatisticsComponent
 from ui.components.processing_results_widget import ProcessingResultsWidget
+from ui.settings_view import SettingsView
+from ui.components.app_button import AppButton
+from PySide6.QtWidgets import QHBoxLayout, QLabel
+from PySide6.QtCore import QSize
+
 
 from core.workers.grouping_worker import GroupingWorker
 
@@ -34,34 +39,35 @@ class CombinedDemoWindow(QMainWindow):
         # Initialize state
         self.worker = None
         self.is_running = False
+        self._suppress_log = False
+        self.config_path = 'config/config.json'  # Required by background_utils
         self.config = self.load_config()
         self._init_timer()
         
-        # Set diagonal gradient from white to sky blue
-        self.setStyleSheet("""
-            QMainWindow {
-                background: qlineargradient(
-                    x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #FFFFFF,
-                    stop:0.3 #F8FCFF,
-                    stop:0.6 #EFF8FF,
-                    stop:1 #D4EDFF
-                );
-            }
-            QScrollArea {
-                border: none;
-                background: transparent;
-            }
-        """)
+        # Don't set stylesheet - let background_utils handle it via QPalette
+        # Apply saved background or default gradient
+        if "background_image" in self.config:
+            from core.utilies.background_utils import apply_background
+            apply_background(self, self.config["background_image"])
+        else:
+            from core.utilies.background_utils import apply_default_gradient
+            apply_default_gradient(self)
         
         # Create scroll area for content
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        scroll.setStyleSheet("""
+            QScrollArea {
+                border: none;
+                background: transparent;
+            }
+        """)
         
         # Central widget
         central_widget = QWidget()
+        central_widget.setStyleSheet("background: transparent;")
         scroll.setWidget(central_widget)
         self.setCentralWidget(scroll)
         
@@ -69,7 +75,27 @@ class CombinedDemoWindow(QMainWindow):
         layout.setContentsMargins(40, 40, 40, 40)
         layout.setSpacing(30)
         
+        # Header with Settings Button
+        header_layout = QHBoxLayout()
+        header_title = QLabel("CutOptimizer Demo")
+        header_title.setStyleSheet("font-size: 24px; font-weight: bold; color: #333;")
+        header_layout.addWidget(header_title)
+        header_layout.addStretch()
+        
+        self.settings_btn = AppButton(
+            text="⚙️",
+            color="transparent",
+            hover_color="#0078D7",
+            text_color="#333333",
+            fixed_size=QSize(40, 32)
+        )
+        self.settings_btn.clicked.connect(self._open_settings)
+        header_layout.addWidget(self.settings_btn)
+        
+        layout.addLayout(header_layout)
+
         # 1. File Management Section (Excel Input) - First
+
         self.file_section = FileManagementSection()
         layout.addWidget(self.file_section, alignment=Qt.AlignmentFlag.AlignTop)
         
@@ -92,6 +118,17 @@ class CombinedDemoWindow(QMainWindow):
         # 5. Processing Results Widget (الجدول) - Last
         self.results_widget = ProcessingResultsWidget()
         layout.addWidget(self.results_widget, 1)
+    
+    def resizeEvent(self, event):
+        """Reapply background when window is resized"""
+        if "background_image" in self.config:
+            from core.utilies.background_utils import apply_background
+            self._suppress_log = True
+            try:
+                apply_background(self, self.config["background_image"])
+            finally:
+                self._suppress_log = False
+        super().resizeEvent(event)
 
     def _init_timer(self):
         """Initialize local timer"""
@@ -136,6 +173,35 @@ class CombinedDemoWindow(QMainWindow):
         except Exception as e:
             print(f"Error loading config: {e}")
         return {}
+    
+    def log_append(self, message):
+        """Log message to console (required by background_utils)"""
+        if self._suppress_log and "✅ تم تطبيق الخلفية بنجاح" in message:
+            return
+        print(message)
+
+    def _open_settings(self):
+        """Open settings dialog"""
+        settings_dialog = SettingsView(parent=self)
+        settings_dialog.exec()
+        
+        # Update machine sizes in config section
+        self.config_section._load_machine_sizes()
+        
+        # Update dropdown options
+        new_options = [f"{size['name']} ({size['min_width']}-{size['max_width']})" for size in self.config_section.machine_sizes]
+        
+        # Update the dropdown's options_list and refresh the list widget
+        self.config_section.size_dropdown.options_list = new_options
+        
+        # Clear and repopulate the list widget
+        self.config_section.size_dropdown.list_widget.clear()
+        for item_text in new_options:
+            from PySide6.QtWidgets import QListWidgetItem
+            item = QListWidgetItem(item_text)
+            self.config_section.size_dropdown.list_widget.addItem(item)
+
+
 
     def run_grouping(self, data):
         if self.is_running:
