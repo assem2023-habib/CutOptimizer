@@ -35,6 +35,7 @@ class CombinedDemoWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("Complete UI Demo - CutOptimizer")
         self.setGeometry(50, 50, 1600, 900)
+        self.setObjectName("MainWindow")
         
         # Initialize state
         self.worker = None

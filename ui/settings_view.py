@@ -6,7 +6,8 @@ import os
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, 
                                QLabel, QGroupBox, QTableWidget, 
                                QTableWidgetItem, QHeaderView, QLineEdit,
-                               QMessageBox, QPushButton)
+                               QMessageBox, QPushButton, QRadioButton, 
+                               QButtonGroup, QComboBox, QWidget)
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QFont
 from ui.components.app_button import AppButton
@@ -88,8 +89,28 @@ class SettingsView(QDialog):
         desc_label.setStyleSheet("color: #B0B0B0; font-size: 11px;")
         layout.addWidget(desc_label)
         
-        # زر تغيير الخلفية
-        bg_layout = QHBoxLayout()
+        # خيارات نوع الخلفية
+        type_layout = QHBoxLayout()
+        self.bg_type_group = QButtonGroup(self)
+        
+        self.radio_image = QRadioButton("صورة خلفية")
+        self.radio_image.setStyleSheet("color: white; font-size: 12px;")
+        self.radio_gradient = QRadioButton("تدرج لوني")
+        self.radio_gradient.setStyleSheet("color: white; font-size: 12px;")
+        
+        self.bg_type_group.addButton(self.radio_image)
+        self.bg_type_group.addButton(self.radio_gradient)
+        
+        type_layout.addWidget(self.radio_image)
+        type_layout.addWidget(self.radio_gradient)
+        type_layout.addStretch()
+        layout.addLayout(type_layout)
+        
+        # حاوية خيار الصورة
+        self.image_container = QWidget()
+        image_layout = QHBoxLayout(self.image_container)
+        image_layout.setContentsMargins(0, 0, 0, 0)
+        
         bg_label = QLabel("🖼️ صورة الخلفية:")
         bg_label.setStyleSheet("font-size: 12px; color: #FFFFFF;")
         
@@ -102,19 +123,121 @@ class SettingsView(QDialog):
         )
         self.change_bg_btn.clicked.connect(self._change_background)
         
-        bg_layout.addWidget(bg_label)
-        bg_layout.addStretch()
-        bg_layout.addWidget(self.change_bg_btn)
+        image_layout.addWidget(bg_label)
+        image_layout.addStretch()
+        image_layout.addWidget(self.change_bg_btn)
+        layout.addWidget(self.image_container)
         
-        layout.addLayout(bg_layout)
+        # حاوية خيار التدرج
+        self.gradient_container = QWidget()
+        gradient_layout = QHBoxLayout(self.gradient_container)
+        gradient_layout.setContentsMargins(0, 0, 0, 0)
+        
+        grad_label = QLabel("🎨 اختر التدرج:")
+        grad_label.setStyleSheet("font-size: 12px; color: #FFFFFF;")
+        
+        self.gradient_combo = QComboBox()
+        self.gradient_combo.setMinimumWidth(200)
+        self.gradient_combo.setStyleSheet("""
+            QComboBox {
+                background-color: #2D2D2D;
+                color: white;
+                border: 1px solid #3A3A3A;
+                border-radius: 4px;
+                padding: 5px;
+            }
+            QComboBox::drop-down {
+                border: none;
+            }
+            QComboBox::down-arrow {
+                image: none;
+                border-left: 5px solid transparent;
+                border-right: 5px solid transparent;
+                border-top: 5px solid white;
+                margin-right: 5px;
+            }
+        """)
+        
+        # تعريف التدرجات
+        self.gradients = [
+            ("أزرق سماوي (افتراضي)", "qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:1, stop:0 #FFFFFF, stop:1 #E0F7FA)"),
+            ("ليلي غامق", "qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:1, stop:0 #1a1a2e, stop:1 #16213e)"),
+            ("غروب الشمس", "qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:1, stop:0 #ff9966, stop:1 #ff5e62)"),
+            ("غابة خضراء", "qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:1, stop:0 #134E5E, stop:1 #71B280)"),
+            ("بنفسجي ملكي", "qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:1, stop:0 #2E3192, stop:1 #1BFFFF)"),
+            ("رمادي عصري", "qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:1, stop:0 #232526, stop:1 #414345)")
+        ]
+        
+        for name, _ in self.gradients:
+            self.gradient_combo.addItem(name)
+            
+        self.gradient_combo.currentIndexChanged.connect(self._apply_gradient)
+        
+        gradient_layout.addWidget(grad_label)
+        gradient_layout.addStretch()
+        gradient_layout.addWidget(self.gradient_combo)
+        layout.addWidget(self.gradient_container)
+        
+        # ربط الأحداث
+        self.bg_type_group.buttonClicked.connect(self._on_bg_type_changed)
+        
+        # الحالة الافتراضية
+        # التحقق من الإعدادات الحالية لتحديد الخيار المناسب
+        config_path = os.path.join(os.getcwd(), "config", "config.json")
+        current_bg_image = ""
+        if os.path.exists(config_path):
+            try:
+                with open(config_path, "r", encoding="utf-8") as f:
+                    config = json.load(f)
+                    current_bg_image = config.get("background_image", "")
+            except:
+                pass
+        
+        if current_bg_image:
+            self.radio_image.setChecked(True)
+            self.gradient_container.setVisible(False)
+        else:
+            self.radio_gradient.setChecked(True)
+            self.image_container.setVisible(False)
+            
         
         # ملاحظة
-        note_label = QLabel("💡 نصيحة: اختر صورة خلفية مناسبة لتحسين تجربتك")
+        note_label = QLabel("💡 نصيحة: اختر نمط الخلفية الذي يريح عينيك")
         note_label.setStyleSheet("color: #808080; font-size: 10px; font-style: italic;")
         layout.addWidget(note_label)
         
         appearance_group.setLayout(layout)
         return appearance_group
+
+    def _on_bg_type_changed(self, button):
+        """معالجة تغيير نوع الخلفية"""
+        if button == self.radio_image:
+            self.image_container.setVisible(True)
+            self.gradient_container.setVisible(False)
+            # إذا كان هناك صورة محفوظة مسبقاً، قد نرغب في إعادة تطبيقها
+            # لكن الزر "تغيير الخلفية" هو المسؤول عن ذلك
+        else:
+            self.image_container.setVisible(False)
+            self.gradient_container.setVisible(True)
+            self._apply_gradient(self.gradient_combo.currentIndex())
+
+    def _apply_gradient(self, index):
+        """تطبيق التدرج المختار"""
+        if index >= 0 and index < len(self.gradients):
+            gradient_style = self.gradients[index][1]
+            
+            # تطبيق على النافذة الرئيسية
+            if self.parent_widget:
+                # إزالة صورة الخلفية من التكوين إذا وجدت
+                from core.utilies.background_utils import save_background_path
+                save_background_path("") # حفظ سلسلة فارغة لإزالة الصورة
+                
+                # تطبيق التدرج
+                self.parent_widget.setStyleSheet(f"#MainWindow {{ background: {gradient_style}; }}")
+                
+                # تحديث التكوين لحفظ التدرج المختار (اختياري، يمكن إضافته لاحقاً)
+                # حالياً نعتمد على أن عدم وجود صورة يعني استخدام التدرج الافتراضي أو المختار
+
     
     def _create_action_buttons(self):
         """إنشاء أزرار الإجراءات (إغلاق)"""

@@ -168,13 +168,20 @@ class SummaryStatisticsComponent(QWidget):
         Update the statistics on the cards.
         """
         if total is not None:
+            self.current_total = total
             self.total_card.update_value(f"{total:,}")
+        
+        # Use stored total if not provided
+        current_total = getattr(self, 'current_total', 0)
             
         if grouped is not None:
-            # Calculate percentage if total is available
-            # Note: This logic assumes total is updated or stored. 
-            # For now, just update the value.
-            self.success_card.update_value(f"{grouped:,}")
+            percentage = 0.0
+            if current_total > 0:
+                percentage = (grouped / current_total) * 100
+            self.success_card.update_value(f"{grouped:,}", f"{percentage:.1f}% success rate")
             
         if remaining is not None:
-            self.remaining_card.update_value(f"{remaining:,}")
+            percentage = 0.0
+            if current_total > 0:
+                percentage = (remaining / current_total) * 100
+            self.remaining_card.update_value(f"{remaining:,}", f"{percentage:.1f}% ungrouped")
