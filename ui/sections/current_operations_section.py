@@ -41,4 +41,3 @@ class CurrentOperationsSection(GlassCardLayout):
         """Update progress bar and details"""
         self.progress_widget.update_progress(percentage, current_step, processed, elapsed, remaining)
     
-

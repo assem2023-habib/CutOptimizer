@@ -75,10 +75,14 @@ class OperationProgressWidget(QWidget):
 
     def setup_ui(self):
         # Add styling for the container
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        
+        # Add styling for the container
         self.setStyleSheet("""
             OperationProgressWidget {
-                background-color: rgba(0, 0, 0, 0.03);
-                border-radius: 12px;
+                background-color: rgba(255, 255, 255, 0.6);
+                border-radius: 16px;
+                border: 1px solid rgba(255, 255, 255, 0.8);
             }
         """)
         
