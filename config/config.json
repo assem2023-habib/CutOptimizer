@@ -22,5 +22,6 @@
             "max_width": 400
         }
     ],
-    "selected_machine_size": "20"
+    "selected_machine_size": "20",
+    "background_gradient": 5
 }

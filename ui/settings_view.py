@@ -228,15 +228,12 @@ class SettingsView(QDialog):
             
             # تطبيق على النافذة الرئيسية
             if self.parent_widget:
-                # إزالة صورة الخلفية من التكوين إذا وجدت
-                from core.utilies.background_utils import save_background_path
-                save_background_path("") # حفظ سلسلة فارغة لإزالة الصورة
+                # حفظ التدرج المختار في التكوين
+                from core.utilies.background_utils import save_background_gradient
+                save_background_gradient(index)
                 
                 # تطبيق التدرج
                 self.parent_widget.setStyleSheet(f"#MainWindow {{ background: {gradient_style}; }}")
-                
-                # تحديث التكوين لحفظ التدرج المختار (اختياري، يمكن إضافته لاحقاً)
-                # حالياً نعتمد على أن عدم وجود صورة يعني استخدام التدرج الافتراضي أو المختار
 
     
     def _create_action_buttons(self):
