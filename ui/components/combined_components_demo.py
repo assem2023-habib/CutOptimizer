@@ -217,6 +217,7 @@ class CombinedDemoWindow(QMainWindow):
         # Generate output path (same dir, suffix _processed)
         base, ext = os.path.splitext(input_path)
         output_path = f"{base}_processed{ext}"
+        self.output_path = output_path
 
         # Extract settings from data
         try:
@@ -338,6 +339,8 @@ class CombinedDemoWindow(QMainWindow):
         )
         
         if success:
+            if hasattr(self, 'output_path') and self.output_path:
+                self.results_widget.set_excel_file_path(self.output_path)
             QMessageBox.information(self, "Success", "Operation completed successfully!")
         
         # self.reset_ui_state() # Optional, might want to keep results visible
