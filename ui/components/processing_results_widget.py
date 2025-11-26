@@ -96,8 +96,8 @@ class ProcessingResultsWidget(GlassCardLayout):
         content_layout.addWidget(self.table)
         
         # Pagination controls
-        pagination_layout = self._create_pagination()
-        content_layout.addLayout(pagination_layout)
+        pagination_widget = self._create_pagination()
+        content_layout.addWidget(pagination_widget)
         
         # Add the container to the GlassCardLayout
         self.add_content_widget(content_container)
@@ -150,10 +150,11 @@ class ProcessingResultsWidget(GlassCardLayout):
         # Table styling
         table.setStyleSheet("""
             QTableWidget {
-                background-color: transparent;
-                border: none;
+                background-color: rgba(255, 255, 255, 0.4);
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                border-radius: 10px;
                 gridline-color: transparent;
-                selection-background-color: rgba(245, 243, 255, 0.5);
+                selection-background-color: rgba(107, 78, 235, 0.15);
             }
             QTableWidget::item {
                 padding: 12px 16px;
@@ -197,11 +198,21 @@ class ProcessingResultsWidget(GlassCardLayout):
         
         return table
     
-    def _create_pagination(self) -> QHBoxLayout:
+    def _create_pagination(self) -> QWidget:
         """Create pagination controls"""
-        pagination_layout = QHBoxLayout()
+        container = QWidget()
+        container.setStyleSheet("""
+            QWidget {
+                background-color: rgba(255, 255, 255, 0.4);
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                border-radius: 10px;
+            }
+        """)
+        
+        pagination_layout = QHBoxLayout(container)
         pagination_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         pagination_layout.setSpacing(20)
+        pagination_layout.setContentsMargins(20, 10, 20, 10)
         
         # Previous button
         prev_icon = qta.icon("fa5s.arrow-left", color="#6B4EEB")
@@ -217,6 +228,8 @@ class ProcessingResultsWidget(GlassCardLayout):
             }
             QPushButton:hover {
                 color: #5A3DD8;
+                background-color: rgba(107, 78, 235, 0.1);
+                border-radius: 5px;
             }
             QPushButton:disabled {
                 color: #AAAAAA;
@@ -229,7 +242,7 @@ class ProcessingResultsWidget(GlassCardLayout):
         # Page label
         self.page_label = QLabel()
         self.page_label.setFont(QFont("Segoe UI", 12, QFont.Weight.DemiBold))
-        self.page_label.setStyleSheet("color: #1a1a1a;")
+        self.page_label.setStyleSheet("color: #1a1a1a; background: transparent; border: none;")
         self.page_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.page_label.setMinimumWidth(120)
         
@@ -247,6 +260,8 @@ class ProcessingResultsWidget(GlassCardLayout):
             }
             QPushButton:hover {
                 color: #5A3DD8;
+                background-color: rgba(107, 78, 235, 0.1);
+                border-radius: 5px;
             }
             QPushButton:disabled {
                 color: #AAAAAA;
@@ -260,7 +275,7 @@ class ProcessingResultsWidget(GlassCardLayout):
         pagination_layout.addWidget(self.page_label)
         pagination_layout.addWidget(self.next_button)
         
-        return pagination_layout
+        return container
     
     def _generate_sample_data(self):
         """Generate sample data for demonstration (15 items)"""

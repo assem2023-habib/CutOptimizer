@@ -136,7 +136,7 @@ class SummaryStatisticsComponent(QWidget):
         # Card 1: Total Elements
         self.total_card = SummaryStatCard(
             title="Total Elements",
-            value="1,245",
+            value="0",
             subtitle="Complete dataset processed",
             bg_color="#4285F4",
             icon_svg=db_icon
@@ -146,8 +146,8 @@ class SummaryStatisticsComponent(QWidget):
         # Card 2: Successfully Grouped
         self.success_card = SummaryStatCard(
             title="Successfully Grouped",
-            value="987",
-            subtitle="79.3% success rate",
+            value="0",
+            subtitle="0.0% success rate",
             bg_color="#28A745",
             icon_svg=check_icon
         )
@@ -156,8 +156,8 @@ class SummaryStatisticsComponent(QWidget):
         # Card 3: Remaining Elements
         self.remaining_card = SummaryStatCard(
             title="Remaining Elements",
-            value="258",
-            subtitle="20.7% ungrouped",
+            value="0",
+            subtitle="0.0% ungrouped",
             bg_color="#FFA000",
             icon_svg=warn_icon
         )
