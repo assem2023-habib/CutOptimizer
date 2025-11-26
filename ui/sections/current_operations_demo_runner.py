@@ -83,11 +83,7 @@ class DemoWindow(QMainWindow):
             remaining=f"{remaining_mins}m {remaining_secs}s"
         )
         
-        self.operations_section.update_statistics(
-            total=f"{total:,}",
-            success=f"{success:,}",
-            remaining=f"{remaining:,}"
-        )
+
 
 
 def main():
