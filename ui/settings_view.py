@@ -17,16 +17,25 @@ from core.utilies.background_utils import change_background
 class SettingsView(QDialog):
     """نافذة الإعدادات الرئيسية"""
     
+    # Constants
+    DEFAULT_MACHINE_SIZES = [
+        {"name": "370x400", "min_width": 370, "max_width": 400},
+        {"name": "470x500", "min_width": 470, "max_width": 500}
+    ]
+    
     def __init__(self, parent=None):
         super().__init__(parent)
         self.parent_widget = parent
         self._setup_ui()
     
-    def _setup_ui(self):
-        """إعداد واجهة المستخدم"""
-        self.setWindowTitle("⚙️ الإعدادات")
-        self.setMinimumSize(500, 400)
-        self.setStyleSheet("""
+    # ============================================================================
+    # Stylesheet Methods
+    # ============================================================================
+    
+    @staticmethod
+    def _get_dialog_stylesheet():
+        """Returns the main dialog stylesheet"""
+        return """
             QDialog {
                 background-color: #1E1E1E;
             }
@@ -49,7 +58,130 @@ class SettingsView(QDialog):
                 color: #E0E0E0;
                 font-size: 12px;
             }
-        """)
+        """
+    
+    @staticmethod
+    def _get_combo_stylesheet():
+        """Returns QComboBox stylesheet"""
+        return """
+            QComboBox {
+                background-color: #2D2D2D;
+                color: white;
+                border: 1px solid #3A3A3A;
+                border-radius: 4px;
+                padding: 5px;
+            }
+            QComboBox::drop-down {
+                border: none;
+            }
+            QComboBox::down-arrow {
+                image: none;
+                border-left: 5px solid transparent;
+                border-right: 5px solid transparent;
+                border-top: 5px solid white;
+                margin-right: 5px;
+            }
+        """
+    
+    @staticmethod
+    def _get_table_stylesheet():
+        """Returns QTableWidget stylesheet"""
+        return """
+            QTableWidget {
+                background-color: #2D2D2D;
+                color: #FFFFFF;
+                border: 1px solid #3A3A3A;
+                border-radius: 4px;
+                gridline-color: #3A3A3A;
+            }
+            QTableWidget::item {
+                padding: 5px;
+            }
+            QHeaderView::section {
+                background-color: #1E1E1E;
+                color: #FFFFFF;
+                padding: 5px;
+                border: 1px solid #3A3A3A;
+                font-weight: bold;
+            }
+        """
+    
+    @staticmethod
+    def _get_delete_button_stylesheet():
+        """Returns delete button stylesheet"""
+        return """
+            QPushButton {
+                background-color: #D32F2F;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                padding: 5px 10px;
+            }
+            QPushButton:hover {
+                background-color: #F44336;
+            }
+        """
+    
+    @staticmethod
+    def _get_add_dialog_stylesheet():
+        """Returns add dialog stylesheet"""
+        return """
+            QDialog {
+                background-color: #2D2D2D;
+            }
+            QLabel {
+                color: #FFFFFF;
+                font-size: 12px;
+            }
+            QLineEdit {
+                background-color: #1E1E1E;
+                color: #FFFFFF;
+                border: 1px solid #3A3A3A;
+                border-radius: 4px;
+                padding: 8px;
+                font-size: 12px;
+            }
+        """
+    
+    # ============================================================================
+    # Config Helper Methods
+    # ============================================================================
+    
+    @staticmethod
+    def _get_config_path():
+        """Returns the path to config.json"""
+        return os.path.join(os.getcwd(), "config", "config.json")
+    
+    def _load_config(self):
+        """Loads and returns the config dictionary"""
+        config_path = self._get_config_path()
+        try:
+            if os.path.exists(config_path):
+                with open(config_path, "r", encoding="utf-8") as f:
+                    return json.load(f)
+        except Exception:
+            pass
+        return {}
+    
+    def _save_config(self, config):
+        """Saves the config dictionary to file"""
+        config_path = self._get_config_path()
+        try:
+            os.makedirs(os.path.dirname(config_path), exist_ok=True)
+            with open(config_path, "w", encoding="utf-8") as f:
+                json.dump(config, f, ensure_ascii=False, indent=4)
+        except Exception as e:
+            QMessageBox.warning(self, "خطأ", f"فشل حفظ الإعدادات: {e}")
+    
+    # ============================================================================
+    # UI Setup
+    # ============================================================================
+    
+    def _setup_ui(self):
+        """إعداد واجهة المستخدم"""
+        self.setWindowTitle("⚙️ الإعدادات")
+        self.setMinimumSize(500, 400)
+        self.setStyleSheet(self._get_dialog_stylesheet())
         
         # التخطيط الرئيسي
         main_layout = QVBoxLayout(self)
@@ -78,6 +210,10 @@ class SettingsView(QDialog):
         buttons_layout = self._create_action_buttons()
         main_layout.addLayout(buttons_layout)
     
+    # ============================================================================
+    # Appearance Section
+    # ============================================================================
+    
     def _create_appearance_section(self):
         """إنشاء قسم إعدادات المظهر"""
         appearance_group = QGroupBox("🎨 المظهر والخلفية")
@@ -89,7 +225,33 @@ class SettingsView(QDialog):
         desc_label.setStyleSheet("color: #B0B0B0; font-size: 11px;")
         layout.addWidget(desc_label)
         
-        # خيارات نوع الخلفية
+        # خيارات نوع الخلفية (Radio buttons)
+        self._create_background_type_selection(layout)
+        
+        # حاوية خيار الصورة
+        self.image_container = self._create_image_background_controls()
+        layout.addWidget(self.image_container)
+        
+        # حاوية خيار التدرج
+        self.gradient_container = self._create_gradient_controls()
+        layout.addWidget(self.gradient_container)
+        
+        # ربط الأحداث
+        self.bg_type_group.buttonClicked.connect(self._on_bg_type_changed)
+        
+        # الحالة الافتراضية
+        self._setup_initial_background_state()
+        
+        # ملاحظة
+        note_label = QLabel("💡 نصيحة: اختر نمط الخلفية الذي يريح عينيك")
+        note_label.setStyleSheet("color: #808080; font-size: 10px; font-style: italic;")
+        layout.addWidget(note_label)
+        
+        appearance_group.setLayout(layout)
+        return appearance_group
+    
+    def _create_background_type_selection(self, layout):
+        """Creates radio buttons for background type selection"""
         type_layout = QHBoxLayout()
         self.bg_type_group = QButtonGroup(self)
         
@@ -105,10 +267,11 @@ class SettingsView(QDialog):
         type_layout.addWidget(self.radio_gradient)
         type_layout.addStretch()
         layout.addLayout(type_layout)
-        
-        # حاوية خيار الصورة
-        self.image_container = QWidget()
-        image_layout = QHBoxLayout(self.image_container)
+    
+    def _create_image_background_controls(self):
+        """Creates the image background controls container"""
+        container = QWidget()
+        image_layout = QHBoxLayout(container)
         image_layout.setContentsMargins(0, 0, 0, 0)
         
         bg_label = QLabel("🖼️ صورة الخلفية:")
@@ -126,11 +289,13 @@ class SettingsView(QDialog):
         image_layout.addWidget(bg_label)
         image_layout.addStretch()
         image_layout.addWidget(self.change_bg_btn)
-        layout.addWidget(self.image_container)
         
-        # حاوية خيار التدرج
-        self.gradient_container = QWidget()
-        gradient_layout = QHBoxLayout(self.gradient_container)
+        return container
+    
+    def _create_gradient_controls(self):
+        """Creates the gradient background controls container"""
+        container = QWidget()
+        gradient_layout = QHBoxLayout(container)
         gradient_layout.setContentsMargins(0, 0, 0, 0)
         
         grad_label = QLabel("🎨 اختر التدرج:")
@@ -138,25 +303,7 @@ class SettingsView(QDialog):
         
         self.gradient_combo = QComboBox()
         self.gradient_combo.setMinimumWidth(200)
-        self.gradient_combo.setStyleSheet("""
-            QComboBox {
-                background-color: #2D2D2D;
-                color: white;
-                border: 1px solid #3A3A3A;
-                border-radius: 4px;
-                padding: 5px;
-            }
-            QComboBox::drop-down {
-                border: none;
-            }
-            QComboBox::down-arrow {
-                image: none;
-                border-left: 5px solid transparent;
-                border-right: 5px solid transparent;
-                border-top: 5px solid white;
-                margin-right: 5px;
-            }
-        """)
+        self.gradient_combo.setStyleSheet(self._get_combo_stylesheet())
         
         # استيراد التدرجات من الملف المركزي
         from ui.constants.gradients import GRADIENTS
@@ -170,22 +317,13 @@ class SettingsView(QDialog):
         gradient_layout.addWidget(grad_label)
         gradient_layout.addStretch()
         gradient_layout.addWidget(self.gradient_combo)
-        layout.addWidget(self.gradient_container)
         
-        # ربط الأحداث
-        self.bg_type_group.buttonClicked.connect(self._on_bg_type_changed)
-        
-        # الحالة الافتراضية
-        # التحقق من الإعدادات الحالية لتحديد الخيار المناسب
-        config_path = os.path.join(os.getcwd(), "config", "config.json")
-        current_bg_image = ""
-        if os.path.exists(config_path):
-            try:
-                with open(config_path, "r", encoding="utf-8") as f:
-                    config = json.load(f)
-                    current_bg_image = config.get("background_image", "")
-            except:
-                pass
+        return container
+    
+    def _setup_initial_background_state(self):
+        """Sets up initial radio button state based on current config"""
+        config = self._load_config()
+        current_bg_image = config.get("background_image", "")
         
         if current_bg_image:
             self.radio_image.setChecked(True)
@@ -193,42 +331,35 @@ class SettingsView(QDialog):
         else:
             self.radio_gradient.setChecked(True)
             self.image_container.setVisible(False)
-            
-        
-        # ملاحظة
-        note_label = QLabel("💡 نصيحة: اختر نمط الخلفية الذي يريح عينيك")
-        note_label.setStyleSheet("color: #808080; font-size: 10px; font-style: italic;")
-        layout.addWidget(note_label)
-        
-        appearance_group.setLayout(layout)
-        return appearance_group
-
+    
     def _on_bg_type_changed(self, button):
         """معالجة تغيير نوع الخلفية"""
         if button == self.radio_image:
             self.image_container.setVisible(True)
             self.gradient_container.setVisible(False)
-            # إذا كان هناك صورة محفوظة مسبقاً، قد نرغب في إعادة تطبيقها
-            # لكن الزر "تغيير الخلفية" هو المسؤول عن ذلك
         else:
             self.image_container.setVisible(False)
             self.gradient_container.setVisible(True)
             self._apply_gradient(self.gradient_combo.currentIndex())
-
+    
     def _apply_gradient(self, index):
         """تطبيق التدرج المختار"""
         if index >= 0 and index < len(self.gradients):
             gradient_style = self.gradients[index][1]
             
-            # تطبيق على النافذة الرئيسية
             if self.parent_widget:
-                # حفظ التدرج المختار في التكوين
                 from core.utilies.background_utils import save_background_gradient
                 save_background_gradient(index)
-                
-                # تطبيق التدرج
                 self.parent_widget.setStyleSheet(f"#MainWindow {{ background: {gradient_style}; }}")
-
+    
+    def _change_background(self):
+        """تغيير خلفية النافذة الرئيسية"""
+        if self.parent_widget:
+            change_background(self.parent_widget)
+    
+    # ============================================================================
+    # Action Buttons
+    # ============================================================================
     
     def _create_action_buttons(self):
         """إنشاء أزرار الإجراءات (إغلاق)"""
@@ -247,6 +378,9 @@ class SettingsView(QDialog):
         buttons_layout.addWidget(close_btn)
         return buttons_layout
     
+    # ============================================================================
+    # Machine Sizes Section
+    # ============================================================================
     
     def _create_machine_sizes_section(self):
         """إنشاء قسم إدارة مقاسات المكنات"""
@@ -260,36 +394,35 @@ class SettingsView(QDialog):
         layout.addWidget(desc_label)
         
         # جدول المقاسات
-        self.sizes_table = QTableWidget()
-        self.sizes_table.setColumnCount(4)
-        self.sizes_table.setHorizontalHeaderLabels(["الاسم", "الحد الأدنى", "الحد الأعلى", ""])
-        self.sizes_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
-        self.sizes_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
-        self.sizes_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
-        self.sizes_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeToContents)
-        self.sizes_table.setMaximumHeight(150)
-        self.sizes_table.setStyleSheet("""
-            QTableWidget {
-                background-color: #2D2D2D;
-                color: #FFFFFF;
-                border: 1px solid #3A3A3A;
-                border-radius: 4px;
-                gridline-color: #3A3A3A;
-            }
-            QTableWidget::item {
-                padding: 5px;
-            }
-            QHeaderView::section {
-                background-color: #1E1E1E;
-                color: #FFFFFF;
-                padding: 5px;
-                border: 1px solid #3A3A3A;
-                font-weight: bold;
-            }
-        """)
+        self.sizes_table = self._create_sizes_table()
         layout.addWidget(self.sizes_table)
         
         # أزرار الإدارة
+        buttons_layout = self._create_machine_size_buttons()
+        layout.addLayout(buttons_layout)
+        
+        sizes_group.setLayout(layout)
+        
+        # تحميل المقاسات الحالية
+        self._load_machine_sizes()
+        
+        return sizes_group
+    
+    def _create_sizes_table(self):
+        """Creates and configures the machine sizes table"""
+        table = QTableWidget()
+        table.setColumnCount(4)
+        table.setHorizontalHeaderLabels(["الاسم", "الحد الأدنى", "الحد الأعلى", ""])
+        table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
+        table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
+        table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeToContents)
+        table.setMaximumHeight(150)
+        table.setStyleSheet(self._get_table_stylesheet())
+        return table
+    
+    def _create_machine_size_buttons(self):
+        """Creates the management buttons for machine sizes"""
         buttons_layout = QHBoxLayout()
         
         add_btn = AppButton(
@@ -314,109 +447,71 @@ class SettingsView(QDialog):
         buttons_layout.addWidget(refresh_btn)
         buttons_layout.addStretch()
         
-        layout.addLayout(buttons_layout)
-        
-        sizes_group.setLayout(layout)
-        
-        # تحميل المقاسات الحالية
-        self._load_machine_sizes()
-        
-        return sizes_group
+        return buttons_layout
     
     def _load_machine_sizes(self):
         """تحميل المقاسات من config.json"""
-        config_path = os.path.join(os.getcwd(), "config", "config.json")
+        config = self._load_config()
+        sizes = config.get("machine_sizes", self.DEFAULT_MACHINE_SIZES)
         
-        # المقاسات الافتراضية
-        default_sizes = [
-            {"name": "370x400", "min_width": 370, "max_width": 400},
-            {"name": "470x500", "min_width": 470, "max_width": 500}
-        ]
+        # If no sizes in config, save defaults
+        if not config.get("machine_sizes"):
+            self._save_machine_sizes(self.DEFAULT_MACHINE_SIZES)
         
-        try:
-            if os.path.exists(config_path):
-                with open(config_path, "r", encoding="utf-8") as f:
-                    config = json.load(f)
-                sizes = config.get("machine_sizes", default_sizes)
-            else:
-                sizes = default_sizes
-                # حفظ المقاسات الافتراضية
-                self._save_machine_sizes(sizes)
-        except Exception as e:
-            QMessageBox.warning(self, "خطأ", f"فشل تحميل المقاسات: {e}")
-            sizes = default_sizes
-        
-        # ملء الجدول
+        self._populate_sizes_table(sizes)
+    
+    def _populate_sizes_table(self, sizes):
+        """Populates the table with machine sizes"""
         self.sizes_table.setRowCount(len(sizes))
         for i, size in enumerate(sizes):
-            # العمود 0: الاسم
-            self.sizes_table.setItem(i, 0, QTableWidgetItem(size["name"]))
-            # العمود 1: الحد الأدنى
-            self.sizes_table.setItem(i, 1, QTableWidgetItem(str(size["min_width"])))
-            # العمود 2: الحد الأعلى
-            self.sizes_table.setItem(i, 2, QTableWidgetItem(str(size["max_width"])))
-            # العمود 3: زر الحذف
-            delete_btn = QPushButton("🗑️")
-            delete_btn.setStyleSheet("""
-                QPushButton {
-                    background-color: #D32F2F;
-                    color: white;
-                    border: none;
-                    border-radius: 4px;
-                    padding: 5px 10px;
-                }
-                QPushButton:hover {
-                    background-color: #F44336;
-                }
-            """)
-            delete_btn.clicked.connect(lambda checked, idx=i: self._delete_machine_size(idx))
-            self.sizes_table.setCellWidget(i, 3, delete_btn)
+            self._populate_table_row(i, size)
+    
+    def _populate_table_row(self, row_index, size):
+        """Populates a single row in the sizes table"""
+        # العمود 0: الاسم
+        self.sizes_table.setItem(row_index, 0, QTableWidgetItem(size["name"]))
+        # العمود 1: الحد الأدنى
+        self.sizes_table.setItem(row_index, 1, QTableWidgetItem(str(size["min_width"])))
+        # العمود 2: الحد الأعلى
+        self.sizes_table.setItem(row_index, 2, QTableWidgetItem(str(size["max_width"])))
+        # العمود 3: زر الحذف
+        delete_btn = QPushButton("🗑️")
+        delete_btn.setStyleSheet(self._get_delete_button_stylesheet())
+        delete_btn.clicked.connect(lambda: self._delete_machine_size(row_index))
+        self.sizes_table.setCellWidget(row_index, 3, delete_btn)
     
     def _save_machine_sizes(self, sizes):
         """حفظ المقاسات في config.json"""
-        config_path = os.path.join(os.getcwd(), "config", "config.json")
-        
-        try:
-            if os.path.exists(config_path):
-                with open(config_path, "r", encoding="utf-8") as f:
-                    config = json.load(f)
-            else:
-                config = {}
-            
-            config["machine_sizes"] = sizes
-            
-            os.makedirs(os.path.dirname(config_path), exist_ok=True)
-            with open(config_path, "w", encoding="utf-8") as f:
-                json.dump(config, f, ensure_ascii=False, indent=4)
-        except Exception as e:
-            QMessageBox.warning(self, "خطأ", f"فشل حفظ المقاسات: {e}")
+        config = self._load_config()
+        config["machine_sizes"] = sizes
+        self._save_config(config)
     
     def _add_machine_size_dialog(self):
         """فتح نافذة لإضافة مقاس جديد"""
         dialog = QDialog(self)
         dialog.setWindowTitle("➕ إضافة مقاس جديد")
         dialog.setMinimumWidth(400)
-        dialog.setStyleSheet("""
-            QDialog {
-                background-color: #2D2D2D;
-            }
-            QLabel {
-                color: #FFFFFF;
-                font-size: 12px;
-            }
-            QLineEdit {
-                background-color: #1E1E1E;
-                color: #FFFFFF;
-                border: 1px solid #3A3A3A;
-                border-radius: 4px;
-                padding: 8px;
-                font-size: 12px;
-            }
-        """)
+        dialog.setStyleSheet(self._get_add_dialog_stylesheet())
         
         layout = QVBoxLayout(dialog)
         layout.setSpacing(15)
         
+        # Create input fields
+        name_input, min_input, max_input = self._create_size_input_fields(layout)
+        
+        # Create buttons
+        save_btn, cancel_btn = self._create_size_dialog_buttons(layout)
+        
+        # Connect save button
+        save_btn.clicked.connect(
+            lambda: self._save_new_machine_size(dialog, name_input, min_input, max_input)
+        )
+        cancel_btn.clicked.connect(dialog.reject)
+        
+        dialog.exec()
+    
+    def _create_size_input_fields(self, layout):
+        """Creates input fields for the add size dialog"""
         # حقل الاسم
         name_label = QLabel("اسم المقاس:")
         name_input = QLineEdit()
@@ -439,7 +534,10 @@ class SettingsView(QDialog):
         layout.addWidget(max_label)
         layout.addWidget(max_input)
         
-        # أزرار
+        return name_input, min_input, max_input
+    
+    def _create_size_dialog_buttons(self, layout):
+        """Creates action buttons for the add size dialog"""
         buttons_layout = QHBoxLayout()
         
         save_btn = AppButton(
@@ -464,45 +562,43 @@ class SettingsView(QDialog):
         
         layout.addLayout(buttons_layout)
         
-        def save_size():
-            name = name_input.text().strip()
-            try:
-                min_w = int(min_input.text().strip())
-                max_w = int(max_input.text().strip())
-            except ValueError:
-                QMessageBox.warning(dialog, "خطأ", "يرجى إدخال أرقام صحيحة للعرض")
-                return
-            
-            if not name:
-                QMessageBox.warning(dialog, "خطأ", "يرجى إدخال اسم المقاس")
-                return
-            
-            if min_w >= max_w:
-                QMessageBox.warning(dialog, "خطأ", "العرض الأدنى يجب أن يكون أقل من العرض الأعلى")
-                return
-            
-            # تحميل المقاسات الحالية
-            config_path = os.path.join(os.getcwd(), "config", "config.json")
-            try:
-                if os.path.exists(config_path):
-                    with open(config_path, "r", encoding="utf-8") as f:
-                        config = json.load(f)
-                    sizes = config.get("machine_sizes", [])
-                else:
-                    sizes = []
-                
-                # إضافة المقاس الجديد
-                sizes.append({"name": name, "min_width": min_w, "max_width": max_w})
-                self._save_machine_sizes(sizes)
-                self._load_machine_sizes()
-                dialog.accept()
-            except Exception as e:
-                QMessageBox.warning(dialog, "خطأ", f"فشل حفظ المقاس: {e}")
+        return save_btn, cancel_btn
+    
+    def _save_new_machine_size(self, dialog, name_input, min_input, max_input):
+        """Validates and saves a new machine size"""
+        name = name_input.text().strip()
         
-        save_btn.clicked.connect(save_size)
-        cancel_btn.clicked.connect(dialog.reject)
+        try:
+            min_w = int(min_input.text().strip())
+            max_w = int(max_input.text().strip())
+        except ValueError:
+            QMessageBox.warning(dialog, "خطأ", "يرجى إدخال أرقام صحيحة للعرض")
+            return
         
-        dialog.exec()
+        # Validate input
+        if not self._validate_machine_size_input(name, min_w, max_w, dialog):
+            return
+        
+        # Load current sizes and add new one
+        config = self._load_config()
+        sizes = config.get("machine_sizes", [])
+        sizes.append({"name": name, "min_width": min_w, "max_width": max_w})
+        
+        self._save_machine_sizes(sizes)
+        self._load_machine_sizes()
+        dialog.accept()
+    
+    def _validate_machine_size_input(self, name, min_w, max_w, dialog):
+        """Validates machine size input"""
+        if not name:
+            QMessageBox.warning(dialog, "خطأ", "يرجى إدخال اسم المقاس")
+            return False
+        
+        if min_w >= max_w:
+            QMessageBox.warning(dialog, "خطأ", "العرض الأدنى يجب أن يكون أقل من العرض الأعلى")
+            return False
+        
+        return True
     
     def _delete_machine_size(self, index):
         """حذف مقاس من القائمة"""
@@ -514,21 +610,10 @@ class SettingsView(QDialog):
         )
         
         if reply == QMessageBox.Yes:
-            config_path = os.path.join(os.getcwd(), "config", "config.json")
-            try:
-                if os.path.exists(config_path):
-                    with open(config_path, "r", encoding="utf-8") as f:
-                        config = json.load(f)
-                    sizes = config.get("machine_sizes", [])
-                    
-                    if 0 <= index < len(sizes):
-                        sizes.pop(index)
-                        self._save_machine_sizes(sizes)
-                        self._load_machine_sizes()
-            except Exception as e:
-                QMessageBox.warning(self, "خطأ", f"فشل حذف المقاس: {e}")
-    
-    def _change_background(self):
-        """تغيير خلفية النافذة الرئيسية"""
-        if self.parent_widget:
-            change_background(self.parent_widget)
+            config = self._load_config()
+            sizes = config.get("machine_sizes", [])
+            
+            if 0 <= index < len(sizes):
+                sizes.pop(index)
+                self._save_machine_sizes(sizes)
+                self._load_machine_sizes()
