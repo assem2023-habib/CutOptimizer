@@ -1,7 +1,7 @@
 import os, json, shutil, sys
 
 from PySide6.QtWidgets import QFileDialog, QMessageBox
-from PySide6.QtGui import QPixmap, QPalette, QBrush
+from PySide6.QtGui import QPixmap, QPalette, QBrush, QLinearGradient, QColor
 from PySide6.QtCore import Qt
 
 DEFAULT_BG_COLOR = "#FFFFFFFF"
@@ -23,25 +23,31 @@ def change_background(app_instance):
 
     
     try:
+        # تحديد المجلد النسبي
         config_dir = os.path.join("config", "backgrounds")
-        os.makedirs(config_dir, exist_ok=True)
+        # الحصول على المسار المطلق للمجلد
+        config_dir_abs = resource_path(config_dir)
+        os.makedirs(config_dir_abs, exist_ok=True)
 
         # مسح محتوى المجلد قبل نسخ الصورة الجديدة
-        clear_backgrounds_folder(config_dir, app_instance)
+        clear_backgrounds_folder(config_dir_abs, app_instance)
 
         file_name = os.path.basename(file_path)
-        target_path = os.path.join(config_dir, file_name)
+        target_path_abs = os.path.join(config_dir_abs, file_name)
         
         # نسخ الملف الجديد
-        shutil.copy(file_path, target_path)
+        shutil.copy(file_path, target_path_abs)
 
-        # حفظ المسار في ملف الإعدادات
-        app_instance.config["background_image"] = target_path
-        with open(app_instance.config_path, "w", encoding="utf-8") as f:
+        # حفظ المسار النسبي في ملف الإعدادات (لدعم نقل التطبيق)
+        relative_path = os.path.join(config_dir, file_name)
+        app_instance.config["background_image"] = relative_path
+        
+        config_path_abs = resource_path(app_instance.config_path)
+        with open(config_path_abs, "w", encoding="utf-8") as f:
             json.dump(app_instance.config, f, ensure_ascii=False, indent=4)
 
-        apply_background(app_instance, target_path)
-        app_instance.log_append(f"🖼️ تم تعيين الصورة الجديدة كخلفية:\n{target_path}")
+        apply_background(app_instance, relative_path)
+        app_instance.log_append(f"🖼️ تم تعيين الصورة الجديدة كخلفية:\n{file_name}")
         
     except Exception as e:
         app_instance.log_append(f"❌ خطأ أثناء تغيير الخلفية: {e}")
@@ -75,17 +81,25 @@ def apply_background(app_instance, image_path: str):
     """
     تطبيق الخلفية المحددة على واجهة التطبيق.
     """
-    try:    
-        if not image_path or not os.path.exists(image_path):
-            app_instance.log_append(f"❌ خطأ: الخلفية غير موجودة - {image_path}")
+    try:
+        if not image_path:
+            app_instance.log_append(f"❌ خطأ: مسار الخلفية فارغ")
             reset_to_default_background(app_instance)
             return
         
-        qss_path = image_path.replace("\\", "/")
-        pixmap = QPixmap(qss_path)
+        # الحصول على المسار المطلق للصورة
+        absolute_image_path = resource_path(image_path)
+        
+        if not os.path.exists(absolute_image_path):
+            app_instance.log_append(f"❌ خطأ: الخلفية غير موجودة - {absolute_image_path}")
+            reset_to_default_background(app_instance)
+            return
+        
+        # تحميل الصورة باستخدام المسار المطلق
+        pixmap = QPixmap(absolute_image_path)
         
         if pixmap.isNull():
-            app_instance.log_append(f"❌ خطأ: فشل تحميل الصورة - {image_path}")
+            app_instance.log_append(f"❌ خطأ: فشل تحميل الصورة - {absolute_image_path}")
             reset_to_default_background(app_instance)
             return
         
@@ -99,6 +113,7 @@ def apply_background(app_instance, image_path: str):
         palette.setBrush(QPalette.Window, QBrush(scaled_pixmap))
         app_instance.setPalette(palette)
         app_instance.setAutoFillBackground(True)
+        app_instance.log_append(f"✅ تم تطبيق الخلفية بنجاح")
         
     except Exception as e:
         app_instance.log_append(f"❌ خطأ أثناء تطبيق الخلفية: {e}")
@@ -106,18 +121,20 @@ def apply_background(app_instance, image_path: str):
 
 
 def remove_background(app_instance):
-    """إزالة الخلفية والعودة للون الافتراضي."""
+    """إزالة الخلفية والعودة للتدرج اللوني الافتراضي."""
     try:
         if "background_image" in app_instance.config:
             old_bg = app_instance.config["background_image"]
             del app_instance.config["background_image"]
             
-            with open(app_instance.config_path, "w", encoding="utf-8") as f:
+            config_path_abs = resource_path(app_instance.config_path)
+            with open(config_path_abs, "w", encoding="utf-8") as f:
                 json.dump(app_instance.config, f, ensure_ascii=False, indent=4)
             
             # مسح مجلد الخلفيات
             config_dir = os.path.join("config", "backgrounds")
-            clear_backgrounds_folder(config_dir, app_instance)
+            config_dir_abs = resource_path(config_dir)
+            clear_backgrounds_folder(config_dir_abs, app_instance)
             
             reset_to_default_background(app_instance)
             app_instance.log_append(f"✅ تم إزالة الخلفية بنجاح")
@@ -128,7 +145,7 @@ def remove_background(app_instance):
 
 
 def reset_to_default_background(app_instance):
-    """تطبيق الخلفية الافتراضية (الصورة)."""
+    """تطبيق الخلفية الافتراضية (تدرج لوني جميل من الأبيض إلى السماوي)."""
     try:
         bg_path = resource_path(DEFAULT_BG_PATH)
         app_instance.log_append(f"🔍 تحميل الخلفية الافتراضية من: {bg_path}")
@@ -148,14 +165,47 @@ def reset_to_default_background(app_instance):
                 app_instance.log_append("✅ تم تعيين الخلفية الافتراضية بنجاح")
                 return
         
-        # fallback — في حال فشل تحميل الصورة
-        palette = app_instance.palette()
-        palette.setBrush(QPalette.Window, QBrush(Qt.white))
-        app_instance.setPalette(palette)
-        app_instance.log_append("⚠️ فشل تحميل الخلفية الافتراضية، تم استخدام اللون الافتراضي.")
+        # fallback — تطبيق تدرج لوني جميل من الأبيض إلى السماوي
+        apply_default_gradient(app_instance)
+        app_instance.log_append("✨ تم تطبيق التدرج اللوني الافتراضي.")
 
     except Exception as e:
         app_instance.log_append(f"❌ خطأ أثناء تعيين الخلفية الافتراضية: {e}")
+        # في حال حدوث خطأ، نستخدم التدرج اللوني
+        apply_default_gradient(app_instance)
+
+
+def apply_default_gradient(app_instance):
+    """تطبيق تدرج لوني جميل من الأبيض إلى السماوي كخلفية افتراضية."""
+    try:
+        # إنشاء تدرج لوني من الأعلى إلى الأسفل
+        gradient = QLinearGradient(0, 0, 0, app_instance.height())
+        
+        # نقطة البداية: أبيض ثلجي نقي
+        gradient.setColorAt(0.0, QColor(255, 255, 255))  # White
+        
+        # نقطة وسطى: أبيض مع لمسة سماوي خفيفة جداً
+        gradient.setColorAt(0.3, QColor(240, 248, 255))  # Alice Blue
+        
+        # نقطة وسطى ثانية: سماوي فاتح جداً
+        gradient.setColorAt(0.6, QColor(224, 242, 254))  # Light Sky Blue
+        
+        # نقطة النهاية: سماوي فاتح جميل
+        gradient.setColorAt(1.0, QColor(186, 230, 253))  # Beautiful Sky Blue
+        
+        # تطبيق التدرج
+        palette = app_instance.palette()
+        palette.setBrush(QPalette.Window, QBrush(gradient))
+        app_instance.setPalette(palette)
+        app_instance.setAutoFillBackground(True)
+        
+    except Exception as e:
+        app_instance.log_append(f"❌ خطأ أثناء تطبيق التدرج اللوني: {e}")
+        # في حال الفشل، استخدم لون أبيض عادي
+        palette = app_instance.palette()
+        palette.setBrush(QPalette.Window, QBrush(Qt.white))
+        app_instance.setPalette(palette)
+
 
 def validate_image(file_path: str) -> bool:
     """التحقق من صحة ملف الصورة."""
@@ -174,6 +224,26 @@ def validate_image(file_path: str) -> bool:
 
 
 def resource_path(relative_path):
-    """يدعم التشغيل من PyInstaller onefile."""
+    """
+    يدعم التشغيل من PyInstaller onefile.
+    يحول المسار النسبي إلى مسار مطلق يعمل في بيئة التطوير وفي الـ EXE.
+    """
+    # إذا كان المسار مطلقاً بالفعل، قم بإرجاعه كما هو
+    if os.path.isabs(relative_path):
+        return relative_path
+    
+    # إذا كان التطبيق يعمل كـ EXE بواسطة PyInstaller
     if hasattr(sys, "_MEIPASS"):
-        return os.path.join(sys._MEIPASS, relative_path)
+        # للملفات المدمجة في الـ EXE
+        bundled_path = os.path.join(sys._MEIPASS, relative_path)
+        if os.path.exists(bundled_path):
+            return bundled_path
+        
+        # للملفات التي يتم إنشاؤها أثناء التشغيل (مثل backgrounds)
+        # نستخدم المسار بجانب الـ EXE
+        exe_dir = os.path.dirname(sys.executable)
+        return os.path.join(exe_dir, relative_path)
+    
+    # في بيئة التطوير، نستخدم المسار بالنسبة لمجلد السكريبت
+    base_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    return os.path.join(base_path, relative_path)

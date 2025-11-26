@@ -8,7 +8,7 @@
     "start_with_largest": true,
     "allow_split_rows": true,
     "theme": "dark",
-    "background_image": "config\\backgrounds\\wallpaper2.jpg",
+    "background_image": "config\\backgrounds\\wallpaper1.jpg",
     "selected_mode": "combinations rep exclude main",
     "selected_sort_type": "sort carpet by height",
     "machine_sizes": [

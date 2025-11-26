@@ -10,7 +10,7 @@ def main():
     # Create main window
     window = QMainWindow()
     window.setWindowTitle("Processing Configuration Demo")
-    window.resize(1000, 600)
+    window.resize(1920, 1080)
     
     # Create gradient background
     palette = QPalette()

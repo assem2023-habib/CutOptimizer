@@ -241,21 +241,27 @@ class ProcessingConfigSection(GlassCardLayout):
         header_layout.addStretch()
         layout.addLayout(header_layout)
 
-        # Content - Checkboxes
-        # Advanced Grouping (Maps to GroupingMode)
-        self.check_advanced = QCheckBox("Advanced Grouping")
-        self.check_advanced.setToolTip("Checked: All Combinations, Unchecked: No Main Repeat")
+        # Content - Radio Buttons for Grouping Mode only
+        self.grouping_group = QButtonGroup(self)
         
-        self.check_report = QCheckBox("Generate Report")
-
-        layout.addWidget(self.check_advanced)
-        layout.addWidget(self.check_report)
+        self.radio_all_combinations = QRadioButton("All Combinations")
+        self.radio_all_combinations.setToolTip(GroupingMode.ALL_COMBINATIONS.value)
+        
+        self.radio_no_main_repeat = QRadioButton("No Main Repeat")
+        self.radio_no_main_repeat.setToolTip(GroupingMode.NO_MAIN_REPEAT.value)
+        self.radio_no_main_repeat.setChecked(True)  # Default
+        
+        self.grouping_group.addButton(self.radio_all_combinations)
+        self.grouping_group.addButton(self.radio_no_main_repeat)
+        
+        layout.addWidget(self.radio_all_combinations)
+        layout.addWidget(self.radio_no_main_repeat)
 
         layout.addStretch()
         return panel
 
     def _setup_footer(self):
-        """Setup Action Buttons"""
+        """Setup Action Buttons inside the glass card"""
         footer_layout = QHBoxLayout()
         footer_layout.setSpacing(20)
         footer_layout.setContentsMargins(0, 20, 0, 0)
@@ -288,7 +294,8 @@ class ProcessingConfigSection(GlassCardLayout):
         footer_layout.addWidget(self.cancel_btn)
         footer_layout.addStretch()
 
-        self.main_layout.addLayout(footer_layout)
+        # Add buttons to card_layout instead of main_layout
+        self.card_layout.addLayout(footer_layout)
 
     def _on_start_clicked(self):
         """Collect data and emit start signal"""
@@ -313,9 +320,9 @@ class ProcessingConfigSection(GlassCardLayout):
         elif self.radio_quantity.isChecked():
             sort_type = SortType.SORT_BY_QUANTITY
 
-        # Get Grouping Mode
-        grouping_mode = GroupingMode.NO_MAIN_REPEAT
-        if self.check_advanced.isChecked():
+        # Get Grouping Mode from radio buttons
+        grouping_mode = GroupingMode.NO_MAIN_REPEAT  # Default
+        if self.radio_all_combinations.isChecked():
             grouping_mode = GroupingMode.ALL_COMBINATIONS
 
         data = {
@@ -323,7 +330,7 @@ class ProcessingConfigSection(GlassCardLayout):
             "tolerance": self.tolerance_input.text(),
             "sort_type": sort_type,
             "grouping_mode": grouping_mode,
-            "generate_report": self.check_report.isChecked()
+            "generate_report": False  # No report generation option
         }
         self.start_processing_signal.emit(data)
 

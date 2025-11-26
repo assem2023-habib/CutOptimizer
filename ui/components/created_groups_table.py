@@ -148,15 +148,3 @@ class CreatedGroupsTable(QWidget):
         if self.current_page > 1:
             self.current_page -= 1
             self._populate_table()
-
-    # def _generate_sample_data(self):
-    #     return [
-    #         {
-    #             "group_id": f"GRP-{i:03}",
-    #             "qty_used": f"{i * 3}",
-    #             "qty_rem": f"{50 - i}",
-    #             "ref_height": f"{1.2 + i*0.1:.2f}",
-    #             "carpet": f"CPT-{100+i}",
-    #         }
-    #         for i in range(1, 26)
-    #     ]
