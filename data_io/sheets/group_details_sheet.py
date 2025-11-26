@@ -80,6 +80,9 @@ def _create_group_details_sheet(
                     )
                 )
 
+            rows.append(
+                _detals_sheet_table()
+            )
             total_qty+= it.qty_used + it.qty_rem
             total_qty_rem+= it.qty_rem
             total_path += path_num
