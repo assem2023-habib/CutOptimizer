@@ -53,21 +53,9 @@ class CombinedDemoWindow(QMainWindow):
         elif "background_gradient" in self.config:
             # Apply saved gradient
             gradient_index = self.config["background_gradient"]
-            # Define gradients (same as in settings_view.py)
-            gradients = [
-                ("أزرق سماوي (افتراضي)", "qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:1, stop:0 #FFFFFF, stop:1 #E0F7FA)"),
-                ("ليلي غامق", "qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:1, stop:0 #1a1a2e, stop:1 #16213e)"),
-                ("غروب الشمس", "qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:1, stop:0 #ff9966, stop:1 #ff5e62)"),
-                ("غابة خضراء", "qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:1, stop:0 #134E5E, stop:1 #71B280)"),
-                ("بنفسجي ملكي", "qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:1, stop:0 #2E3192, stop:1 #1BFFFF)"),
-                ("رمادي عصري", "qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:1, stop:0 #232526, stop:1 #414345)")
-            ]
-            if 0 <= gradient_index < len(gradients):
-                gradient_style = gradients[gradient_index][1]
-                self.setStyleSheet(f"#MainWindow {{ background: {gradient_style}; }}")
-            else:
-                from core.utilies.background_utils import apply_default_gradient
-                apply_default_gradient(self)
+            from ui.constants.gradients import get_gradient_style
+            gradient_style = get_gradient_style(gradient_index)
+            self.setStyleSheet(f"#MainWindow {{ background: {gradient_style}; }}")
         else:
             from core.utilies.background_utils import apply_default_gradient
             apply_default_gradient(self)

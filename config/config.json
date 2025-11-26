@@ -23,5 +23,6 @@
         }
     ],
     "selected_machine_size": "20",
-    "background_gradient": 5
+    "background_gradient": 3,
+    "background_image": "config\\backgrounds\\img1.jpg"
 }

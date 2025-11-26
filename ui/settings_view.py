@@ -158,15 +158,9 @@ class SettingsView(QDialog):
             }
         """)
         
-        # تعريف التدرجات
-        self.gradients = [
-            ("أزرق سماوي (افتراضي)", "qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:1, stop:0 #FFFFFF, stop:1 #E0F7FA)"),
-            ("ليلي غامق", "qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:1, stop:0 #1a1a2e, stop:1 #16213e)"),
-            ("غروب الشمس", "qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:1, stop:0 #ff9966, stop:1 #ff5e62)"),
-            ("غابة خضراء", "qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:1, stop:0 #134E5E, stop:1 #71B280)"),
-            ("بنفسجي ملكي", "qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:1, stop:0 #2E3192, stop:1 #1BFFFF)"),
-            ("رمادي عصري", "qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:1, stop:0 #232526, stop:1 #414345)")
-        ]
+        # استيراد التدرجات من الملف المركزي
+        from ui.constants.gradients import GRADIENTS
+        self.gradients = GRADIENTS
         
         for name, _ in self.gradients:
             self.gradient_combo.addItem(name)
