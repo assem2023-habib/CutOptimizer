@@ -12,6 +12,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
 from ui.components.glass_card_layout import GlassCardLayout
 import qtawesome as qta
+from core.actions.file_actions import open_excel_file
 
 
 # Grid icon SVG for the title
@@ -68,6 +69,8 @@ class ProcessingResultsWidget(GlassCardLayout):
         self.rows_per_page = 6
         self.all_data = []  # Will hold all data
         self.total_pages = 1
+        self.excel_file_path = None
+
         
         # Set minimum size for the card
         self.setMinimumHeight(600)
@@ -100,16 +103,16 @@ class ProcessingResultsWidget(GlassCardLayout):
         self.add_content_widget(content_container)
     
     def _create_header(self) -> QHBoxLayout:
-        """Create the header section with export button"""
+        """Create the header section with read excel button"""
         header_layout = QHBoxLayout()
         header_layout.setSpacing(12)
         
         header_layout.addStretch()
         
-        # Export button
-        export_btn = QPushButton("📊 Export Excel")
-        export_btn.setFont(QFont("Segoe UI", 13))
-        export_btn.setStyleSheet("""
+        # Read Excel button
+        self.read_excel_btn = QPushButton("� Read Excel")
+        self.read_excel_btn.setFont(QFont("Segoe UI", 13))
+        self.read_excel_btn.setStyleSheet("""
             QPushButton {
                 background-color: #6B4EEB;
                 color: white;
@@ -124,10 +127,15 @@ class ProcessingResultsWidget(GlassCardLayout):
             QPushButton:pressed {
                 background-color: #4A2EC7;
             }
+            QPushButton:disabled {
+                background-color: #cccccc;
+                color: #666666;
+            }
         """)
-        export_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        export_btn.clicked.connect(self._export_excel)
-        header_layout.addWidget(export_btn)
+        self.read_excel_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.read_excel_btn.clicked.connect(self._read_excel)
+        self.read_excel_btn.setEnabled(False) # Initially disabled
+        header_layout.addWidget(self.read_excel_btn)
         
         return header_layout
     
@@ -344,7 +352,15 @@ class ProcessingResultsWidget(GlassCardLayout):
         self.current_page = 1
         self._populate_table()
     
-    def _export_excel(self):
-        """Handle export to Excel button click"""
-        print("Export to Excel clicked!")
-        # TODO: Implement actual Excel export functionality
+    def _read_excel(self):
+        """Handle Read Excel button click"""
+        if self.excel_file_path:
+            open_excel_file(self.excel_file_path)
+        else:
+            print("No Excel file path set!")
+
+    def set_excel_file_path(self, path: str):
+        """Set the path for the Excel file and enable the button"""
+        self.excel_file_path = path
+        self.read_excel_btn.setEnabled(bool(path))
+
