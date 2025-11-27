@@ -25,5 +25,6 @@
         }
     ],
     "selected_machine_size": "20",
-    "background_gradient": 4
+    "background_gradient": 4,
+    "measurement_unit": "m2"
 }

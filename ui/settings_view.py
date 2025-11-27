@@ -7,6 +7,7 @@ from PySide6.QtGui import QFont
 from ui.widgets.app_button import AppButton
 from ui.components.appearance_settings_widget import AppearanceSettingsWidget
 from ui.components.machine_sizes_widget import MachineSizesWidget
+from ui.components.measurement_settings_widget import MeasurementSettingsWidget
 from ui.styles.settings_styles import SettingsStyles
 
 
@@ -21,7 +22,7 @@ class SettingsView(QDialog):
     def _setup_ui(self):
         """إعداد واجهة المستخدم"""
         self.setWindowTitle("⚙️ الإعدادات")
-        self.setMinimumSize(900, 700)
+        self.setMinimumSize(1000, 800)
         self.setStyleSheet(SettingsStyles.get_dialog_stylesheet())
         
         # التخطيط الرئيسي
@@ -43,6 +44,11 @@ class SettingsView(QDialog):
         # قسم مقاسات المكنات
         machine_sizes_group = self._create_machine_sizes_section()
         main_layout.addWidget(machine_sizes_group)
+
+        # قسم وحدات القياس
+        self.measurement_widget = MeasurementSettingsWidget()
+        main_layout.addWidget(self.measurement_widget)
+
         
         # مساحة فارغة للتوسع المستقبلي
         main_layout.addStretch()
