@@ -4,6 +4,7 @@ from typing import List, Dict, Optional, Tuple
 from models.carpet import Carpet
 from models.group_carpet import GroupCarpet
 import traceback
+from core.config.config_manager import ConfigManager
 
 # استيراد دوال إنشاء الصفحات من الملف المنفصل
 from .excel_sheets import (
@@ -132,6 +133,18 @@ def write_output_excel(
 
     df_enhanset_remaining_suggestion_sheet= _create_enhanset_remaining_suggestion_sheet(suggested_groups= suggested_groups, min_width=min_width, max_width= max_width, tolerance= tolerance_length)
 
+    # Apply Unit Conversion
+    try:
+        config_manager = ConfigManager()
+        config = config_manager.load_config()
+        unit = config.get("measurement_unit", "cm")
+        
+        if unit in ['m', 'm2']:
+            dfs = [df1, df2, df3, totals_df, df_audit, waste_df, df_suggestion_group, df_enhanset_remaining_suggestion_sheet]
+            _convert_dfs_units(dfs, unit)
+    except Exception as e:
+        print(f"Error applying unit conversion: {e}")
+        traceback.print_exc()
 
     _write_all_sheets_to_excel(
         path, df1, df2, df3, totals_df, df_audit, waste_df, df_suggestion_group, df_enhanset_remaining_suggestion_sheet
@@ -399,3 +412,64 @@ def _apply_advanced_formatting(
 
     except Exception as e:
         raise
+
+
+def _convert_dfs_units(dfs: List[pd.DataFrame], unit: str):
+    """
+    Convert values in DataFrames based on the selected unit.
+    cm -> m: divide linear by 100, area by 10000
+    """
+    linear_factor = 100.0
+    area_factor = 10000.0
+    
+    # Columns representing linear dimensions (cm)
+    linear_cols = [
+        'العرض', 'الطول', 'الارتفاع', 
+        'الطول الاجمالي للسجادة', 'العرض الإجمالي', 
+        'الطول الإجمالي المرجعي (التقريبي)', 
+        'طول المسار', 'أقصى ارتفاع', 
+        'الهادر في العرض', 'اطول مسار'
+    ]
+    
+    # Columns representing area (cm2)
+    area_cols = [
+        'المساحة الإجمالية', 
+        'الإجمالي الأصلي (cm²)', 
+        'المستهلك (cm²)', 
+        'المتبقي (cm²)'
+    ]
+    
+    # Map for renaming columns to reflect new unit
+    rename_map = {
+        'الإجمالي الأصلي (cm²)': 'الإجمالي الأصلي (m²)',
+        'المستهلك (cm²)': 'المستهلك (m²)',
+        'المتبقي (cm²)': 'المتبقي (m²)'
+    }
+
+    for df in dfs:
+        if df.empty:
+            continue
+            
+        # Convert Linear Columns
+        for col in linear_cols:
+            if col in df.columns:
+                df[col] = df[col].apply(lambda x: _safe_convert(x, linear_factor))
+                
+        # Convert Area Columns
+        for col in area_cols:
+            if col in df.columns:
+                df[col] = df[col].apply(lambda x: _safe_convert(x, area_factor))
+        
+        # Rename columns
+        df.rename(columns=rename_map, inplace=True)
+
+
+def _safe_convert(val, factor):
+    """Safely convert a value by dividing by factor, handling non-numeric values."""
+    try:
+        if val == "" or val is None:
+            return val
+        f = float(val)
+        return round(f / factor, 2)
+    except (ValueError, TypeError):
+        return val

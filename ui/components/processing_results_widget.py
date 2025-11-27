@@ -278,26 +278,9 @@ class ProcessingResultsWidget(GlassCardLayout):
         return container
     
     def _generate_sample_data(self):
-        """Generate sample data for demonstration (15 items)"""
-        self.all_data = [
-            ("GRP-001", "45", "5", "1.20", "CPT-101", "Completed"),
-            ("GRP-002", "32", "8", "1.35", "CPT-102", "Pending"),
-            ("GRP-003", "28", "12", "1.50", "CPT-103", "Completed"),
-            ("GRP-004", "50", "0", "1.40", "CPT-104", "Pending"),
-            ("GRP-005", "38", "7", "1.25", "CPT-105", "Completed"),
-            ("GRP-006", "42", "3", "1.30", "CPT-106", "Completed"),
-            ("GRP-007", "36", "9", "1.45", "CPT-107", "Pending"),
-            ("GRP-008", "40", "6", "1.28", "CPT-108", "Completed"),
-            ("GRP-009", "30", "10", "1.38", "CPT-109", "Pending"),
-            ("GRP-010", "48", "2", "1.32", "CPT-110", "Completed"),
-            ("GRP-011", "35", "8", "1.42", "CPT-111", "Pending"),
-            ("GRP-012", "44", "4", "1.26", "CPT-112", "Completed"),
-            ("GRP-013", "39", "7", "1.36", "CPT-113", "Completed"),
-            ("GRP-014", "33", "11", "1.48", "CPT-114", "Pending"),
-            ("GRP-015", "47", "1", "1.22", "CPT-115", "Completed"),
-        ]
-        
-        self.total_pages = max(1, (len(self.all_data) + self.rows_per_page - 1) // self.rows_per_page)
+        """Initialize with empty data"""
+        self.all_data = []
+        self.total_pages = 1
     
     def _populate_table(self):
         """Populate table with current page data"""
