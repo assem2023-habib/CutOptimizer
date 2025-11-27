@@ -43,12 +43,14 @@ def _generate_waste_sheet(
     for g in groups:
         group_id+= 1
         sumPathLoss= 0
-
+        wasteWidth = max_width - g.total_width()
+        
         for item in g.items:
             
-            sumPathLoss += (g.max_length_ref() - item.length_ref()) * item.width
+            sumPathLoss += (g.max_length_ref() - item.length_ref())
 
-        wasteWidth = max_width - g.total_width()
+        sumPathLoss+= g.max_height() * wasteWidth
+
 
         summary.append({
             'رقم القصة': f'القصة_{group_id}',

@@ -21,7 +21,7 @@ class SettingsView(QDialog):
     def _setup_ui(self):
         """إعداد واجهة المستخدم"""
         self.setWindowTitle("⚙️ الإعدادات")
-        self.setMinimumSize(500, 400)
+        self.setMinimumSize(900, 700)
         self.setStyleSheet(SettingsStyles.get_dialog_stylesheet())
         
         # التخطيط الرئيسي

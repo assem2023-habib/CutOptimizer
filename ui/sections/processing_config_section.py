@@ -161,15 +161,6 @@ class ProcessingConfigSection(GlassCardLayout):
         )
         layout.addWidget(self.size_dropdown)
 
-        # Tolerance Input
-        label_tolerance = QLabel("Tolerance:")
-        label_tolerance.setStyleSheet("color: #2C3E50; background-color: transparent; font-weight: 600;")
-        layout.addWidget(label_tolerance)
-        self.tolerance_input = QLineEdit("5")
-        self.tolerance_input.setMaximumHeight(30)
-        self.tolerance_input.setStyleSheet("padding: none;")
-        layout.addWidget(self.tolerance_input)
-
         layout.addStretch()
         return panel
 
@@ -325,9 +316,12 @@ class ProcessingConfigSection(GlassCardLayout):
         if self.radio_all_combinations.isChecked():
             grouping_mode = GroupingMode.ALL_COMBINATIONS
 
+        # Get tolerance from selected machine size
+        tolerance = selected_size.get("tolerance", 5) if selected_size else 5
+        
         data = {
             "machine_size": selected_size,
-            "tolerance": self.tolerance_input.text(),
+            "tolerance": tolerance,
             "sort_type": sort_type,
             "grouping_mode": grouping_mode,
             "generate_report": False  # No report generation option
