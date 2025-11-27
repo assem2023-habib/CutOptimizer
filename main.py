@@ -1,13 +1,12 @@
 import sys
 from PySide6.QtWidgets import QApplication
-from PySide6.QtGui import QFont
-from ui.components.combined_components_demo import CombinedDemoWindow
+sys.path.insert(0, r'c:\Users\RYZEN\Desktop\Task\CutOptimizer')
+
+from ui.main_window import MainWindow
 
 def main():
     app = QApplication(sys.argv)
-    app.setFont(QFont("Segoe UI", 10))
-    
-    window = CombinedDemoWindow()
+    window = MainWindow()
     window.showMaximized()
     sys.exit(app.exec())
 
