@@ -4,7 +4,7 @@ Results View - Displays processing results and statistics
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel
 from PySide6.QtCore import Qt, QSize, Signal
 from PySide6.QtGui import QFont
-from ui.components.app_button import AppButton
+from ui.widgets.app_button import AppButton
 from ui.components.summary_statistics_component import SummaryStatisticsComponent
 from ui.components.processing_results_widget import ProcessingResultsWidget
 

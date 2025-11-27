@@ -2,7 +2,7 @@ from PySide6.QtWidgets import QWidget, QHBoxLayout
 from PySide6.QtCore import QSize, Qt
 from PySide6.QtWidgets import QGraphicsBlurEffect
 
-from ui.components.app_button import AppButton
+from ui.widgets.app_button import AppButton
 import os
 
 class ProcessControllSection(QWidget):

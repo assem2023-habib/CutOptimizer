@@ -16,7 +16,7 @@ from core.actions.file_actions import (
     browse_output_lineedit,
     open_excel_file
 )
-from ui.components.app_button import AppButton
+from ui.widgets.app_button import AppButton
 from ui.sections.measurement_settings_section import MeasurementSettingsSection
 from ui.sections.process_controll_section import ProcessControllSection
 from core.workers.grouping_worker import GroupingWorker

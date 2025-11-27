@@ -5,7 +5,7 @@ Handles background image and gradient selection
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                                QRadioButton, QButtonGroup, QComboBox)
 from PySide6.QtCore import QSize, Signal
-from ui.components.app_button import AppButton
+from ui.widgets.app_button import AppButton
 from ui.styles.settings_styles import SettingsStyles
 from ui.constants.gradients import GRADIENTS
 from core.utilies.background_utils import change_background, save_background_gradient

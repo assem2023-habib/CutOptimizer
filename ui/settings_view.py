@@ -4,7 +4,7 @@
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QGroupBox
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QFont
-from ui.components.app_button import AppButton
+from ui.widgets.app_button import AppButton
 from ui.components.appearance_settings_widget import AppearanceSettingsWidget
 from ui.components.machine_sizes_widget import MachineSizesWidget
 from ui.styles.settings_styles import SettingsStyles

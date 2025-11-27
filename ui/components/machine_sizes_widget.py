@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                                QTableWidget, QTableWidgetItem, QHeaderView,
                                QDialog, QLineEdit, QMessageBox, QPushButton)
 from PySide6.QtCore import QSize
-from ui.components.app_button import AppButton
+from ui.widgets.app_button import AppButton
 from ui.styles.settings_styles import SettingsStyles
 from core.config.config_manager import ConfigManager
 

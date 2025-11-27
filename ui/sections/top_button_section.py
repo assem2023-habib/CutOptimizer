@@ -2,7 +2,7 @@ from PySide6.QtWidgets import QWidget, QHBoxLayout,QLineEdit
 from PySide6.QtWidgets import QGraphicsBlurEffect
 from PySide6.QtCore import Qt
 
-from ui.components.app_button import AppButton
+from ui.widgets.app_button import AppButton
 
 import os
 

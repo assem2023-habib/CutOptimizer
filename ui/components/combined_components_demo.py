@@ -23,7 +23,7 @@ from ui.sections.current_operations_section import CurrentOperationsSection
 from ui.components.summary_statistics_component import SummaryStatisticsComponent
 from ui.components.processing_results_widget import ProcessingResultsWidget
 from ui.settings_view import SettingsView
-from ui.components.app_button import AppButton
+from ui.widgets.app_button import AppButton
 from ui.constants.gradients import get_gradient_style
 from core.workers.grouping_worker import GroupingWorker
 from core.utilies.background_utils import apply_background, apply_default_gradient
