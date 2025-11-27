@@ -16,6 +16,12 @@
             "min_width": 370,
             "max_width": 400,
             "tolerance": 100
+        },
+        {
+            "name": "470 * 500",
+            "min_width": 470,
+            "max_width": 500,
+            "tolerance": 100
         }
     ],
     "selected_machine_size": "20",
