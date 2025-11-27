@@ -4,7 +4,7 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QFont, QDragEnterEvent, QDropEvent, QPixmap, QPainter
 from PySide6.QtSvg import QSvgRenderer
 import os
-from ui.components.glass_card_layout import GlassCardLayout
+from ui.widgets.glass_card_layout import GlassCardLayout
 
 class FileManagementSection(QWidget):
     """قسم إدارة الملفات مع منطقة السحب والإفلات ومعاينة الملف"""

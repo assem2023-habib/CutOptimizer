@@ -2,7 +2,7 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                              QProgressBar, QFrame)
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
-from ui.components.glass_card_layout import GlassCardLayout
+from ui.widgets.glass_card_layout import GlassCardLayout
 from ui.components.operation_progress_widget import OperationProgressWidget
 
 # Simple SVG for the list icon

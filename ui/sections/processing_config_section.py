@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QFont, QIcon
 
-from ui.components.glass_card_layout import GlassCardLayout
+from ui.widgets.glass_card_layout import GlassCardLayout
 from ui.components.drop_down_list import DropDownList
 from ui.widgets.app_button import AppButton
 from core.Enums.sort_type import SortType

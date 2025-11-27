@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
-from ui.components.glass_card_layout import GlassCardLayout
+from ui.widgets.glass_card_layout import GlassCardLayout
 import qtawesome as qta
 from core.actions.file_actions import open_excel_file
 
