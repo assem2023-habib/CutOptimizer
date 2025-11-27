@@ -8,20 +8,16 @@ def _waste_sheet_table(
         total_width= '',
         waste_width= '',
         max_length_ref= '',
-        result_1= '',
-        path_loss= '',
-        result_2= '',
         sum_path_loss= '',
+        result= '',
     ):
     return ({
             'رقم القصة': group_id,
             'العرض الإجمالي': total_width,
             'الهادر في العرض':  waste_width,
             'اطول مسار': max_length_ref,
-            'نتيجة الضرب': result_1,
-            'الهادر في المسارات': path_loss,
-            'نتيجة الجمع': result_2,
-            'مجموع هادرالمسارات في المجموعة': sum_path_loss,
+            'حاصل جمع هادر المسارات': sum_path_loss,
+            'نتيجة الجمع': result,
         })
 
 
@@ -52,14 +48,16 @@ def _generate_waste_sheet(
         sumPathLoss+= g.max_height() * wasteWidth
 
 
-        summary.append({
-            'رقم القصة': f'القصة_{group_id}',
-            'العرض الإجمالي': g.total_width(),
-            'الهادر في العرض':  wasteWidth,
-            'اطول مسار': g.max_length_ref(),
-            'حاصل جمع هادر المسارات': sumPathLoss,
-            'نتيجة الجمع': sumPathLoss + wasteWidth,
-        })
+        summary.append(
+            _waste_sheet_table(
+                f'القصة_{group_id}',
+                g.total_width(),
+                wasteWidth,
+                g.max_length_ref(),
+                sumPathLoss,
+                sumPathLoss + wasteWidth
+            )
+        )
 
         total_width+= g.total_width()
         total_wasteWidth+= wasteWidth
@@ -67,23 +65,20 @@ def _generate_waste_sheet(
         total_result+= sumPathLoss + wasteWidth
         total_maxPath+= g.max_length_ref()
 
-    summary.append({
-        'رقم القصة': '',
-        'العرض الإجمالي': '',
-        'الهادر في العرض':  '',
-        'اطول مسار': '',
-        'حاصل جمع هادر المسارات': '',
-        'نتيجة الجمع':'',
-    })
+    summary.append(
+        _waste_sheet_table()
+    )
     
-    summary.append({
-        'رقم القصة': "المجموع",
-        'العرض الإجمالي': total_width,
-        'الهادر في العرض':  total_wasteWidth,
-        'اطول مسار': total_maxPath,
-        'حاصل جمع هادر المسارات': total_pathLoss,
-        'نتيجة الجمع': total_result,
-    })
+    summary.append(
+        _waste_sheet_table(
+            "المجموع",
+            total_width,
+            total_wasteWidth,
+            total_maxPath,
+            total_pathLoss,
+            total_result
+        )
+    )
 
     df = pd.DataFrame(summary)
 
