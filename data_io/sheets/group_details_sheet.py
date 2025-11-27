@@ -80,21 +80,18 @@ def _create_group_details_sheet(
                     )
                 )
 
-            rows.append(
-                _detals_sheet_table()
-            )
-            total_qty+= it.qty_used + it.qty_rem
-            total_qty_rem+= it.qty_rem
-            total_path += path_num
+        rows.append(
+            _detals_sheet_table()
+        )
+        total_qty+= it.qty_used + it.qty_rem
+        total_qty_rem+= it.qty_rem
+        total_path += path_num
 
         total_width+= g.total_width()
         total_height+= g.total_height()
         total_qty_used+= g.total_qty()
         total_length_ref+= g.total_length_ref()
 
-    rows.append(
-        _detals_sheet_table()
-    )
     rows.append(
         _detals_sheet_table(
             '',

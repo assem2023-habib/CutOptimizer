@@ -8,7 +8,7 @@ import sys
 import os
 import json
 import traceback
-from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QScrollArea, QMessageBox
+from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QScrollArea, QMessageBox, QStackedWidget
 from PySide6.QtCore import Qt, QTimer, QElapsedTimer
 
 # Add parent directory to path for imports
@@ -21,6 +21,7 @@ from ui.components.summary_statistics_component import SummaryStatisticsComponen
 from ui.components.processing_results_widget import ProcessingResultsWidget
 from ui.settings_view import SettingsView
 from ui.components.app_button import AppButton
+from ui.views.results_view import ResultsView
 from PySide6.QtWidgets import QHBoxLayout, QLabel
 from PySide6.QtCore import QSize
 
