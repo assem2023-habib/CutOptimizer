@@ -31,21 +31,15 @@ class ProcessingConfigSection(GlassCardLayout):
         self._setup_footer()
 
     def _load_machine_sizes(self):
-        """Load machine sizes from config.json"""
-        config_path = os.path.join(os.getcwd(), "config", "config.json")
+        """Load machine sizes from ConfigManager"""
+        from core.config.config_manager import ConfigManager
+        
         default_sizes = [
             {"name": "Default 370x400", "min_width": 370, "max_width": 400},
         ]
         
-        try:
-            if os.path.exists(config_path):
-                with open(config_path, "r", encoding="utf-8") as f:
-                    config = json.load(f)
-                self.machine_sizes = config.get("machine_sizes", default_sizes)
-            else:
-                self.machine_sizes = default_sizes
-        except Exception as e:
-            print(f"Error loading machine sizes: {e}")
+        self.machine_sizes = ConfigManager.get_value("machine_sizes", default_sizes)
+        if not self.machine_sizes:
             self.machine_sizes = default_sizes
 
     def _setup_panels(self):

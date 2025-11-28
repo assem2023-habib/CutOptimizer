@@ -86,11 +86,11 @@ class MachineSizesWidget(QWidget):
     
     def load_sizes(self):
         """Loads sizes from config"""
-        config = ConfigManager.load_config()
-        sizes = config.get("machine_sizes", self.DEFAULT_SIZES)
+        sizes = ConfigManager.get_value("machine_sizes", self.DEFAULT_SIZES)
         
-        if not config.get("machine_sizes"):
-            self._save_sizes(self.DEFAULT_SIZES)
+        if not sizes:
+            sizes = self.DEFAULT_SIZES
+            self._save_sizes(sizes)
         
         self._populate_table(sizes)
     
@@ -114,9 +114,7 @@ class MachineSizesWidget(QWidget):
     
     def _save_sizes(self, sizes):
         """Saves sizes to config"""
-        config = ConfigManager.load_config()
-        config["machine_sizes"] = sizes
-        ConfigManager.save_config(config)
+        ConfigManager.set_value("machine_sizes", sizes)
     
     def _show_add_dialog(self):
         """Shows dialog to add a new size"""
@@ -225,8 +223,7 @@ class MachineSizesWidget(QWidget):
             return
         
         # Add new size
-        config = ConfigManager.load_config()
-        sizes = config.get("machine_sizes", [])
+        sizes = ConfigManager.get_value("machine_sizes", [])
         sizes.append({"name": name, "min_width": min_w, "max_width": max_w, "tolerance": tolerance})
         
         self._save_sizes(sizes)
@@ -243,8 +240,7 @@ class MachineSizesWidget(QWidget):
         )
         
         if reply == QMessageBox.Yes:
-            config = ConfigManager.load_config()
-            sizes = config.get("machine_sizes", [])
+            sizes = ConfigManager.get_value("machine_sizes", [])
             
             if 0 <= index < len(sizes):
                 sizes.pop(index)

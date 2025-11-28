@@ -119,8 +119,8 @@ class AppearanceSettingsWidget(QWidget):
     
     def _setup_initial_state(self):
         """Sets initial state based on config"""
-        config = ConfigManager.load_config()
-        has_image = bool(config.get("background_image", ""))
+        bg_image = ConfigManager.get_value("background_image", "")
+        has_image = bool(bg_image)
         
         if has_image:
             self.radio_image.setChecked(True)

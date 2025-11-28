@@ -294,44 +294,6 @@ def try_create_single_group(
     if not single_group.is_valid(min_width, max_width):
         return None
     
-    qty_to_consume = carpet.rem_qty
-    carpet.consume(qty_to_consume)
-    
-    return single_group
-
-def load_selected_mode()->GroupingMode | None:
-    config_path= os.path.join(os.getcwd(), "config", "config.json")
-    if not os.path.exists(config_path):
-        return None
-    
-    
-    with open(config_path, "r", encoding="utf-8") as f:
-        cfg= json.load(f)
-        mode_text = cfg.get("selected_mode", "").strip()
-    
-    try:
-        return GroupingMode(mode_text)
-    except ValueError:
-        return None
-    
- 
-def load_saved_sort():
-    config_path= os.path.join(os.getcwd(), "config", "config.json")
-    if not os.path.exists(config_path):
-        return None
-    
-    
-    with open(config_path, "r", encoding="utf-8") as f:
-        cfg= json.load(f)
-        mode_text = cfg.get("selected_sort_type", "").strip()
-
-    return SortType(mode_text)
-
-def rollback_consumption(rollback_data: list[dict]) -> None:
-    """
-    ✅ إرجاع جميع الكميات المستهلكة
-    يتم استدعاؤها عندما تفشل المجموعة في التحقق
-    """
     for item in rollback_data:
         carpet = item["carpet"]
         qty = item["qty"]

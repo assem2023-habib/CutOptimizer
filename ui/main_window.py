@@ -46,7 +46,6 @@ class MainWindow(QMainWindow):
         # Settings handler
         self.settings_handler = SettingsHandler(self)
         self.config = self.settings_handler.load_config()
-        self.config_path = self.settings_handler.config_path
         
         # Apply background
         self.settings_handler.apply_background()

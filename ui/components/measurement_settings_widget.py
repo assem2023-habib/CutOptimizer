@@ -51,8 +51,7 @@ class MeasurementSettingsWidget(QWidget):
         
     def _load_current_setting(self):
         """Load current unit from config"""
-        config = self.config_manager.load_config()
-        unit = config.get("measurement_unit", "cm")
+        unit = ConfigManager.get_value("measurement_unit", "cm")
         
         if unit == "m2":
             self.radio_m2.setChecked(True)
@@ -70,6 +69,4 @@ class MeasurementSettingsWidget(QWidget):
             unit = "m"
             
         # Update config
-        config = self.config_manager.load_config()
-        config["measurement_unit"] = unit
-        self.config_manager.save_config(config)
+        ConfigManager.set_value("measurement_unit", unit)

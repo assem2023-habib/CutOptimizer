@@ -3,60 +3,50 @@ Configuration Manager
 Handles loading and saving application configuration
 """
 import json
-import os
-
+from PySide6.QtCore import QSettings
 
 class ConfigManager:
-    """Manages application configuration files"""
+    """Manages application configuration using QSettings (Registry/Internal Storage)"""
     
     @staticmethod
-    def get_config_path():
-        """Returns the path to config.json"""
-        return os.path.join(os.getcwd(), "config", "config.json")
-    
-    @classmethod
-    def load_config(cls):
-        """Loads and returns the config dictionary"""
-        config_path = cls.get_config_path()
-        try:
-            if os.path.exists(config_path):
-                with open(config_path, "r", encoding="utf-8") as f:
-                    return json.load(f)
-        except Exception:
-            pass
-        return {}
-    
-    @classmethod
-    def save_config(cls, config):
-        """Saves the config dictionary to file"""
-        config_path = cls.get_config_path()
-        try:
-            os.makedirs(os.path.dirname(config_path), exist_ok=True)
-            with open(config_path, "w", encoding="utf-8") as f:
-                json.dump(config, f, ensure_ascii=False, indent=4)
-            return True
-        except Exception as e:
-            print(f"Error saving config: {e}")
-            return False
+    def _get_settings():
+        return QSettings("CutOptimizer", "CutOptimizer")
     
     @classmethod
     def get_value(cls, key, default=None):
         """Gets a specific config value"""
-        config = cls.load_config()
-        return config.get(key, default)
+        settings = cls._get_settings()
+        val = settings.value(key, default)
+        
+        # Handle potential JSON strings for complex objects
+        if isinstance(val, str):
+            try:
+                # Try to decode if it looks like a list or dict
+                if val.strip().startswith(('[', '{')):
+                    return json.loads(val)
+            except (json.JSONDecodeError, AttributeError):
+                pass
+        
+        # QSettings might return 'true'/'false' strings for booleans sometimes, 
+        # but PySide6 usually handles types well. 
+        # However, if we stored a complex object as JSON, we just returned it above.
+        return val
     
     @classmethod
     def set_value(cls, key, value):
         """Sets a specific config value"""
-        config = cls.load_config()
-        config[key] = value
-        return cls.save_config(config)
+        settings = cls._get_settings()
+        
+        # Serialize complex objects to JSON string
+        if isinstance(value, (list, dict)):
+            value = json.dumps(value, ensure_ascii=False)
+            
+        settings.setValue(key, value)
+        return True
     
     @classmethod
     def remove_value(cls, key):
         """Removes a specific config value"""
-        config = cls.load_config()
-        if key in config:
-            del config[key]
-            return cls.save_config(config)
+        settings = cls._get_settings()
+        settings.remove(key)
         return True

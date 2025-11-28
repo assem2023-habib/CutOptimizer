@@ -54,7 +54,6 @@ def _generate_waste_sheet(
 
         result = sumPathLoss * 100 / total
         total_result+= result
-        print(sumPathLoss , "\n")
 
         summary.append(
             _waste_sheet_table(
