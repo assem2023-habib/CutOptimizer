@@ -8,6 +8,8 @@ from data_io.excel_io import read_input_excel, write_output_excel
 from core.validation import validate_carpets
 from core.grouping_algorithm import build_groups
 from core.suggestion_engine import generate_suggestions
+from core.Enums.grouping_mode import GroupingMode
+from core.Enums.sort_type import SortType
 
 class WorkerSignals(QObject):
     progress = Signal(int)
@@ -63,6 +65,8 @@ class GroupingWorker(QThread):
                 max_width=self.max_width,
                 max_partner=self.cfg.get("max_partner", 7),
                 tolerance=self.tolerance_len,
+                selected_mode=self.cfg.get("grouping_mode", GroupingMode.NO_MAIN_REPEAT),
+                selected_sort_type=self.cfg.get("sort_type", SortType.SORT_BY_HEIGHT),
             )
             
 
@@ -117,7 +121,7 @@ class GroupingWorker(QThread):
 
         except InterruptedError:
             self.signals.log.emit("🛑 تم إيقاف العملية من قبل المستخدم.")
-            self.signals.finished.emit(False, "تم الإيقاف يدويًا.")
+            self.signals.finished.emit(False, "تم الإيقاف يدوياً.")
         except Exception as e:
             tb = traceback.format_exc()
             self.signals.error.emit(tb)
@@ -125,7 +129,7 @@ class GroupingWorker(QThread):
 
     def _check_interrupt(self):
         if self._is_interrupted:
-            raise InterruptedError("تم إيقاف العملية يدويًا.")
+            raise InterruptedError("تم إيقاف العملية يدوياً.")
 
     def stop(self):
         self._is_interrupted = True

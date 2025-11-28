@@ -19,9 +19,9 @@ def build_groups(
         max_width: int,
         max_partner: int = 7,
         tolerance: int = 0,
+        selected_mode: GroupingMode = GroupingMode.NO_MAIN_REPEAT,
+        selected_sort_type: SortType = SortType.SORT_BY_HEIGHT,
 ) -> List[GroupCarpet]:
-    selected_mode= load_selected_mode()
-    selected_sort_type= load_saved_sort()
 
     if selected_sort_type== SortType.SORT_BY_WIDTH:
         carpets.sort(key=lambda c: (c.width, c.height, c.qty), reverse=True)
@@ -284,6 +284,7 @@ def try_create_single_group(
         qty_used=carpet.rem_qty,
         qty_rem=0,
         client_order= carpet.client_order,
+        repeated=result
     )
 
     single_group = GroupCarpet(
@@ -294,6 +295,10 @@ def try_create_single_group(
     if not single_group.is_valid(min_width, max_width):
         return None
     
+    carpet.consume(carpet.rem_qty)
+    return single_group
+    
+def rollback_consumption(rollback_data):
     for item in rollback_data:
         carpet = item["carpet"]
         qty = item["qty"]
