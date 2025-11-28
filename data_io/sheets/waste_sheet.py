@@ -1,6 +1,7 @@
 import pandas as pd
-from typing import List
+from typing import List, Optional
 from models.group_carpet import GroupCarpet
+from models.carpet import Carpet
 
 
 def _waste_sheet_table(
@@ -15,17 +16,18 @@ def _waste_sheet_table(
             'رقم القصة': group_id,
             'العرض الإجمالي': total_width,
             'الهادر في العرض':  waste_width,
-            'اطول مسار': max_length_ref,
-            'حاصل جمع هادر المسارات': sum_path_loss,
-            'نتيجة الجمع': result,
+            'المسار المرجعي': max_length_ref,
+            'هادر المسارات': sum_path_loss,
+            'نسبة الهدر': result,
         })
 
 
 def _generate_waste_sheet(
     groups: List[GroupCarpet],
+    originals: Optional[List[Carpet]],
     max_width: int,
 ) -> pd.DataFrame:
-    
+    total= 0
     summary = []
     total_width= 0
     total_wasteWidth= 0
@@ -36,6 +38,9 @@ def _generate_waste_sheet(
     total_result= 0
     group_id= 0
 
+    for c in originals:
+        total+= c.area() + c.qty
+
     for g in groups:
         group_id+= 1
         sumPathLoss= 0
@@ -43,10 +48,13 @@ def _generate_waste_sheet(
         
         for item in g.items:
             
-            sumPathLoss += (g.max_length_ref() - item.length_ref())
+            sumPathLoss += (g.max_length_ref() - item.length_ref()) * item.width
 
-        sumPathLoss+= g.max_height() * wasteWidth
+        sumPathLoss+= wasteWidth
 
+        result = sumPathLoss * 100 / total
+        total_result+= result
+        print(sumPathLoss , "\n")
 
         summary.append(
             _waste_sheet_table(
@@ -55,14 +63,13 @@ def _generate_waste_sheet(
                 wasteWidth,
                 g.max_length_ref(),
                 sumPathLoss,
-                sumPathLoss + wasteWidth
+                result
             )
         )
 
         total_width+= g.total_width()
         total_wasteWidth+= wasteWidth
         total_pathLoss+= sumPathLoss
-        total_result+= sumPathLoss + wasteWidth
         total_maxPath+= g.max_length_ref()
 
     summary.append(

@@ -125,7 +125,7 @@ def write_output_excel(
     totals_df = _create_totals_sheet(originals ,groups, remaining)
 
     # إنشاء ورقة إحصائيات المجموعات الإضافية
-    waste_df = _generate_waste_sheet(groups, max_width) 
+    waste_df = _generate_waste_sheet(groups, originals, max_width) 
 
     # إنشاء ورقة التدقيق
     df_audit = _create_audit_sheet(groups, remaining, originals)
