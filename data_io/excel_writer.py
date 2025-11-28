@@ -139,9 +139,9 @@ def write_output_excel(
 
     # Apply Unit Conversion
     try:
-        config_manager = ConfigManager()
-        config = config_manager.load_config()
-        unit = config.get("measurement_unit", "cm")
+        # config_manager = ConfigManager() # No longer needed
+        # config = config_manager.load_config() # No longer needed
+        unit = ConfigManager.get_value("measurement_unit", "cm")
         
         if unit in ['m', 'm2']:
             dfs = [df1, df2, df3, totals_df, df_audit, waste_df, df_suggestion_group, df_enhanset_remaining_suggestion_sheet, df_detailed_waste]
