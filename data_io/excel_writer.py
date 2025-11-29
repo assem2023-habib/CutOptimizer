@@ -15,8 +15,7 @@ from .excel_sheets import (
     _create_audit_sheet,
     _generate_waste_sheet,
     _create_remaining_suggestion_sheet,
-    _create_enhanset_remaining_suggestion_sheet,
-    _generate_detailed_waste_sheet
+    _create_enhanset_remaining_suggestion_sheet
 )
 
 from .excel_formatting import (
@@ -133,9 +132,6 @@ def write_output_excel(
     df_suggestion_group= _create_remaining_suggestion_sheet(remaining, min_width, max_width, tolerance_length)
 
     df_enhanset_remaining_suggestion_sheet= _create_enhanset_remaining_suggestion_sheet(suggested_groups= suggested_groups, min_width=min_width, max_width= max_width, tolerance= tolerance_length)
-    
-    # إنشاء ورقة الهادر التفصيلي الجديدة
-    # df_detailed_waste = _generate_detailed_waste_sheet(groups)
 
     # Apply Unit Conversion
     try:
@@ -167,8 +163,7 @@ def _write_all_sheets_to_excel(
     df_audit: pd.DataFrame,
     waste_df: pd.DataFrame,
     df_suggestion_group: pd.DataFrame,
-    df_enhanset_remaining_suggestion_sheet: pd.DataFrame,
-    df_detailed_waste: pd.DataFrame
+    df_enhanset_remaining_suggestion_sheet: pd.DataFrame
 ) -> None:
     """كتابة جميع الأوراق إلى ملف Excel مع ضبط تلقائي لعرض الأعمدة."""
     try:
@@ -191,9 +186,6 @@ def _write_all_sheets_to_excel(
 
             if not waste_df.empty:
                 waste_df.to_excel(writer, sheet_name='الهادر', index=False)
-                
-            if not df_detailed_waste.empty:
-                df_detailed_waste.to_excel(writer, sheet_name='تحليل الهادر', index=False)
 
             if not df_suggestion_group.empty:
                 df_suggestion_group.to_excel(writer, sheet_name='اقتراحات المتبقيات', index=False)
@@ -201,13 +193,13 @@ def _write_all_sheets_to_excel(
             if not df_enhanset_remaining_suggestion_sheet.empty:
                 df_enhanset_remaining_suggestion_sheet.to_excel(writer, sheet_name='اقتراحات المتبقيات المحسنة', index=False)
 
-            _auto_adjust_column_width(writer, df1, df2, df3, totals_df, df_audit, waste_df, df_suggestion_group, df_enhanset_remaining_suggestion_sheet, df_detailed_waste)
+            _auto_adjust_column_width(writer, df1, df2, df3, totals_df, df_audit, waste_df, df_suggestion_group, df_enhanset_remaining_suggestion_sheet)
 
     except Exception as e2:
         raise
 
 
-def _auto_adjust_column_width(writer, df1, df2, df3, totals_df, df_audit, waste_df, df_suggestion_group, df_enhanset_remaining_suggestion_sheet, df_detailed_waste):
+def _auto_adjust_column_width(writer, df1, df2, df3, totals_df, df_audit, waste_df, df_suggestion_group, df_enhanset_remaining_suggestion_sheet):
     workbook = writer.book
 
     header_format = _create_header_format(workbook)
@@ -235,9 +227,6 @@ def _auto_adjust_column_width(writer, df1, df2, df3, totals_df, df_audit, waste_
 
     if not waste_df.empty:
         sheet_dataframes['الهادر'] = waste_df
-        
-    if not df_detailed_waste.empty:
-        sheet_dataframes['تحليل الهادر'] = df_detailed_waste
 
     if not df_suggestion_group.empty:
         sheet_dataframes['اقتراحات المتبقيات'] = df_suggestion_group
