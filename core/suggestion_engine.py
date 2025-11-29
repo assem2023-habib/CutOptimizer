@@ -15,7 +15,13 @@ def generate_suggestions(
 
     suggestions: List[List[GroupCarpet]]= []
 
-    min_remaining_width= min(c.width for c in remaining if c.rem_qty > 0)
+    # Filter for carpets that actually have remaining quantity
+    active_remaining = [c for c in remaining if c.rem_qty > 0]
+    
+    if not active_remaining:
+        return []
+
+    min_remaining_width= min(c.width for c in active_remaining)
     work_copy= [copy.deepcopy(c) for c in remaining]
 
     current_min= min_width
