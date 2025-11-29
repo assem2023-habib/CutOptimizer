@@ -46,7 +46,7 @@ class MachineSizesWidget(QWidget):
         """Creates the sizes table"""
         table = QTableWidget()
         table.setColumnCount(5)
-        table.setHorizontalHeaderLabels(["الاسم", "الحد الأدنى", "الحد الأعلى", "التفاوت", ""])
+        table.setHorizontalHeaderLabels(["رقم النول", "الحد الأدنى", "الحد الأعلى", "التفاوت", ""])
         table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
         table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
         table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
@@ -142,7 +142,7 @@ class MachineSizesWidget(QWidget):
     
     def _create_input_fields(self, layout):
         """Creates input fields for add dialog"""
-        name_label = QLabel("اسم المقاس:")
+        name_label = QLabel("رقم النول:")
         name_input = QLineEdit()
         name_input.setPlaceholderText("مثال: 370x400")
         

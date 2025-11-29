@@ -135,7 +135,7 @@ def write_output_excel(
     df_enhanset_remaining_suggestion_sheet= _create_enhanset_remaining_suggestion_sheet(suggested_groups= suggested_groups, min_width=min_width, max_width= max_width, tolerance= tolerance_length)
     
     # إنشاء ورقة الهادر التفصيلي الجديدة
-    df_detailed_waste = _generate_detailed_waste_sheet(groups)
+    # df_detailed_waste = _generate_detailed_waste_sheet(groups)
 
     # Apply Unit Conversion
     try:
@@ -144,14 +144,14 @@ def write_output_excel(
         unit = ConfigManager.get_value("measurement_unit", "cm")
         
         if unit in ['m', 'm2']:
-            dfs = [df1, df2, df3, totals_df, df_audit, waste_df, df_suggestion_group, df_enhanset_remaining_suggestion_sheet, df_detailed_waste]
+            dfs = [df1, df2, df3, totals_df, df_audit, waste_df, df_suggestion_group, df_enhanset_remaining_suggestion_sheet]
             _convert_dfs_units(dfs, unit)
     except Exception as e:
         print(f"Error applying unit conversion: {e}")
         traceback.print_exc()
 
     _write_all_sheets_to_excel(
-        path, df1, df2, df3, totals_df, df_audit, waste_df, df_suggestion_group, df_enhanset_remaining_suggestion_sheet, df_detailed_waste
+        path, df1, df2, df3, totals_df, df_audit, waste_df, df_suggestion_group, df_enhanset_remaining_suggestion_sheet
     )
 
 # =============================================================================
