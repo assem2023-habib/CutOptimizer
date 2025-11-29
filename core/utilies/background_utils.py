@@ -1,4 +1,5 @@
 import os
+import sys
 import shutil
 from PySide6.QtGui import QPixmap, QPalette, QBrush, QLinearGradient, QColor
 from PySide6.QtCore import Qt, QStandardPaths
@@ -109,9 +110,11 @@ def apply_background(app_instance, image_path: str):
             reset_to_default_background(app_instance)
             return
         
+        # تحجيم الصورة لتغطي الشاشة بالكامل (cover mode)
+        window_size = app_instance.size()
         scaled_pixmap = pixmap.scaled(
-            app_instance.size(),
-            Qt.KeepAspectRatioByExpanding,
+            window_size,
+            Qt.IgnoreAspectRatio,  # ملء الشاشة بالكامل
             Qt.SmoothTransformation
         )
 
@@ -152,9 +155,11 @@ def reset_to_default_background(app_instance):
         if os.path.exists(bg_path):
             pixmap = QPixmap(bg_path)
             if not pixmap.isNull():
+                # تحجيم الصورة لتغطي الشاشة بالكامل (cover mode)
+                window_size = app_instance.size()
                 scaled = pixmap.scaled(
-                    app_instance.size(),
-                    Qt.KeepAspectRatioByExpanding,
+                    window_size,
+                    Qt.IgnoreAspectRatio,  # ملء الشاشة بالكامل
                     Qt.SmoothTransformation
                 )
                 palette = app_instance.palette()
