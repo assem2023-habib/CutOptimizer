@@ -59,14 +59,24 @@ class GroupingWorker(QThread):
 
             carpets = self.merge_duplicate_carpets(carpets)
             
+            # Debug: Verify parameters being passed to algorithm
+            selected_mode = self.cfg.get("grouping_mode", GroupingMode.NO_MAIN_REPEAT)
+            selected_sort = self.cfg.get("sort_type",SortType.SORT_BY_QUANTITY)
+            
+            print(f"\n[DEBUG] Worker calling algorithm with:")
+            print(f"  - grouping_mode: {selected_mode}")
+            print(f"  - sort_type: {selected_sort}")
+            print(f"  - min_width: {self.min_width}, max_width: {self.max_width}")
+            print(f"  - tolerance: {self.tolerance_len}\n")
+            
             groups = build_groups(
                 carpets= carpets,
                 min_width=self.min_width,
                 max_width=self.max_width,
                 max_partner=self.cfg.get("max_partner", 7),
                 tolerance=self.tolerance_len,
-                selected_mode=self.cfg.get("grouping_mode", GroupingMode.NO_MAIN_REPEAT),
-                selected_sort_type=self.cfg.get("sort_type", SortType.SORT_BY_HEIGHT),
+                selected_mode=selected_mode,
+                selected_sort_type=selected_sort,
             )
             
 

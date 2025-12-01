@@ -82,18 +82,33 @@ class ProcessingHandler:
         """Extract and validate settings from data"""
         try:
             machine_size = data.get("machine_size", {})
+            sort_type = data.get("sort_type")
+            grouping_mode = data.get("grouping_mode")
+            
             settings = {
                 'min_width': machine_size.get("min_width", 0),
                 'max_width': machine_size.get("max_width", 0),
-                'tolerance': int(data.get("tolerance", 5))
+                'tolerance': int(data.get("tolerance", 5)),
+                'sort_type': sort_type,
+                'grouping_mode': grouping_mode
             }
             
-            # Update config
+            # Update config with ALL user selections
             self.config.update({
                 "min_width": settings['min_width'],
                 "max_width": settings['max_width'],
-                "tolerance": settings['tolerance']
+                "tolerance": settings['tolerance'],
+                "sort_type": sort_type,
+                "grouping_mode": grouping_mode
             })
+            
+            # Debug logging to verify user selections are captured
+            print(f"[DEBUG] User Selections Captured:")
+            print(f"  - Sort Type: {sort_type}")
+            print(f"  - Grouping Mode: {grouping_mode}")
+            print(f"  - Min Width: {settings['min_width']}")
+            print(f"  - Max Width: {settings['max_width']}")
+            print(f"  - Tolerance: {settings['tolerance']}")
             
             return settings
         except ValueError:
@@ -116,14 +131,19 @@ class ProcessingHandler:
             self.is_running = True
             self.window.operations_section.update_progress(0, "Starting...", "0/0", "00:00:00", "--:--:--")
             
-            # Create and start worker
+            # Debug: Verify config has user selections before passing to worker
+            print(f"[DEBUG] Config being passed to worker:")
+            print(f"  - sort_type: {self.config.get('sort_type')}")
+            print(f"  - grouping_mode: {self.config.get('grouping_mode')}")
+            
+            # Create and start worker (config now contains sort_type and grouping_mode)
             self.worker = GroupingWorker(
                 input_path=input_path,
                 output_path=self.output_path,
                 min_width=settings['min_width'],
                 max_width=settings['max_width'],
                 tolerance_len=settings['tolerance'],
-                cfg=self.config
+                cfg=self.config  # Now includes sort_type and grouping_mode!
             )
             
             # Connect signals
