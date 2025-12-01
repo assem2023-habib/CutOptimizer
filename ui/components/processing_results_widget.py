@@ -355,7 +355,7 @@ class ProcessingResultsWidget(GlassCardLayout):
         if self.excel_file_path:
             open_excel_file(self.excel_file_path)
         else:
-            print("No Excel file path set!")
+            pass
 
     def set_excel_file_path(self, path: str):
         """Set the path for the Excel file and enable the button"""

@@ -102,14 +102,6 @@ class ProcessingHandler:
                 "grouping_mode": grouping_mode
             })
             
-            # Debug logging to verify user selections are captured
-            print(f"[DEBUG] User Selections Captured:")
-            print(f"  - Sort Type: {sort_type}")
-            print(f"  - Grouping Mode: {grouping_mode}")
-            print(f"  - Min Width: {settings['min_width']}")
-            print(f"  - Max Width: {settings['max_width']}")
-            print(f"  - Tolerance: {settings['tolerance']}")
-            
             return settings
         except ValueError:
             QMessageBox.warning(self.window, "Error", "Invalid numeric values in settings.")
@@ -131,12 +123,7 @@ class ProcessingHandler:
             self.is_running = True
             self.window.operations_section.update_progress(0, "Starting...", "0/0", "00:00:00", "--:--:--")
             
-            # Debug: Verify config has user selections before passing to worker
-            print(f"[DEBUG] Config being passed to worker:")
-            print(f"  - sort_type: {self.config.get('sort_type')}")
-            print(f"  - grouping_mode: {self.config.get('grouping_mode')}")
-            
-            # Create and start worker (config now contains sort_type and grouping_mode)
+            # Create and start worker
             self.worker = GroupingWorker(
                 input_path=input_path,
                 output_path=self.output_path,

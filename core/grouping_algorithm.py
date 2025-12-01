@@ -23,22 +23,13 @@ def build_groups(
         selected_sort_type: SortType = SortType.SORT_BY_HEIGHT,
 ) -> List[GroupCarpet]:
 
-    # Debug: Confirm algorithm received user selections
-    print(f"[DEBUG] Algorithm build_groups received:")
-    print(f"  - selected_mode: {selected_mode}")
-    print(f"  - selected_sort_type: {selected_sort_type}")
-    print(f"  - min_width: {min_width}, max_width: {max_width}")
-    print(f"  - tolerance: {tolerance}")
 
     if selected_sort_type== SortType.SORT_BY_WIDTH:
         carpets.sort(key=lambda c: (c.width, c.height, c.qty), reverse=True)
-        print(f"[DEBUG] ✅ Sorted by WIDTH")
     elif selected_sort_type == SortType.SORT_BY_QUANTITY:
         carpets.sort(key=lambda c: (c.rem_qty, c.height, c.width), reverse=True)
-        print(f"[DEBUG] ✅ Sorted by QUANTITY")
     elif selected_sort_type == SortType.SORT_BY_HEIGHT:
         carpets.sort(key=lambda c: (c.height, c.width, c.qty), reverse=True)
-        print(f"[DEBUG] ✅ Sorted by HEIGHT")
 
     group: List[GroupCarpet] = []
     group_id = 1
