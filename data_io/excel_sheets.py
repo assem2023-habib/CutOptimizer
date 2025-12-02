@@ -45,7 +45,6 @@ from .sheets.suggestion_sheets import (
     _create_enhanset_remaining_suggestion_sheet
 )
 
-from .sheets.detailed_waste_sheet import _generate_detailed_waste_sheet
 
 # إعادة تصدير جميع الدوال للحفاظ على التوافقية
 # Re-export all functions for backward compatibility

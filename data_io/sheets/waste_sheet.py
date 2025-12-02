@@ -62,7 +62,7 @@ def _generate_waste_sheet(
                 wasteWidth,
                 g.max_length_ref(),
                 sumPathLoss,
-                result
+                f"{round(result, 2)}%"
             )
         )
 
@@ -82,7 +82,7 @@ def _generate_waste_sheet(
             total_wasteWidth,
             total_maxPath,
             total_pathLoss,
-            total_result
+            f"{round(total_result, 2)}%"
         )
     )
 
