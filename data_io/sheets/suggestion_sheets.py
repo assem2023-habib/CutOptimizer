@@ -229,3 +229,45 @@ def _create_pair_complement_sheet(remaining: List[Carpet], min_width: int, max_w
     })
 
     return pd.DataFrame(rows)
+
+
+def _create_final_metric_totals_sheet(
+        originals: List[Carpet],
+        groups: List[GroupCarpet],
+        remaining: List[Carpet],
+        min_width: int,
+        max_width: int,
+    ) -> pd.DataFrame:
+    total_original_area = 0
+    for c in originals:
+        total_original_area += c.area() * c.qty
+
+    total_remaining_area = 0
+    for r in remaining:
+        if r.rem_qty > 0:
+            total_remaining_area += r.area() * r.rem_qty
+
+    used_area = 0
+    total_waste_area_on_used = 0
+    for g in groups:
+        width_waste_area = max(0, max_width - g.total_width()) * g.max_length_ref()
+        path_loss_area = 0
+        for item in g.items:
+            used_area += item.area()
+            path_loss_area += max(0, g.max_length_ref() - item.length_ref()) * item.width
+        total_waste_area_on_used += (width_waste_area + path_loss_area)
+
+    waste_percentage = 0.0
+    if used_area > 0:
+        waste_percentage = (total_waste_area_on_used / used_area) * 100.0
+
+    rows = [{
+        '': '',
+        'كمية الطلبية': total_original_area,
+        'الكمية المتبقية': total_remaining_area,
+        'الكمية المنتجة': used_area,
+        'كمية الهادر': total_waste_area_on_used,
+        'نسبة الهادر (%)': f"{round(waste_percentage, 2)}%",
+    }]
+
+    return pd.DataFrame(rows)

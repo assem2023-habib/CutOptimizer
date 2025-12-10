@@ -49,6 +49,10 @@ from .sheets.suggestion_sheets import (
     _create_pair_complement_sheet
 )
 
+from .sheets.suggestion_sheets import (
+    _create_final_metric_totals_sheet
+)
+
 
 # إعادة تصدير جميع الدوال للحفاظ على التوافقية
 # Re-export all functions for backward compatibility
@@ -67,5 +71,6 @@ __all__ = [
     '_create_remaining_suggestion_sheet',
     '_create_enhanset_remaining_suggestion_sheet',
     '_generate_detailed_waste_sheet',
-    '_create_pair_complement_sheet'
+    '_create_pair_complement_sheet',
+    '_create_final_metric_totals_sheet'
 ]
