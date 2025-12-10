@@ -168,3 +168,64 @@ def _create_enhanset_remaining_suggestion_sheet(
     df = pd.DataFrame(rem_rows)
 
     return df
+
+
+def _create_pair_complement_sheet(remaining: List[Carpet], min_width: int, max_width: int) -> pd.DataFrame:
+    aggregated = {}
+    for r in remaining:
+        if r.rem_qty > 0:
+            key = (r.id, r.width, r.height, r.client_order)
+            aggregated[key] = aggregated.get(key, 0) + int(r.rem_qty)
+
+    rows = []
+    total_original_width = 0
+    total_complement_width = 0
+    total_qty = 0
+
+    for (rid, w, h, co), q in aggregated.items():
+        comp_w = max(0, max_width - w)
+        total_w = w + comp_w
+        valid = (min_width <= total_w <= max_width)
+        rows.append({
+            'معرف السجادة': rid,
+            'أمر العميل': co,
+            'العرض الأصلي': w,
+            'الطول الأصلي': h,
+            'الكمية المتبقية': q,
+            'عرض مكمل مقترح': comp_w,
+            'طول مكمل مقترح': h,
+            'كمية مكمل مقترحة': q,
+            'العرض الإجمالي بعد الإكمال': total_w,
+            'صالح ضمن الحدود': 'نعم' if valid else 'لا',
+        })
+        total_original_width += w
+        total_complement_width += comp_w
+        total_qty += q
+
+    rows.append({
+        'معرف السجادة': '',
+        'أمر العميل': '',
+        'العرض الأصلي': '',
+        'الطول الأصلي': '',
+        'الكمية المتبقية': '',
+        'عرض مكمل مقترح': '',
+        'طول مكمل مقترح': '',
+        'كمية مكمل مقترحة': '',
+        'العرض الإجمالي بعد الإكمال': '',
+        'صالح ضمن الحدود': '',
+    })
+
+    rows.append({
+        'معرف السجادة': 'المجموع',
+        'أمر العميل': '',
+        'العرض الأصلي': total_original_width,
+        'الطول الأصلي': '',
+        'الكمية المتبقية': total_qty,
+        'عرض مكمل مقترح': total_complement_width,
+        'طول مكمل مقترح': '',
+        'كمية مكمل مقترحة': total_qty,
+        'العرض الإجمالي بعد الإكمال': total_original_width + total_complement_width,
+        'صالح ضمن الحدود': '',
+    })
+
+    return pd.DataFrame(rows)

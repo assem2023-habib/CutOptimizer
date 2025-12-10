@@ -15,7 +15,8 @@ from .excel_sheets import (
     _create_audit_sheet,
     _generate_waste_sheet,
     _create_remaining_suggestion_sheet,
-    _create_enhanset_remaining_suggestion_sheet
+    _create_enhanset_remaining_suggestion_sheet,
+    _create_pair_complement_sheet
 )
 
 from .excel_formatting import (
@@ -133,6 +134,9 @@ def write_output_excel(
 
     df_enhanset_remaining_suggestion_sheet= _create_enhanset_remaining_suggestion_sheet(suggested_groups= suggested_groups, min_width=min_width, max_width= max_width, tolerance= tolerance_length)
 
+    # إنشاء ورقة اقتراح مكمل مباشر لكل عنصر متبقي
+    df_pair_complement = _create_pair_complement_sheet(remaining, min_width, max_width)
+
     # Apply Unit Conversion
     try:
         # config_manager = ConfigManager() # No longer needed
@@ -140,14 +144,14 @@ def write_output_excel(
         unit = ConfigManager.get_value("measurement_unit", "cm")
         
         if unit in ['m', 'm2']:
-            dfs = [df1, df2, df3, totals_df, df_audit, waste_df, df_suggestion_group, df_enhanset_remaining_suggestion_sheet]
+            dfs = [df1, df2, df3, totals_df, df_audit, waste_df, df_suggestion_group, df_enhanset_remaining_suggestion_sheet, df_pair_complement]
             _convert_dfs_units(dfs, unit)
     except Exception as e:
         print(f"Error applying unit conversion: {e}")
         traceback.print_exc()
 
     _write_all_sheets_to_excel(
-        path, df1, df2, df3, totals_df, df_audit, waste_df, df_suggestion_group, df_enhanset_remaining_suggestion_sheet
+        path, df1, df2, df3, totals_df, df_audit, waste_df, df_suggestion_group, df_enhanset_remaining_suggestion_sheet, df_pair_complement
     )
 
 # =============================================================================
@@ -163,7 +167,8 @@ def _write_all_sheets_to_excel(
     df_audit: pd.DataFrame,
     waste_df: pd.DataFrame,
     df_suggestion_group: pd.DataFrame,
-    df_enhanset_remaining_suggestion_sheet: pd.DataFrame
+    df_enhanset_remaining_suggestion_sheet: pd.DataFrame,
+    df_pair_complement: pd.DataFrame
 ) -> None:
     """كتابة جميع الأوراق إلى ملف Excel مع ضبط تلقائي لعرض الأعمدة."""
     try:
@@ -193,13 +198,16 @@ def _write_all_sheets_to_excel(
             if not df_enhanset_remaining_suggestion_sheet.empty:
                 df_enhanset_remaining_suggestion_sheet.to_excel(writer, sheet_name='اقتراحات المتبقيات المحسنة', index=False)
 
-            _auto_adjust_column_width(writer, df1, df2, df3, totals_df, df_audit, waste_df, df_suggestion_group, df_enhanset_remaining_suggestion_sheet)
+            if not df_pair_complement.empty:
+                df_pair_complement.to_excel(writer, sheet_name='اقتراح مكمل لكل عنصر', index=False)
+
+            _auto_adjust_column_width(writer, df1, df2, df3, totals_df, df_audit, waste_df, df_suggestion_group, df_enhanset_remaining_suggestion_sheet, df_pair_complement)
 
     except Exception as e2:
         raise
 
 
-def _auto_adjust_column_width(writer, df1, df2, df3, totals_df, df_audit, waste_df, df_suggestion_group, df_enhanset_remaining_suggestion_sheet):
+def _auto_adjust_column_width(writer, df1, df2, df3, totals_df, df_audit, waste_df, df_suggestion_group, df_enhanset_remaining_suggestion_sheet, df_pair_complement):
     workbook = writer.book
 
     header_format = _create_header_format(workbook)
@@ -233,6 +241,9 @@ def _auto_adjust_column_width(writer, df1, df2, df3, totals_df, df_audit, waste_
         
     if not df_enhanset_remaining_suggestion_sheet.empty:
         sheet_dataframes['اقتراحات المتبقيات المحسنة'] = df_enhanset_remaining_suggestion_sheet
+
+    if not df_pair_complement.empty:
+        sheet_dataframes['اقتراح مكمل لكل عنصر'] = df_pair_complement
 
     for sheet_name, df in sheet_dataframes.items():
         if sheet_name in writer.sheets:
@@ -425,6 +436,8 @@ def _convert_dfs_units(dfs: List[pd.DataFrame], unit: str):
     # Columns representing linear dimensions (cm)
     linear_cols = [
         'العرض', 'الطول', 'الارتفاع', 
+        'العرض الأصلي', 'الطول الأصلي',
+        'عرض مكمل مقترح', 'طول مكمل مقترح', 'العرض الإجمالي بعد الإكمال',
         'الطول الاجمالي للسجادة', 'العرض الإجمالي', 
         'الطول الإجمالي المرجعي (التقريبي)', 
         'طول المسار', 'أقصى ارتفاع', 

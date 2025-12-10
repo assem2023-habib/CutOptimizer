@@ -2,6 +2,7 @@ import os
 import pandas as pd
 from typing import List
 from models.data_models import Carpet
+from core.config.config_manager import ConfigManager
 
 def read_input_excel(path: str, sheet_name: int = 0)-> List[Carpet]:
     if not os.path.exists(path):
@@ -25,13 +26,19 @@ def read_input_excel(path: str, sheet_name: int = 0)-> List[Carpet]:
             width = int(str(row[1]).strip())
             height = int(str(row[2]).strip())
             qty_raw = int(row[3])
-            single_pair = str(row[4]).strip().upper() if len(row) > 4 else ""
-            texture_type = str(row[5]).strip().upper() if len(row) > 5 else ""
-            prep_code = str(row[6]).strip().upper() if len(row) > 6 else ""
+            # Determine texture/prep columns based on new format (no A/B column)
+            if len(row) > 6:
+                # Legacy format with extra A/B column present at index 4
+                texture_type = str(row[5]).strip().upper()
+                prep_code = str(row[6]).strip().upper()
+            else:
+                texture_type = str(row[4]).strip().upper() if len(row) > 4 else ""
+                prep_code = str(row[5]).strip().upper() if len(row) > 5 else ""
 
-            if single_pair == "A":
-                qty = max(1 , qty_raw // 2)
-
+            # Apply A/B pair mode from application settings
+            pair_mode = str(ConfigManager.get_value("pair_mode", "B")).upper()
+            if pair_mode == "A":
+                qty = max(1, qty_raw // 2)
             else:
                 qty = qty_raw
 
