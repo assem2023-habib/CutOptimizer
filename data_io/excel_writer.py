@@ -16,8 +16,7 @@ from .excel_sheets import (
     _generate_waste_sheet,
     _create_remaining_suggestion_sheet,
     _create_enhanset_remaining_suggestion_sheet,
-    _create_pair_complement_sheet,
-    _create_final_metric_totals_sheet,
+    _create_pair_complement_sheet
 )
 
 from .excel_formatting import (
@@ -123,7 +122,7 @@ def write_output_excel(
     df3 = _create_remaining_sheet(remaining)
 
     # إنشاء ورقة الإجماليات
-    totals_df = _create_totals_sheet(originals ,groups, remaining)
+    totals_df = _create_totals_sheet(originals, groups, remaining, max_width)
 
     # إنشاء ورقة إحصائيات المجموعات الإضافية
     waste_df = _generate_waste_sheet(groups, originals, max_width) 
@@ -138,9 +137,6 @@ def write_output_excel(
     # إنشاء ورقة اقتراح مكمل مباشر لكل عنصر متبقي
     df_pair_complement = _create_pair_complement_sheet(remaining, min_width, max_width)
 
-    # إنشاء ورقة ملخص الطلبية
-    df_final_metric_totals = _create_final_metric_totals_sheet(originals or [], groups or [], remaining or [], min_width or 0, max_width or 0)
-
     # Apply Unit Conversion
     try:
         # config_manager = ConfigManager() # No longer needed
@@ -148,14 +144,14 @@ def write_output_excel(
         unit = ConfigManager.get_value("measurement_unit", "cm")
         
         if unit in ['m', 'm2']:
-            dfs = [df1, df2, df3, totals_df, df_audit, waste_df, df_suggestion_group, df_enhanset_remaining_suggestion_sheet, df_pair_complement, df_final_metric_totals]
+            dfs = [df1, df2, df3, totals_df, df_audit, waste_df, df_suggestion_group, df_enhanset_remaining_suggestion_sheet, df_pair_complement]
             _convert_dfs_units(dfs, unit)
     except Exception as e:
         print(f"Error applying unit conversion: {e}")
         traceback.print_exc()
 
     _write_all_sheets_to_excel(
-        path, df1, df2, df3, totals_df, df_audit, waste_df, df_suggestion_group, df_enhanset_remaining_suggestion_sheet, df_pair_complement, df_final_metric_totals
+        path, df1, df2, df3, totals_df, df_audit, waste_df, df_suggestion_group, df_enhanset_remaining_suggestion_sheet, df_pair_complement
     )
 
 # =============================================================================
@@ -172,8 +168,7 @@ def _write_all_sheets_to_excel(
     waste_df: pd.DataFrame,
     df_suggestion_group: pd.DataFrame,
     df_enhanset_remaining_suggestion_sheet: pd.DataFrame,
-    df_pair_complement: pd.DataFrame,
-    df_final_metric_totals: pd.DataFrame
+    df_pair_complement: pd.DataFrame
 ) -> None:
     """كتابة جميع الأوراق إلى ملف Excel مع ضبط تلقائي لعرض الأعمدة."""
     try:
@@ -205,17 +200,14 @@ def _write_all_sheets_to_excel(
 
             if not df_pair_complement.empty:
                 df_pair_complement.to_excel(writer, sheet_name='اقتراح مكمل لكل عنصر', index=False)
-            
-            if not df_final_metric_totals.empty:
-                df_final_metric_totals.to_excel(writer, sheet_name='الإجماليات المترية النهائية', index=False)
 
-            _auto_adjust_column_width(writer, df1, df2, df3, totals_df, df_audit, waste_df, df_suggestion_group, df_enhanset_remaining_suggestion_sheet, df_pair_complement, df_final_metric_totals)
+            _auto_adjust_column_width(writer, df1, df2, df3, totals_df, df_audit, waste_df, df_suggestion_group, df_enhanset_remaining_suggestion_sheet, df_pair_complement)
 
     except Exception as e2:
         raise
 
 
-def _auto_adjust_column_width(writer, df1, df2, df3, totals_df, df_audit, waste_df, df_suggestion_group, df_enhanset_remaining_suggestion_sheet, df_pair_complement, df_final_metric_totals):
+def _auto_adjust_column_width(writer, df1, df2, df3, totals_df, df_audit, waste_df, df_suggestion_group, df_enhanset_remaining_suggestion_sheet, df_pair_complement):
     workbook = writer.book
 
     header_format = _create_header_format(workbook)
@@ -252,9 +244,6 @@ def _auto_adjust_column_width(writer, df1, df2, df3, totals_df, df_audit, waste_
 
     if not df_pair_complement.empty:
         sheet_dataframes['اقتراح مكمل لكل عنصر'] = df_pair_complement
-
-    if not df_final_metric_totals.empty:
-        sheet_dataframes['الإجماليات المترية النهائية'] = df_final_metric_totals
 
     for sheet_name, df in sheet_dataframes.items():
         if sheet_name in writer.sheets:
@@ -462,13 +451,7 @@ def _convert_dfs_units(dfs: List[pd.DataFrame], unit: str):
         'المستهلك (cm²)', 
         'المتبقي (cm²)',
         'المساحة الكلية للعناصر',
-        'قيمة الهادر',
-        'المساحة المستخدمة (cm²)',
-        'إجمالي المساحة الأصلية (cm²)',
-        'كمية الطلبية',
-        'الكمية المتبقية',
-        'الكمية المنتجة',
-        'كمية الهادر'
+        'قيمة الهادر'
     ]
     
     # Map for renaming columns to reflect new unit
