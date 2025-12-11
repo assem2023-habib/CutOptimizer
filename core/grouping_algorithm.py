@@ -19,6 +19,7 @@ def build_groups(
         max_width: int,
         max_partner: int = 7,
         tolerance: int = 0,
+        path_length_limit: Optional[int] = None,
         selected_mode: GroupingMode = GroupingMode.NO_MAIN_REPEAT,
         selected_sort_type: SortType = SortType.SORT_BY_HEIGHT,
 ) -> List[GroupCarpet]:
@@ -45,7 +46,7 @@ def build_groups(
             start_index = next((j for j, c in enumerate(carpets) if c.width <= remaining_width), None)
             if start_index is None:
                 single_group = try_create_single_group(
-                    main, min_width, max_width, group_id
+                    main, min_width, max_width, group_id, path_length_limit
                 )
                 if single_group:
                     group.append(single_group)
@@ -70,6 +71,7 @@ def build_groups(
                 min_width=min_width,
                 max_width=max_width,
                 tolerance=tolerance,
+                path_length_limit=path_length_limit,
                 group_id=group_id,
                 selected_mode=selected_mode,
                 start_index=start_index
@@ -93,6 +95,7 @@ def build_groups(
                     min_width=min_width,
                     max_width=max_width,
                     tolerance=tolerance,
+                    path_length_limit=path_length_limit,
                     group_id=group_id,
                     selected_mode=GroupingMode.ALL_COMBINATIONS,
                     start_index=start_index
@@ -100,7 +103,7 @@ def build_groups(
                 group.extend(new_groups)
 
         single_group = try_create_single_group(
-                main, min_width, max_width, group_id
+                main, min_width, max_width, group_id, path_length_limit
             )
 
         if single_group:
@@ -121,6 +124,7 @@ def generate_and_process_partners(
         min_width: int,
         max_width: int,
         tolerance: int,
+        path_length_limit: Optional[int],
         group_id: int,
         selected_mode: GroupingMode,
         start_index: int,
@@ -157,7 +161,7 @@ def generate_and_process_partners(
         if not main.is_available():
             break
         result= process_partner_group(
-            main, partners, tolerance, group_id,
+            main, partners, tolerance, path_length_limit, group_id,
             min_width= min_width, max_width=max_width
         )
         if result:
@@ -170,6 +174,7 @@ def process_partner_group(
     main: Carpet,
     partners: List[Carpet],
     tolerance: int,
+    path_length_limit: Optional[int],
     current_group_id: int,
     min_width: int,
     max_width: int,
@@ -250,15 +255,16 @@ def process_partner_group(
                     repeated= result
                 )
             )
-    
     if not all_valid or len(used_items) < 2:
         rollback_consumption(rollback_data)
         return None
     
     new_group = GroupCarpet(group_id=current_group_id, items=used_items)
-    if new_group.is_valid(min_width, max_width):
+    if new_group.is_valid(min_width, max_width) and _is_within_path_limit(new_group, path_length_limit):
         return new_group, current_group_id + 1
-    
+
+    # Add a comment to explain why we are rolling back
+    # The group is not valid or within path limit, so we rollback the consumption
     rollback_consumption(rollback_data)
     return None
     
@@ -267,35 +273,44 @@ def try_create_single_group(
     carpet: Carpet,
     min_width: int,
     max_width: int,
-    group_id: int
+    group_id: int,
+    path_length_limit: Optional[int],
 ) -> Optional[GroupCarpet]:
 
-    if not (carpet.width >= min_width and 
-            carpet.width <= max_width and 
-            carpet.is_available() and 
-            carpet.rem_qty > 0):
+    if not (
+        carpet.width >= min_width
+        and carpet.width <= max_width
+        and carpet.is_available()
+        and carpet.rem_qty > 0
+    ):
         return None
-    result= []
+
+    consumed_repeated = []
     if hasattr(carpet, "repeated") and carpet.repeated:
-        result= carpet.consume_from_repeated(carpet.rem_qty)
+        consumed_repeated = carpet.consume_from_repeated(carpet.rem_qty)
+
     single_item = CarpetUsed(
         carpet_id=carpet.id,
         width=carpet.width,
         height=carpet.height,
         qty_used=carpet.rem_qty,
         qty_rem=0,
-        client_order= carpet.client_order,
-        repeated=result
+        client_order=carpet.client_order,
+        repeated=consumed_repeated,
     )
 
-    single_group = GroupCarpet(
-        group_id=group_id,
-        items=[single_item]
-    )
+    single_group = GroupCarpet(group_id=group_id, items=[single_item])
 
     if not single_group.is_valid(min_width, max_width):
+        if consumed_repeated and hasattr(carpet, "restore_repeated"):
+            carpet.restore_repeated(consumed_repeated)
         return None
-    
+
+    if not _is_within_path_limit(single_group, path_length_limit):
+        if consumed_repeated and hasattr(carpet, "restore_repeated"):
+            carpet.restore_repeated(consumed_repeated)
+        return None
+
     carpet.consume(carpet.rem_qty)
     return single_group
     
@@ -311,29 +326,11 @@ def rollback_consumption(rollback_data):
         # إرجاع الكميات من repeated
         if consumed_repeated and hasattr(carpet, "restore_repeated"):
             carpet.restore_repeated(consumed_repeated)
-        client_order= carpet.client_order,
-        repeated=result
 
-    single_group = GroupCarpet(
-        group_id=group_id,
-        items=[single_item]
-    )
-
-    if not single_group.is_valid(min_width, max_width):
-        return None
-    
-    carpet.consume(carpet.rem_qty)
-    return single_group
-    
-def rollback_consumption(rollback_data):
-    for item in rollback_data:
-        carpet = item["carpet"]
-        qty = item["qty"]
-        consumed_repeated = item["consumed_repeated"]
-        
-        # إرجاع الكمية الرئيسية
-        carpet.rem_qty += qty
-        
-        # إرجاع الكميات من repeated
-        if consumed_repeated and hasattr(carpet, "restore_repeated"):
-            carpet.restore_repeated(consumed_repeated)
+def _is_within_path_limit(group: GroupCarpet, path_length_limit: Optional[int]) -> bool:
+    if not path_length_limit or path_length_limit <= 0:
+        return True
+    try:
+        return group.max_length_ref() <= path_length_limit
+    except ValueError:
+        return False

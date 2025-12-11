@@ -1,5 +1,5 @@
 import copy
-from typing import List
+from typing import List, Optional
 from models.group_carpet import GroupCarpet
 from models.carpet import Carpet
 from core.grouping_algorithm import build_groups
@@ -12,6 +12,7 @@ def generate_suggestions(
         min_width: int,
         max_width: int,
         tolerance: int,
+        path_length_limit: Optional[int],
         selected_mode: GroupingMode ,
         selected_sort_type: SortType ,
         step: int= 10,    
@@ -40,6 +41,7 @@ def generate_suggestions(
             max_width= current_max,
             max_partner= 9,
             tolerance= tolerance,
+            path_length_limit=path_length_limit,
             selected_mode= selected_mode,
             selected_sort_type= selected_sort_type,
         )

@@ -15,8 +15,8 @@ class MachineSizesWidget(QWidget):
     """Widget for managing machine size presets"""
     
     DEFAULT_SIZES = [
-        {"name": "370x400", "min_width": 370, "max_width": 400, "tolerance": 5},
-        {"name": "470x500", "min_width": 470, "max_width": 500, "tolerance": 5}
+        {"name": "370x400", "min_width": 370, "max_width": 400, "tolerance": 5, "path_length": 0},
+        {"name": "470x500", "min_width": 470, "max_width": 500, "tolerance": 5, "path_length": 0}
     ]
     
     def __init__(self):
@@ -45,13 +45,14 @@ class MachineSizesWidget(QWidget):
     def _create_table(self):
         """Creates the sizes table"""
         table = QTableWidget()
-        table.setColumnCount(5)
-        table.setHorizontalHeaderLabels(["رقم النول", "الحد الأدنى", "الحد الأعلى", "التفاوت", ""])
+        table.setColumnCount(6)
+        table.setHorizontalHeaderLabels(["رقم النول", "الحد الأدنى", "الحد الأعلى", "التفاوت", "طول المسار", ""])
         table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
         table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
         table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
         table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeToContents)
         table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeToContents)
+        table.horizontalHeader().setSectionResizeMode(5, QHeaderView.ResizeToContents)
         table.setMaximumHeight(150)
         table.setStyleSheet(SettingsStyles.get_table_stylesheet())
         return table
@@ -91,6 +92,15 @@ class MachineSizesWidget(QWidget):
         if not sizes:
             sizes = self.DEFAULT_SIZES
             self._save_sizes(sizes)
+        else:
+            # Ensure path_length exists for backward compatibility
+            updated = False
+            for size in sizes:
+                if "path_length" not in size:
+                    size["path_length"] = 0
+                    updated = True
+            if updated:
+                self._save_sizes(sizes)
         
         self._populate_table(sizes)
     
@@ -106,11 +116,12 @@ class MachineSizesWidget(QWidget):
         self.table.setItem(row, 1, QTableWidgetItem(str(size["min_width"])))
         self.table.setItem(row, 2, QTableWidgetItem(str(size["max_width"])))
         self.table.setItem(row, 3, QTableWidgetItem(str(size.get("tolerance", 5))))
+        self.table.setItem(row, 4, QTableWidgetItem(str(size.get("path_length", 0))))
         
         delete_btn = QPushButton("🗑️")
         delete_btn.setStyleSheet(SettingsStyles.get_delete_button_stylesheet())
         delete_btn.clicked.connect(lambda: self._delete_size(row))
-        self.table.setCellWidget(row, 4, delete_btn)
+        self.table.setCellWidget(row, 5, delete_btn)
     
     def _save_sizes(self, sizes):
         """Saves sizes to config"""
@@ -127,14 +138,14 @@ class MachineSizesWidget(QWidget):
         layout.setSpacing(15)
         
         # Input fields
-        name_input, min_input, max_input, tolerance_input = self._create_input_fields(layout)
+        name_input, min_input, max_input, tolerance_input, path_length_input = self._create_input_fields(layout)
         
         # Buttons
         save_btn, cancel_btn = self._create_dialog_buttons(layout)
         
         # Connect
         save_btn.clicked.connect(
-            lambda: self._save_new_size(dialog, name_input, min_input, max_input, tolerance_input)
+            lambda: self._save_new_size(dialog, name_input, min_input, max_input, tolerance_input, path_length_input)
         )
         cancel_btn.clicked.connect(dialog.reject)
         
@@ -158,6 +169,11 @@ class MachineSizesWidget(QWidget):
         tolerance_input = QLineEdit()
         tolerance_input.setPlaceholderText("مثال: 5")
         tolerance_input.setText("5")  # Default value
+
+        path_length_label = QLabel("طول المسار (Path Length):")
+        path_length_input = QLineEdit()
+        path_length_input.setPlaceholderText("مثال: 1200")
+        path_length_input.setText("0")
         
         layout.addWidget(name_label)
         layout.addWidget(name_input)
@@ -167,8 +183,10 @@ class MachineSizesWidget(QWidget):
         layout.addWidget(max_input)
         layout.addWidget(tolerance_label)
         layout.addWidget(tolerance_input)
+        layout.addWidget(path_length_label)
+        layout.addWidget(path_length_input)
         
-        return name_input, min_input, max_input, tolerance_input
+        return name_input, min_input, max_input, tolerance_input, path_length_input
     
     def _create_dialog_buttons(self, layout):
         """Creates dialog buttons"""
@@ -198,7 +216,7 @@ class MachineSizesWidget(QWidget):
         
         return save_btn, cancel_btn
     
-    def _save_new_size(self, dialog, name_input, min_input, max_input, tolerance_input):
+    def _save_new_size(self, dialog, name_input, min_input, max_input, tolerance_input, path_length_input):
         """Validates and saves new size"""
         name = name_input.text().strip()
         
@@ -206,6 +224,7 @@ class MachineSizesWidget(QWidget):
             min_w = int(min_input.text().strip())
             max_w = int(max_input.text().strip())
             tolerance = int(tolerance_input.text().strip())
+            path_length = int(path_length_input.text().strip())
         except ValueError:
             QMessageBox.warning(dialog, "خطأ", "يرجى إدخال أرقام صحيحة")
             return
@@ -221,10 +240,20 @@ class MachineSizesWidget(QWidget):
         if tolerance <= 0:
             QMessageBox.warning(dialog, "خطأ", "التفاوت يجب أن يكون أكبر من صفر")
             return
+
+        if path_length < 0:
+            QMessageBox.warning(dialog, "خطأ", "طول المسار يجب أن يكون صفراً أو قيمة موجبة")
+            return
         
         # Add new size
         sizes = ConfigManager.get_value("machine_sizes", [])
-        sizes.append({"name": name, "min_width": min_w, "max_width": max_w, "tolerance": tolerance})
+        sizes.append({
+            "name": name,
+            "min_width": min_w,
+            "max_width": max_w,
+            "tolerance": tolerance,
+            "path_length": path_length
+        })
         
         self._save_sizes(sizes)
         self.load_sizes()

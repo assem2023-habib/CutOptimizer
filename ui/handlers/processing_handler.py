@@ -90,7 +90,8 @@ class ProcessingHandler:
                 'max_width': machine_size.get("max_width", 0),
                 'tolerance': int(data.get("tolerance", 5)),
                 'sort_type': sort_type,
-                'grouping_mode': grouping_mode
+                'grouping_mode': grouping_mode,
+                'path_length': int(data.get("path_length", machine_size.get("path_length", 0) or 0))
             }
             
             # Update config with ALL user selections
@@ -99,7 +100,8 @@ class ProcessingHandler:
                 "max_width": settings['max_width'],
                 "tolerance": settings['tolerance'],
                 "sort_type": sort_type,
-                "grouping_mode": grouping_mode
+                "grouping_mode": grouping_mode,
+                "path_length": settings['path_length']
             })
             
             return settings
@@ -130,6 +132,7 @@ class ProcessingHandler:
                 min_width=settings['min_width'],
                 max_width=settings['max_width'],
                 tolerance_len=settings['tolerance'],
+                path_length=settings['path_length'],
                 cfg=self.config  # Now includes sort_type and grouping_mode!
             )
             

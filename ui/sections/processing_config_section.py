@@ -35,12 +35,20 @@ class ProcessingConfigSection(GlassCardLayout):
         from core.config.config_manager import ConfigManager
         
         default_sizes = [
-            {"name": "Default 370x400", "min_width": 370, "max_width": 400},
+            {"name": "Default 370x400", "min_width": 370, "max_width": 400, "path_length": 0},
         ]
         
         self.machine_sizes = ConfigManager.get_value("machine_sizes", default_sizes)
         if not self.machine_sizes:
             self.machine_sizes = default_sizes
+        else:
+            updated = False
+            for size in self.machine_sizes:
+                if "path_length" not in size:
+                    size["path_length"] = 0
+                    updated = True
+            if updated:
+                ConfigManager.set_value("machine_sizes", self.machine_sizes)
 
     def _setup_panels(self):
         """Setup the three main panels"""
@@ -141,7 +149,10 @@ class ProcessingConfigSection(GlassCardLayout):
         label_size.setStyleSheet("color: #2C3E50; background-color: transparent; font-weight: 600;")
         layout.addWidget(label_size)
         
-        options = [f"{size['name']} ({size['min_width']}-{size['max_width']})" for size in self.machine_sizes]
+        options = [
+            f"{size['name']} ({size['min_width']}-{size['max_width']}) | طول المسار: {size.get('path_length', 0)}"
+            for size in self.machine_sizes
+        ]
         self.size_dropdown = DropDownList(
             selected_value_text="Select Size...",
             options_list=options,
@@ -312,12 +323,14 @@ class ProcessingConfigSection(GlassCardLayout):
 
         # Get tolerance from selected machine size
         tolerance = selected_size.get("tolerance", 5) if selected_size else 5
+        path_length = selected_size.get("path_length", 0) if selected_size else 0
         
         data = {
             "machine_size": selected_size,
             "tolerance": tolerance,
             "sort_type": sort_type,
             "grouping_mode": grouping_mode,
+            "path_length": path_length,
             "generate_report": False  # No report generation option
         }
         self.start_processing_signal.emit(data)
