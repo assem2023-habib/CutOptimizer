@@ -13,7 +13,7 @@ def _create_totals_sheet(
     remaining: List[Carpet],
     max_width: Optional[int] = None,
 ) -> pd.DataFrame:
-    pair_mode = str(ConfigManager.get_value("pair_mode", "B")).upper()
+    pair_mode = str(ConfigManager.get_value("pair_mode")).upper()
     multiplier = 2 if pair_mode == "A" else 1
     
     total_order_quantity = _calculate_total_order_quantity(original_groups)
@@ -82,11 +82,11 @@ def _calculate_total_waste_quantity(
 
         group_max_length = group.max_length_ref()
         sum_path_loss = 0
-
+        waste_with= (max_width - group.total_width()) * group_max_length
         for item in group.items:
             sum_path_loss += (group_max_length - item.length_ref()) * item.width
-
-        sum_path_loss += (max_width - group.total_width()) * group_max_length
+            
+        sum_path_loss += waste_with
         total_waste += sum_path_loss
 
     return total_waste
