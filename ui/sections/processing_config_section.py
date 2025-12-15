@@ -284,6 +284,8 @@ class ProcessingConfigSection(GlassCardLayout):
 
     def _on_start_clicked(self):
         """Collect data and emit start signal"""
+        from core.config.config_manager import ConfigManager
+        
         # Get Size
         selected_size_text = self.size_dropdown.get_selected_value()
         selected_size = None
@@ -297,6 +299,10 @@ class ProcessingConfigSection(GlassCardLayout):
         if not selected_size:
             # Handle error or default
             pass
+        else:
+            # Save pair_mode from selected machine size to config
+            pair_mode = selected_size.get("pair_mode", "B")
+            ConfigManager.set_value("pair_mode", pair_mode)
 
         # Get Sort Type
         sort_type = SortType.SORT_BY_HEIGHT # Default

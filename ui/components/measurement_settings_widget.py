@@ -49,27 +49,6 @@ class MeasurementSettingsWidget(QWidget):
         
         self.group_box.setLayout(group_layout)
         layout.addWidget(self.group_box)
-
-        # Pair Mode Group (A/B)
-        self.pair_group_box = QGroupBox("🔁 خيار فردي/زوجي (A/B)")
-        pair_layout = QHBoxLayout()
-        pair_layout.setSpacing(20)
-
-        self.radio_pair_a = QRadioButton("A")
-        self.radio_pair_b = QRadioButton("B")
-
-        self.pair_button_group = QButtonGroup(self)
-        self.pair_button_group.addButton(self.radio_pair_a, 1)
-        self.pair_button_group.addButton(self.radio_pair_b, 2)
-
-        self.pair_button_group.buttonClicked.connect(self._on_pair_mode_changed)
-
-        pair_layout.addWidget(self.radio_pair_a)
-        pair_layout.addWidget(self.radio_pair_b)
-        pair_layout.addStretch()
-
-        self.pair_group_box.setLayout(pair_layout)
-        layout.addWidget(self.pair_group_box)
         
     def _load_current_setting(self):
         """Load current unit from config"""
@@ -81,13 +60,6 @@ class MeasurementSettingsWidget(QWidget):
             self.radio_m.setChecked(True)
         else:
             self.radio_cm.setChecked(True)
-        
-        # Load pair mode (default to B)
-        pair_mode = ConfigManager.get_value("pair_mode", "B")
-        if str(pair_mode).upper() == "A":
-            self.radio_pair_a.setChecked(True)
-        else:
-            self.radio_pair_b.setChecked(True)
             
     def _on_unit_changed(self, button):
         """Handle unit change"""
@@ -99,11 +71,3 @@ class MeasurementSettingsWidget(QWidget):
             
         # Update config
         ConfigManager.set_value("measurement_unit", unit)
-
-    def _on_pair_mode_changed(self, button):
-        """Handle A/B pair mode change"""
-        mode = "B"
-        if button == self.radio_pair_a:
-            mode = "A"
-        # Update config
-        ConfigManager.set_value("pair_mode", mode)

@@ -19,6 +19,9 @@ def read_input_excel(path: str, sheet_name: int = 0)-> List[Carpet]:
     invalid_rows = []
 
     prep_offset = {"A": 8, "B": 6, "C": 1, "D": 3}
+    
+    # Get pair_mode from config (set from Processing Configuration)
+    pair_mode = str(ConfigManager.get_value("pair_mode", "B")).upper()
 
     for idx, row in df.iterrows():
         try:
@@ -35,8 +38,7 @@ def read_input_excel(path: str, sheet_name: int = 0)-> List[Carpet]:
                 texture_type = str(row[4]).strip().upper() if len(row) > 4 else ""
                 prep_code = str(row[5]).strip().upper() if len(row) > 5 else ""
 
-            # Apply A/B pair mode from application settings
-            pair_mode = str(ConfigManager.get_value("pair_mode", "B")).upper()
+            # Apply pair_mode to quantity
             if pair_mode == "A":
                 qty = max(1, qty_raw // 2)
             else:
