@@ -1,5 +1,7 @@
 import pandas as pd
 from typing import List, Optional
+
+from pandas._libs.groupby import group_max
 from models.carpet import Carpet
 from models.group_carpet import GroupCarpet
 
@@ -92,7 +94,7 @@ def _calculate_total_waste_quantity(
         for item in group.items:
             sum_path_loss += (group_max_length - item.length_ref()) * item.width
 
-        sum_path_loss += (max_width - group.total_width())
+        sum_path_loss += (max_width - group.total_width()) * group_max_length
         total_waste += sum_path_loss
 
     return total_waste
