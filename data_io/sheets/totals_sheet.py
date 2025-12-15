@@ -4,6 +4,7 @@ from typing import List, Optional
 from pandas._libs.groupby import group_max
 from models.carpet import Carpet
 from models.group_carpet import GroupCarpet
+from core.config.config_manager import ConfigManager
 
 
 def _create_totals_sheet(
@@ -12,10 +13,13 @@ def _create_totals_sheet(
     remaining: List[Carpet],
     max_width: Optional[int] = None,
 ) -> pd.DataFrame:
-    total_order_quantity = _calculate_total_order_quantity(original_groups, groups)
+    pair_mode = str(ConfigManager.get_value("pair_mode", "B")).upper()
+    multiplier = 2 if pair_mode == "A" else 1
+    
+    total_order_quantity = _calculate_total_order_quantity(original_groups)
     total_remaining_quantity = _calculate_total_remaining_quantity(remaining)
-    total_produced_quantity = _calculate_total_produced_quantity(groups)
-    total_waste_quantity = _calculate_total_waste_quantity(groups, max_width)
+    total_produced_quantity = _calculate_total_produced_quantity(total_order_quantity, total_remaining_quantity)
+    total_waste_quantity = _calculate_total_waste_quantity(groups, max_width) * multiplier
 
     waste_percentage = (
         f"{round((total_waste_quantity / total_produced_quantity) * 100, 2):.2f}%"
@@ -37,18 +41,13 @@ def _create_totals_sheet(
 
 def _calculate_total_order_quantity(
     original_groups: Optional[List[Carpet]],
-    groups: List[GroupCarpet],
 ) -> int:
     total = 0
     if original_groups:
         for carpet in original_groups:
-            total += carpet.area() * getattr(carpet, "qty", 0)
+            qty_original = getattr(carpet, "qty_original_before_pair_mode", getattr(carpet, "qty", 0))
+            total += carpet.area() * qty_original
         return total
-
-    for group in groups or []:
-        for item in group.items:
-            units = getattr(item, "qty_used", 0) + getattr(item, "qty_rem", 0)
-            total += (item.width * item.height) * units
 
     return total
 
@@ -56,22 +55,15 @@ def _calculate_total_order_quantity(
 def _calculate_total_remaining_quantity(remaining: List[Carpet]) -> int:
     total = 0
     for carpet in remaining or []:
-        if carpet.repeated:
-            for rep in carpet.repeated:
-                qty = int(rep.get("qty_rem", 0) or 0)
-                if qty > 0:
-                    total += carpet.area() * qty
-        else:
-            if carpet.rem_qty > 0:
-                total += carpet.area() * carpet.rem_qty
+        qty_rem= carpet.rem_qty
+        if qty_rem > 0:
+            total += carpet.area() * qty_rem
+                
     return total
 
 
-def _calculate_total_produced_quantity(groups: List[GroupCarpet]) -> int:
-    total = 0
-    for group in groups or []:
-        for item in group.items:
-            total += item.area()
+def _calculate_total_produced_quantity(total_quantity, remainig) -> int:
+    total = total_quantity - remainig  
     return total
 
 
