@@ -15,8 +15,8 @@ class MachineSizesWidget(QWidget):
     """Widget for managing machine size presets"""
     
     DEFAULT_SIZES = [
-        {"name": "370x400", "min_width": 370, "max_width": 400, "tolerance": 5, "pair_mode": "B"},
-        {"name": "470x500", "min_width": 470, "max_width": 500, "tolerance": 5, "pair_mode": "B"}
+        {"name": "370x400", "min_width": 370, "max_width": 400, "tolerance": 5, "pair_mode": "B", "path_length_limit": 0},
+        {"name": "470x500", "min_width": 470, "max_width": 500, "tolerance": 5, "pair_mode": "B", "path_length_limit": 0}
     ]
     
     def __init__(self):
@@ -45,14 +45,15 @@ class MachineSizesWidget(QWidget):
     def _create_table(self):
         """Creates the sizes table"""
         table = QTableWidget()
-        table.setColumnCount(6)
-        table.setHorizontalHeaderLabels(["رقم النول", "الحد الأدنى", "الحد الأعلى", "التفاوت", "فردي/زوجي", ""])
+        table.setColumnCount(7)
+        table.setHorizontalHeaderLabels(["رقم النول", "الحد الأدنى", "الحد الأعلى", "التفاوت", "فردي/زوجي", "حد الطول", ""])
         table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
         table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
         table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
         table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeToContents)
         table.horizontalHeader().setSectionResizeMode(4, QHeaderView.ResizeToContents)
         table.horizontalHeader().setSectionResizeMode(5, QHeaderView.ResizeToContents)
+        table.horizontalHeader().setSectionResizeMode(6, QHeaderView.ResizeToContents)
         table.setMaximumHeight(150)
         table.setStyleSheet(SettingsStyles.get_table_stylesheet())
         return table
@@ -93,10 +94,12 @@ class MachineSizesWidget(QWidget):
             sizes = self.DEFAULT_SIZES
             self._save_sizes(sizes)
         else:
-            # Ensure all sizes have pair_mode field (for backward compatibility)
+            # Ensure all sizes have pair_mode and path_length_limit fields (for backward compatibility)
             for size in sizes:
                 if "pair_mode" not in size:
                     size["pair_mode"] = "B"
+                if "path_length_limit" not in size:
+                    size["path_length_limit"] = 0
             self._save_sizes(sizes)
         
         self._populate_table(sizes)
@@ -114,11 +117,12 @@ class MachineSizesWidget(QWidget):
         self.table.setItem(row, 2, QTableWidgetItem(str(size["max_width"])))
         self.table.setItem(row, 3, QTableWidgetItem(str(size.get("tolerance", 5))))
         self.table.setItem(row, 4, QTableWidgetItem(str(size.get("pair_mode", "B"))))
+        self.table.setItem(row, 5, QTableWidgetItem(str(size.get("path_length_limit", 0))))
         
         delete_btn = QPushButton("🗑️")
         delete_btn.setStyleSheet(SettingsStyles.get_delete_button_stylesheet())
         delete_btn.clicked.connect(lambda: self._delete_size(row))
-        self.table.setCellWidget(row, 5, delete_btn)
+        self.table.setCellWidget(row, 6, delete_btn)
     
     def _save_sizes(self, sizes):
         """Saves sizes to config"""
@@ -135,14 +139,14 @@ class MachineSizesWidget(QWidget):
         layout.setSpacing(15)
         
         # Input fields
-        name_input, min_input, max_input, tolerance_input, pair_mode_input = self._create_input_fields(layout)
+        name_input, min_input, max_input, tolerance_input, pair_mode_input, path_length_input = self._create_input_fields(layout)
         
         # Buttons
         save_btn, cancel_btn = self._create_dialog_buttons(layout)
         
         # Connect
         save_btn.clicked.connect(
-            lambda: self._save_new_size(dialog, name_input, min_input, max_input, tolerance_input, pair_mode_input)
+            lambda: self._save_new_size(dialog, name_input, min_input, max_input, tolerance_input, pair_mode_input, path_length_input)
         )
         cancel_btn.clicked.connect(dialog.reject)
         
@@ -172,6 +176,11 @@ class MachineSizesWidget(QWidget):
         pair_mode_input.setPlaceholderText("A أو B")
         pair_mode_input.setText("B")  # Default value
         
+        path_length_label = QLabel("حد الطول (Path Length Limit):")
+        path_length_input = QLineEdit()
+        path_length_input.setPlaceholderText("مثال: 0 (بدون حد)")
+        path_length_input.setText("0")  # Default value
+        
         layout.addWidget(name_label)
         layout.addWidget(name_input)
         layout.addWidget(min_label)
@@ -182,8 +191,10 @@ class MachineSizesWidget(QWidget):
         layout.addWidget(tolerance_input)
         layout.addWidget(pair_mode_label)
         layout.addWidget(pair_mode_input)
+        layout.addWidget(path_length_label)
+        layout.addWidget(path_length_input)
         
-        return name_input, min_input, max_input, tolerance_input, pair_mode_input
+        return name_input, min_input, max_input, tolerance_input, pair_mode_input, path_length_input
     
     def _create_dialog_buttons(self, layout):
         """Creates dialog buttons"""
@@ -213,7 +224,7 @@ class MachineSizesWidget(QWidget):
         
         return save_btn, cancel_btn
     
-    def _save_new_size(self, dialog, name_input, min_input, max_input, tolerance_input, pair_mode_input):
+    def _save_new_size(self, dialog, name_input, min_input, max_input, tolerance_input, pair_mode_input, path_length_input):
         """Validates and saves new size"""
         name = name_input.text().strip()
         pair_mode = pair_mode_input.text().strip().upper()
@@ -222,6 +233,7 @@ class MachineSizesWidget(QWidget):
             min_w = int(min_input.text().strip())
             max_w = int(max_input.text().strip())
             tolerance = int(tolerance_input.text().strip())
+            path_length_limit = int(path_length_input.text().strip())
         except ValueError:
             QMessageBox.warning(dialog, "خطأ", "يرجى إدخال أرقام صحيحة")
             return
@@ -242,9 +254,13 @@ class MachineSizesWidget(QWidget):
             QMessageBox.warning(dialog, "خطأ", "يرجى إدخال A أو B للخيار فردي/زوجي")
             return
         
+        if path_length_limit < 0:
+            QMessageBox.warning(dialog, "خطأ", "حد الطول يجب أن يكون أكبر من أو يساوي صفر")
+            return
+        
         # Add new size
         sizes = ConfigManager.get_value("machine_sizes", [])
-        sizes.append({"name": name, "min_width": min_w, "max_width": max_w, "tolerance": tolerance, "pair_mode": pair_mode})
+        sizes.append({"name": name, "min_width": min_w, "max_width": max_w, "tolerance": tolerance, "pair_mode": pair_mode, "path_length_limit": path_length_limit})
         
         self._save_sizes(sizes)
         self.load_sizes()
