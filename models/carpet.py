@@ -9,9 +9,11 @@ class Carpet:
     client_order: int
     rem_qty: int = field(init=False)
     repeated: list[dict] = field(default_factory=list)
+    qty_original_before_pair_mode: int = field(init=False)
 
     def __post_init__(self):
         self.rem_qty = self.qty
+        self.qty_original_before_pair_mode = self.qty
 
     def area(self) -> int:
         """إرجاع المساحة"""

@@ -61,6 +61,7 @@ def read_input_excel(path: str, sheet_name: int = 0)-> List[Carpet]:
                 qty=qty,
                 client_order=client_order
             )
+            carpet.qty_original_before_pair_mode = qty_raw
             carpets.append(carpet)
         except Exception as e:
             invalid_rows.append(idx + 1)
