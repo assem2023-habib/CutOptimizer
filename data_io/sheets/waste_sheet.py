@@ -39,12 +39,12 @@ def _generate_waste_sheet(
     group_id= 0
 
     for c in originals:
-        total+= c.area() + c.qty
+        total+= c.area() * c.qty
 
     for g in groups:
         group_id+= 1
         sumPathLoss= 0
-        wasteWidth = max_width - g.total_width()
+        wasteWidth = (max_width - g.total_width()) * g.max_length_ref()
         
         for item in g.items:
             
