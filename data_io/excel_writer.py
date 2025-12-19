@@ -14,8 +14,6 @@ from .excel_sheets import (
     _create_totals_sheet,
     _create_audit_sheet,
     _generate_waste_sheet,
-    _create_remaining_suggestion_sheet,
-    _create_enhanset_remaining_suggestion_sheet,
     _create_pair_complement_sheet
 )
 
@@ -130,10 +128,6 @@ def write_output_excel(
     # إنشاء ورقة التدقيق
     df_audit = _create_audit_sheet(groups, remaining, originals)
 
-    df_suggestion_group= _create_remaining_suggestion_sheet(remaining, min_width, max_width, tolerance_length)
-
-    df_enhanset_remaining_suggestion_sheet= _create_enhanset_remaining_suggestion_sheet(suggested_groups= suggested_groups, min_width=min_width, max_width= max_width, tolerance= tolerance_length)
-
     # إنشاء ورقة اقتراح مكمل مباشر لكل عنصر متبقي
     df_pair_complement = _create_pair_complement_sheet(remaining, min_width, max_width)
 
@@ -144,14 +138,14 @@ def write_output_excel(
         unit = ConfigManager.get_value("measurement_unit", "cm")
         
         if unit in ['m', 'm2']:
-            dfs = [df1, df2, df3, totals_df, df_audit, waste_df, df_suggestion_group, df_enhanset_remaining_suggestion_sheet, df_pair_complement]
+            dfs = [df1, df2, df3, totals_df, df_audit, waste_df, df_pair_complement]
             _convert_dfs_units(dfs, unit)
     except Exception as e:
         print(f"Error applying unit conversion: {e}")
         traceback.print_exc()
 
     _write_all_sheets_to_excel(
-        path, df1, df2, df3, totals_df, df_audit, waste_df, df_suggestion_group, df_enhanset_remaining_suggestion_sheet, df_pair_complement
+        path, df1, df2, df3, totals_df, df_audit, waste_df, df_pair_complement
     )
 
 # =============================================================================
@@ -166,8 +160,6 @@ def _write_all_sheets_to_excel(
     totals_df: pd.DataFrame,
     df_audit: pd.DataFrame,
     waste_df: pd.DataFrame,
-    df_suggestion_group: pd.DataFrame,
-    df_enhanset_remaining_suggestion_sheet: pd.DataFrame,
     df_pair_complement: pd.DataFrame
 ) -> None:
     """كتابة جميع الأوراق إلى ملف Excel مع ضبط تلقائي لعرض الأعمدة."""
@@ -192,22 +184,16 @@ def _write_all_sheets_to_excel(
             if not waste_df.empty:
                 waste_df.to_excel(writer, sheet_name='الهادر', index=False)
 
-            if not df_suggestion_group.empty:
-                df_suggestion_group.to_excel(writer, sheet_name='اقتراحات المتبقيات', index=False)
-
-            if not df_enhanset_remaining_suggestion_sheet.empty:
-                df_enhanset_remaining_suggestion_sheet.to_excel(writer, sheet_name='اقتراحات المتبقيات المحسنة', index=False)
-
             if not df_pair_complement.empty:
                 df_pair_complement.to_excel(writer, sheet_name='اقتراح مكمل لكل عنصر', index=False)
 
-            _auto_adjust_column_width(writer, df1, df2, df3, totals_df, df_audit, waste_df, df_suggestion_group, df_enhanset_remaining_suggestion_sheet, df_pair_complement)
+            _auto_adjust_column_width(writer, df1, df2, df3, totals_df, df_audit, waste_df, df_pair_complement)
 
     except Exception as e2:
         raise
 
 
-def _auto_adjust_column_width(writer, df1, df2, df3, totals_df, df_audit, waste_df, df_suggestion_group, df_enhanset_remaining_suggestion_sheet, df_pair_complement):
+def _auto_adjust_column_width(writer, df1, df2, df3, totals_df, df_audit, waste_df, df_pair_complement):
     workbook = writer.book
 
     header_format = _create_header_format(workbook)
@@ -235,12 +221,6 @@ def _auto_adjust_column_width(writer, df1, df2, df3, totals_df, df_audit, waste_
 
     if not waste_df.empty:
         sheet_dataframes['الهادر'] = waste_df
-
-    if not df_suggestion_group.empty:
-        sheet_dataframes['اقتراحات المتبقيات'] = df_suggestion_group
-        
-    if not df_enhanset_remaining_suggestion_sheet.empty:
-        sheet_dataframes['اقتراحات المتبقيات المحسنة'] = df_enhanset_remaining_suggestion_sheet
 
     if not df_pair_complement.empty:
         sheet_dataframes['اقتراح مكمل لكل عنصر'] = df_pair_complement
@@ -290,7 +270,12 @@ def _apply_advanced_formatting(
         numeric_cols = ['العرض', 'الطول','الارتفاع', 'الكمية المستخدمة', 'الكمية الأصلية',
                                   'الطول الاجمالي للسجادة', 'العرض الإجمالي', 'الطول الإجمالي المرجعي (التقريبي)',
                                   'المساحة الإجمالية', 'الكمية المتبقية', 'الإجمالي قبل العملية',
-                                  'الإجمالي بعد العملية', 'المستهلك', 'الكفاءة (%)']
+                                  'الإجمالي بعد العملية', 'المستهلك', 'الكفاءة (%)','الكمية المنتجة', 
+                                  'كمية الهادر', 'كمية الطلبية', 
+                                  'الكمية المستخدمة الكلية', 'المساحة الإجمالية_2', 'الكمية الاصلية', 
+                                  'طول المسار', 'الهادر في العرض', 'المسار المرجعي', 
+                                  'هادر المسارات', 'طول مكمل مقترح', 'كمية مكمل مقترحة',
+                                  'العرض الإجمالي بعد الإكمال']
         
         for col_num, col_name in enumerate(df.columns, start=0):
             col_data = df[col_name].astype(str)
@@ -351,6 +336,7 @@ def _apply_advanced_formatting(
                         'font_color': '#2C3E50',
                         'align': 'center',
                         'valign': 'vcenter',
+                        'num_format': '#,##0.###'
                     })
 
         for row_num in range(len(df)):

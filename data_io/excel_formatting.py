@@ -49,6 +49,7 @@ def _create_number_format(workbook):
         'font_color': '#006400',
         'align': 'center',
         'valign': 'vcenter',
+        'num_format': '#,##0.###'
     })
 
 def _create_summary_row_format(workbook):
@@ -61,6 +62,7 @@ def _create_summary_row_format(workbook):
         'border': 1,
         'border_color': 'black',
         'align': 'center',
+        'num_format': '#,##0.###'
     })
 
 # =============================================================================

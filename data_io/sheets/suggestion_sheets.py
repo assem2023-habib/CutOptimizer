@@ -180,6 +180,7 @@ def _create_pair_complement_sheet(remaining: List[Carpet], min_width: int, max_w
     rows = []
     total_original_width = 0
     total_complement_width = 0
+    total_complement_height = 0
     total_qty = 0
 
     for (rid, w, h, co), q in aggregated.items():
@@ -200,6 +201,7 @@ def _create_pair_complement_sheet(remaining: List[Carpet], min_width: int, max_w
         })
         total_original_width += w
         total_complement_width += comp_w
+        total_complement_height += h
         total_qty += q
 
     rows.append({
@@ -222,7 +224,7 @@ def _create_pair_complement_sheet(remaining: List[Carpet], min_width: int, max_w
         'الطول الأصلي': '',
         'الكمية المتبقية': total_qty,
         'عرض مكمل مقترح': total_complement_width,
-        'طول مكمل مقترح': '',
+        'طول مكمل مقترح': total_complement_height,
         'كمية مكمل مقترحة': total_qty,
         'العرض الإجمالي بعد الإكمال': total_original_width + total_complement_width,
         'صالح ضمن الحدود': '',
