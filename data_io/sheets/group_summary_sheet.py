@@ -1,6 +1,7 @@
 import pandas as pd
 from typing import List
 from models.group_carpet import GroupCarpet
+from core.config.config_manager import ConfigManager
 
 def _summary_sheet_table(
         group_id= '',
@@ -30,6 +31,9 @@ def _create_group_summary_sheet(
     """إنشاء ورقة ملخص المجموعات مع الإحصائيات."""
     summary = []
     
+    pair_mode = str(ConfigManager.get_value("pair_mode", "B")).upper()
+    multiplier = 2 if pair_mode == "B" else 1
+    
     total_width= 0
     total_height= 0
     total_area= 0
@@ -46,18 +50,18 @@ def _create_group_summary_sheet(
                 g.total_width(),
                 len(g.items),
                 g.max_height(),
-                g.total_area() ,
-                g.total_qty() ,
+                g.total_area() * multiplier,
+                g.total_qty() * multiplier,
                 types_count,
-                g.total_area() ,
+                g.total_area() * multiplier,
             )
         )
         total_width+= g.total_width()
         total_height+= g.max_height()
-        total_area+= g.total_area() 
+        total_area+= g.total_area() * multiplier
         items_count+= types_count
-        total_qty_used+= g.total_qty() 
-        total_area_div+= g.total_area() 
+        total_qty_used+= g.total_qty() * multiplier
+        total_area_div+= g.total_area() * multiplier
 
     summary.append(_summary_sheet_table())
     
