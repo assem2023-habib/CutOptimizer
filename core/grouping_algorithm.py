@@ -19,6 +19,7 @@ def build_groups(
         max_width: int,
         max_partner: int = 7,
         tolerance: int = 0,
+        path_length_limit: int = 0,
         selected_mode: GroupingMode = GroupingMode.NO_MAIN_REPEAT,
         selected_sort_type: SortType = SortType.SORT_BY_HEIGHT,
 ) -> List[GroupCarpet]:
@@ -45,7 +46,7 @@ def build_groups(
             start_index = next((j for j, c in enumerate(carpets) if c.width <= remaining_width), None)
             if start_index is None:
                 single_group = try_create_single_group(
-                    main, min_width, max_width, group_id
+                    main, min_width, max_width, group_id, path_length_limit
                 )
                 if single_group:
                     group.append(single_group)
@@ -71,6 +72,7 @@ def build_groups(
                 max_width=max_width,
                 tolerance=tolerance,
                 group_id=group_id,
+                path_length_limit=path_length_limit,
                 selected_mode=selected_mode,
                 start_index=start_index
             )
@@ -94,13 +96,14 @@ def build_groups(
                     max_width=max_width,
                     tolerance=tolerance,
                     group_id=group_id,
+                    path_length_limit=path_length_limit,
                     selected_mode=GroupingMode.ALL_COMBINATIONS,
                     start_index=start_index
                 )
                 group.extend(new_groups)
 
         single_group = try_create_single_group(
-                main, min_width, max_width, group_id
+                main, min_width, max_width, group_id, path_length_limit
             )
 
         if single_group:
@@ -122,6 +125,7 @@ def generate_and_process_partners(
         max_width: int,
         tolerance: int,
         group_id: int,
+        path_length_limit: int,
         selected_mode: GroupingMode,
         start_index: int,
     )->tuple[List[GroupCarpet], int]:
@@ -158,7 +162,8 @@ def generate_and_process_partners(
             break
         result= process_partner_group(
             main, partners, tolerance, group_id,
-            min_width= min_width, max_width=max_width
+            min_width= min_width, max_width=max_width,
+            path_length_limit=path_length_limit
         )
         if result:
             new_group, group_id =result
@@ -173,6 +178,7 @@ def process_partner_group(
     current_group_id: int,
     min_width: int,
     max_width: int,
+    path_length_limit: int = 0,
 ) -> Optional[tuple]:
 
     elements = [main] + partners
@@ -197,10 +203,10 @@ def process_partner_group(
         return None
     
     if tolerance == 0:
-        x_vals, k_max = equal_products_solution(a, XMax)
+        x_vals, k_max = equal_products_solution(a, XMax, path_length_limit)
     else:
         x_vals, k_max = equal_products_solution_with_tolerance(
-            a, XMax, tolerance
+            a, XMax, tolerance, path_length_limit
         )
     
     if not x_vals or k_max <= 0:
@@ -267,7 +273,8 @@ def try_create_single_group(
     carpet: Carpet,
     min_width: int,
     max_width: int,
-    group_id: int
+    group_id: int,
+    path_length_limit: int = 0
 ) -> Optional[GroupCarpet]:
 
     if not (carpet.width >= min_width and 
@@ -276,14 +283,22 @@ def try_create_single_group(
             carpet.rem_qty > 0):
         return None
     result= []
+    qty_to_consume = carpet.rem_qty
+    if path_length_limit > 0:
+        max_qty_by_limit = path_length_limit // carpet.height
+        qty_to_consume = min(qty_to_consume, max_qty_by_limit)
+        
+    if qty_to_consume <= 0:
+        return None
+
     if hasattr(carpet, "repeated") and carpet.repeated:
-        result= carpet.consume_from_repeated(carpet.rem_qty)
+        result= carpet.consume_from_repeated(qty_to_consume)
     single_item = CarpetUsed(
         carpet_id=carpet.id,
         width=carpet.width,
         height=carpet.height,
-        qty_used=carpet.rem_qty,
-        qty_rem=0,
+        qty_used=qty_to_consume,
+        qty_rem=carpet.rem_qty - qty_to_consume,
         client_order= carpet.client_order,
         repeated=result
     )
@@ -296,7 +311,7 @@ def try_create_single_group(
     if not single_group.is_valid(min_width, max_width):
         return None
     
-    carpet.consume(carpet.rem_qty)
+    carpet.consume(qty_to_consume)
     return single_group
     
 def rollback_consumption(rollback_data):

@@ -14,6 +14,7 @@ def generate_suggestions(
         tolerance: int,
         selected_mode: GroupingMode ,
         selected_sort_type: SortType ,
+        path_length_limit: int = 0,
         step: int= 10,    
     )->List[List[GroupCarpet]]:
 
@@ -40,6 +41,7 @@ def generate_suggestions(
             max_width= current_max,
             max_partner= 9,
             tolerance= tolerance,
+            path_length_limit= path_length_limit,
             selected_mode= selected_mode,
             selected_sort_type= selected_sort_type,
         )

@@ -20,7 +20,7 @@ class WorkerSignals(QObject):
 
 class GroupingWorker(QThread):
     def __init__(self, input_path, output_path,
-                 min_width, max_width, tolerance_len, cfg):
+                 min_width, max_width, tolerance_len, path_length_limit, cfg):
         super().__init__()
         self.signals = WorkerSignals()
 
@@ -29,6 +29,7 @@ class GroupingWorker(QThread):
         self.min_width = min_width
         self.max_width = max_width
         self.tolerance_len = tolerance_len
+        self.path_length_limit = path_length_limit
         self.cfg = cfg
 
         self._is_interrupted = False
@@ -69,6 +70,7 @@ class GroupingWorker(QThread):
                 max_width=self.max_width,
                 max_partner=self.cfg.get("max_partner", 7),
                 tolerance=self.tolerance_len,
+                path_length_limit=self.path_length_limit,
                 selected_mode=selected_mode,
                 selected_sort_type=selected_sort,
             )
@@ -104,6 +106,7 @@ class GroupingWorker(QThread):
                 tolerance= self.tolerance_len,
                 selected_mode=selected_mode,
                 selected_sort_type=selected_sort,
+                path_length_limit=self.path_length_limit,
             )
             self._check_interrupt()
 
@@ -118,6 +121,7 @@ class GroupingWorker(QThread):
                 tolerance= self.tolerance_len,
                 selected_mode=selected_mode,
                 selected_sort_type=selected_sort,
+                path_length_limit=self.path_length_limit,
             )
             self._check_interrupt()
 

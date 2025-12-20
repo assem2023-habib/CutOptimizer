@@ -36,7 +36,7 @@ def lcm_list(lst: List[int])->int:
 # 2️⃣ تابع اختيار n شركاء
 # ------------------------
 
-def equal_products_solution(a: List[int], Xmax:List[int])->Tuple[Optional[List[int]], int]:
+def equal_products_solution(a: List[int], Xmax:List[int], path_length_limit: int = 0)->Tuple[Optional[List[int]], int]:
     n = len(a)
     if n == 0 or n!=len(Xmax):
         return None,0
@@ -61,6 +61,18 @@ def equal_products_solution(a: List[int], Xmax:List[int])->Tuple[Optional[List[i
     if k_max <= 0:
         return None, 0
 
+    if path_length_limit > 0:
+        # Constraint: height * qty <= path_length_limit
+        # (a_ref * x0) <= path_length_limit
+        # target <= path_length_limit
+        # (g * l / Ai) * Ai * k_max <= path_length_limit
+        # (g * l) * k_max <= path_length_limit
+        k_max_by_limit = path_length_limit // (g * l)
+        k_max = min(k_max, k_max_by_limit)
+
+    if k_max <= 0:
+        return None, 0
+
     x_list = []
     for Ai in A:
         xi = (l * k_max) // Ai
@@ -70,7 +82,8 @@ def equal_products_solution(a: List[int], Xmax:List[int])->Tuple[Optional[List[i
 
 def equal_products_solution_with_tolerance(a: List[int],
                              Xmax:List[int],
-                             delta : int)->Tuple[Optional[List[int]], int]:
+                             delta : int,
+                             path_length_limit: int = 0)->Tuple[Optional[List[int]], int]:
     n = len(a)
     if n == 0 or n!=len(Xmax):
         return None,0
@@ -87,6 +100,10 @@ def equal_products_solution_with_tolerance(a: List[int],
     for i in range(1, n):
         limit = floor((a[i] * Xmax[i] + delta) /a_ref )
         x0_max = min(x0_max,limit)
+    
+    if path_length_limit > 0:
+        x0_max_by_limit = path_length_limit // a_ref
+        x0_max = min(x0_max, x0_max_by_limit)
     if x0_max < 0:
         return None, 0  
 
