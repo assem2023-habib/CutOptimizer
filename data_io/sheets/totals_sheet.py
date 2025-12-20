@@ -17,7 +17,7 @@ def _create_totals_sheet(
     multiplier = 2 if pair_mode == "A" else 1
     
     total_order_quantity = _calculate_total_order_quantity(original_groups)
-    total_remaining_quantity = _calculate_total_remaining_quantity(remaining)
+    total_remaining_quantity = _calculate_total_remaining_quantity(remaining) * multiplier
     total_produced_quantity = _calculate_total_produced_quantity(total_order_quantity, total_remaining_quantity)
     total_waste_quantity = _calculate_total_waste_quantity(groups, max_width) * multiplier
 

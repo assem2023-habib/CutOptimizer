@@ -2,6 +2,7 @@ import pandas as pd
 from typing import List, Optional
 from models.group_carpet import GroupCarpet
 from models.carpet import Carpet
+from core.config.config_manager import ConfigManager
 
 
 def _waste_sheet_table(
@@ -52,7 +53,7 @@ def _generate_waste_sheet(
 
         sumPathLoss+= wasteWidth
 
-        result = sumPathLoss * 100 / total
+        result = sumPathLoss * 100 / (total) if total > 0 else 0
         total_result+= result
 
         summary.append(

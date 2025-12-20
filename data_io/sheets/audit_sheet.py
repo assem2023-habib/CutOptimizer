@@ -83,9 +83,9 @@ def _create_audit_sheet(
 
     for (rid, w, h, co) in sorted(all_keys, key=lambda x: (x[0] if x[0] is not None else -1, x[1], x[2])):
         key = (rid, w, h, co)
-        orig = int(original_totals.get(key, 0))
-        used = int(used_totals.get(key, 0))
-        rem  = int(remaining_totals.get(key, 0))
+        orig = int(original_totals.get(key, 0)) 
+        used = int(used_totals.get(key, 0)) 
+        rem  = int(remaining_totals.get(key, 0)) 
         diff = used + rem - orig
 
         total_width+= w

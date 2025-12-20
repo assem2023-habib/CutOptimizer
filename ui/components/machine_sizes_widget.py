@@ -4,7 +4,8 @@ Manages machine size presets for the application
 """
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                                QTableWidget, QTableWidgetItem, QHeaderView,
-                               QDialog, QLineEdit, QMessageBox, QPushButton)
+                               QDialog, QLineEdit, QMessageBox, QPushButton,
+                               QRadioButton, QButtonGroup)
 from PySide6.QtCore import QSize
 from ui.widgets.app_button import AppButton
 from ui.styles.settings_styles import SettingsStyles
@@ -139,14 +140,14 @@ class MachineSizesWidget(QWidget):
         layout.setSpacing(15)
         
         # Input fields
-        name_input, min_input, max_input, tolerance_input, pair_mode_input, path_length_input = self._create_input_fields(layout)
+        name_input, min_input, max_input, tolerance_input, path_length_input = self._create_input_fields(layout)
         
         # Buttons
         save_btn, cancel_btn = self._create_dialog_buttons(layout)
         
         # Connect
         save_btn.clicked.connect(
-            lambda: self._save_new_size(dialog, name_input, min_input, max_input, tolerance_input, pair_mode_input, path_length_input)
+            lambda: self._save_new_size(dialog, name_input, min_input, max_input, tolerance_input, path_length_input)
         )
         cancel_btn.clicked.connect(dialog.reject)
         
@@ -171,10 +172,19 @@ class MachineSizesWidget(QWidget):
         tolerance_input.setPlaceholderText("مثال: 5")
         tolerance_input.setText("5")  # Default value
         
-        pair_mode_label = QLabel("فردي/زوجي (A/B):")
-        pair_mode_input = QLineEdit()
-        pair_mode_input.setPlaceholderText("A أو B")
-        pair_mode_input.setText("B")  # Default value
+        pair_mode_label = QLabel("النمط (زوجي/فردي):")
+        pair_mode_layout = QHBoxLayout()
+        self.radio_a = QRadioButton("زوجي (A)")
+        self.radio_b = QRadioButton("فردي (B)")
+        self.radio_b.setChecked(True) # Default to Odd (B) as it's safer
+        
+        pair_mode_group = QButtonGroup(self) # For exclusive selection
+        pair_mode_group.addButton(self.radio_a)
+        pair_mode_group.addButton(self.radio_b)
+        
+        pair_mode_layout.addWidget(self.radio_a)
+        pair_mode_layout.addWidget(self.radio_b)
+        pair_mode_layout.addStretch()
         
         path_length_label = QLabel("حد الطول (Path Length Limit):")
         path_length_input = QLineEdit()
@@ -190,11 +200,11 @@ class MachineSizesWidget(QWidget):
         layout.addWidget(tolerance_label)
         layout.addWidget(tolerance_input)
         layout.addWidget(pair_mode_label)
-        layout.addWidget(pair_mode_input)
+        layout.addLayout(pair_mode_layout)
         layout.addWidget(path_length_label)
         layout.addWidget(path_length_input)
         
-        return name_input, min_input, max_input, tolerance_input, pair_mode_input, path_length_input
+        return name_input, min_input, max_input, tolerance_input, path_length_input
     
     def _create_dialog_buttons(self, layout):
         """Creates dialog buttons"""
@@ -224,10 +234,10 @@ class MachineSizesWidget(QWidget):
         
         return save_btn, cancel_btn
     
-    def _save_new_size(self, dialog, name_input, min_input, max_input, tolerance_input, pair_mode_input, path_length_input):
+    def _save_new_size(self, dialog, name_input, min_input, max_input, tolerance_input, path_length_input):
         """Validates and saves new size"""
         name = name_input.text().strip()
-        pair_mode = pair_mode_input.text().strip().upper()
+        pair_mode = "A" if self.radio_a.isChecked() else "B"
         
         try:
             min_w = int(min_input.text().strip())
@@ -248,10 +258,6 @@ class MachineSizesWidget(QWidget):
         
         if tolerance <= 0:
             QMessageBox.warning(dialog, "خطأ", "التفاوت يجب أن يكون أكبر من صفر")
-            return
-        
-        if pair_mode not in ["A", "B"]:
-            QMessageBox.warning(dialog, "خطأ", "يرجى إدخال A أو B للخيار فردي/زوجي")
             return
         
         if path_length_limit < 0:

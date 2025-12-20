@@ -2,7 +2,6 @@ import pandas as pd
 from typing import List
 from models.group_carpet import GroupCarpet
 
-
 def _summary_sheet_table(
         group_id= '',
         total_width= '',
@@ -30,6 +29,7 @@ def _create_group_summary_sheet(
 ) -> pd.DataFrame:
     """إنشاء ورقة ملخص المجموعات مع الإحصائيات."""
     summary = []
+    
     total_width= 0
     total_height= 0
     total_area= 0
@@ -46,18 +46,18 @@ def _create_group_summary_sheet(
                 g.total_width(),
                 len(g.items),
                 g.max_height(),
-                g.total_area(),
-                g.total_qty(),
+                g.total_area() ,
+                g.total_qty() ,
                 types_count,
-                g.total_area(),
+                g.total_area() ,
             )
         )
         total_width+= g.total_width()
         total_height+= g.max_height()
-        total_area+= g.total_area()
+        total_area+= g.total_area() 
         items_count+= types_count
-        total_qty_used+= g.total_qty()
-        total_area_div+= g.total_area()
+        total_qty_used+= g.total_qty() 
+        total_area_div+= g.total_area() 
 
     summary.append(_summary_sheet_table())
     

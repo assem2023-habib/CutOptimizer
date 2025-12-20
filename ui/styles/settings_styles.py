@@ -116,4 +116,21 @@ class SettingsStyles:
                 padding: 8px;
                 font-size: 12px;
             }
+            QRadioButton {
+                color: #FFFFFF;
+                font-size: 12px;
+                spacing: 8px;
+                background-color: transparent;
+            }
+            QRadioButton::indicator {
+                width: 16px;
+                height: 16px;
+                border-radius: 8px;
+                border: 2px solid #5C5C5C;
+                background-color: #1E1E1E;
+            }
+            QRadioButton::indicator:checked {
+                background-color: #1976D2;
+                border: 2px solid #1976D2;
+            }
         """
