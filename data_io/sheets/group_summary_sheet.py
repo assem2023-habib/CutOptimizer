@@ -18,10 +18,10 @@ def _summary_sheet_table(
         'العرض الإجمالي': total_width,
         'عدد المسارات': path_count,
         'أقصى ارتفاع': max_height,
-        'المساحة الإجمالية': total_area,
+        'المساحة الإجمالية (cm²)': total_area,
         'الكمية المستخدمة الكلية': total_qty_used,
         'عدد أنواع السجاد': carpet_count,
-         'المساحة الإجمالية_2' : total_area_2,
+         'إجمالي المساحة (cm²)': total_area_2,
         })
 
 
@@ -49,7 +49,7 @@ def _create_group_summary_sheet(
                 g.total_area(),
                 g.total_qty(),
                 types_count,
-                g.total_area() / 10000,
+                g.total_area(),
             )
         )
         total_width+= g.total_width()
@@ -57,7 +57,7 @@ def _create_group_summary_sheet(
         total_area+= g.total_area()
         items_count+= types_count
         total_qty_used+= g.total_qty()
-        total_area_div+= g.total_area() / 10000
+        total_area_div+= g.total_area()
 
     summary.append(_summary_sheet_table())
     

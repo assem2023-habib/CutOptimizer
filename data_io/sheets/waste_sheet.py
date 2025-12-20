@@ -15,9 +15,9 @@ def _waste_sheet_table(
     return ({
             'رقم القصة': group_id,
             'العرض الإجمالي': total_width,
-            'الهادر في العرض':  waste_width,
+            'الهادر في العرض (cm²)':  waste_width,
             'المسار المرجعي': max_length_ref,
-            'هادر المسارات': sum_path_loss,
+            'هادر المسارات (cm²)': sum_path_loss,
             'نسبة الهدر': result,
         })
 

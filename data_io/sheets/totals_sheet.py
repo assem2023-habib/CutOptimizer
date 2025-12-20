@@ -29,10 +29,10 @@ def _create_totals_sheet(
 
     totals_row = {
         "": "",
-        "كمية الطلبية": total_order_quantity,
-        "الكمية المتبقية": total_remaining_quantity,
-        "الكمية المنتجة": total_produced_quantity,
-        "كمية الهادر": total_waste_quantity,
+        "كمية الطلبية (cm²)": total_order_quantity,
+        "الكمية المتبقية (cm²)": total_remaining_quantity,
+        "الكمية المنتجة (cm²)": total_produced_quantity,
+        "كمية الهادر (cm²)": total_waste_quantity,
         "نسبة الهادر": waste_percentage,
     }
 
