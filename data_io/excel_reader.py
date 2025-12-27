@@ -3,6 +3,7 @@ import pandas as pd
 from typing import List
 from models.data_models import Carpet
 from typing import List, Tuple
+from core.config.config_manager import ConfigManager
 
 def read_input_excel(path: str, sheet_name: int = 0)-> Tuple[List[Carpet], List[Carpet]]:
     if not os.path.exists(path):
