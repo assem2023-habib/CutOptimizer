@@ -48,6 +48,7 @@ def _create_totals_sheet(
     )
 
     totals_row = {
+        "":"",
         "كمية الطلبية (cm²)": total_order_quantity,
         "الكمية المتبقية (cm²)": total_remaining_quantity,
         "الكمية المنتجة (cm²)": total_produced_quantity,
