@@ -2,9 +2,9 @@ import os
 import pandas as pd
 from typing import List
 from models.data_models import Carpet
-from core.config.config_manager import ConfigManager
+from typing import List, Tuple
 
-def read_input_excel(path: str, sheet_name: int = 0)-> List[Carpet]:
+def read_input_excel(path: str, sheet_name: int = 0)-> Tuple[List[Carpet], List[Carpet]]:
     if not os.path.exists(path):
         raise FileExistsError(f"❌ الملف غير موجود: {path}")
     
@@ -15,7 +15,8 @@ def read_input_excel(path: str, sheet_name: int = 0)-> List[Carpet]:
     except Exception as e:
         raise Exception(f"فشل في قراءة الملف: {e}")
     
-    carpets = []
+    processed_carpets = []
+    raw_carpets = []
     invalid_rows = []
 
     prep_offset = {"A": 8, "B": 6, "C": 1, "D": 3}
@@ -26,9 +27,20 @@ def read_input_excel(path: str, sheet_name: int = 0)-> List[Carpet]:
     for idx, row in df.iterrows():
         try:
             client_order = int(row[0])
-            width = int(str(row[1]).strip())
-            height = int(str(row[2]).strip())
+            width_raw = int(str(row[1]).strip())
+            height_raw = int(str(row[2]).strip())
             qty_raw = int(row[3])
+            
+            # Save raw carpet data
+            raw_carpet = Carpet(
+                id=idx + 1,
+                width=width_raw,
+                height=height_raw,
+                qty=qty_raw,
+                client_order=client_order
+            )
+            raw_carpets.append(raw_carpet)
+
             # Determine texture/prep columns based on new format (no A/B column)
             if len(row) > 6:
                 # Legacy format with extra A/B column present at index 4
@@ -43,6 +55,9 @@ def read_input_excel(path: str, sheet_name: int = 0)-> List[Carpet]:
                 qty = max(1, qty_raw // 2)
             else:
                 qty = qty_raw
+
+            width = width_raw
+            height = height_raw
 
             if prep_code in prep_offset:
                 height += prep_offset[prep_code]
@@ -62,9 +77,9 @@ def read_input_excel(path: str, sheet_name: int = 0)-> List[Carpet]:
                 client_order=client_order
             )
             carpet.qty_original_before_pair_mode = qty_raw
-            carpets.append(carpet)
+            processed_carpets.append(carpet)
         except Exception as e:
             invalid_rows.append(idx + 1)
             continue
 
-    return carpets
+    return processed_carpets, raw_carpets

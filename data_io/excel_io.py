@@ -46,7 +46,8 @@ def write_output_excel(
     max_width: Optional[int] = None,
     tolerance_length: Optional[int] = None,
     originals: Optional[List[Carpet]] = None,
-    suggested_groups: Optional[List[List[GroupCarpet]]]= None
+    suggested_groups: Optional[List[List[GroupCarpet]]]= None,
+    raw_originals: Optional[List[Carpet]] = None
 ) -> None:
     """
     كتابة النتائج إلى ملف Excel.
@@ -67,6 +68,8 @@ def write_output_excel(
         الحد الأقصى للعرض
     originals : Optional[List[Carpet]]
         البيانات الأصلية للتدقيق
+    raw_originals : Optional[List[Carpet]]
+        البيانات الخام الأصلية قبل التعديلات
         
     أمثلة:
     -------
@@ -78,5 +81,5 @@ def write_output_excel(
     """
     from .excel_writer import write_output_excel as _write_output_excel
     _write_output_excel(
-        path, groups, remaining, min_width, max_width,tolerance_length , originals, suggested_groups
+        path, groups, remaining, min_width, max_width,tolerance_length , originals, suggested_groups, raw_originals
     )

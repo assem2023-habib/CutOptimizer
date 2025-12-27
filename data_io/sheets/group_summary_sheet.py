@@ -32,7 +32,7 @@ def _create_group_summary_sheet(
     summary = []
     
     pair_mode = str(ConfigManager.get_value("pair_mode", "B")).upper()
-    multiplier = 2 if pair_mode == "B" else 1
+    multiplier = 2 if pair_mode == "A" else 1
     
     total_width= 0
     total_height= 0

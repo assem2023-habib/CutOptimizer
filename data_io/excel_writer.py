@@ -85,6 +85,7 @@ def write_output_excel(
     tolerance_length: Optional[int] = None,
     originals: Optional[List[Carpet]] = None,
     suggested_groups: Optional[List[List[GroupCarpet]]]= None,
+    raw_originals: Optional[List[Carpet]] = None,
 ) -> None:
     """
     كتابة النتائج إلى ملف Excel مع صفحات متعددة.
@@ -109,6 +110,8 @@ def write_output_excel(
         السماحية للطول
     originals : Optional[List[Carpet]]
         البيانات الأصلية للتدقيق
+    raw_originals : Optional[List[Carpet]]
+        البيانات الخام الأصلية قبل التعديلات
     """
     # إنشاء ورقة تفاصيل المجموعات
     df1 = _create_group_details_sheet(groups)
@@ -120,7 +123,7 @@ def write_output_excel(
     df3 = _create_remaining_sheet(remaining)
 
     # إنشاء ورقة الإجماليات
-    totals_df = _create_totals_sheet(originals, groups, remaining, max_width)
+    totals_df = _create_totals_sheet(originals, groups, remaining, max_width, raw_originals)
 
     # إنشاء ورقة إحصائيات المجموعات الإضافية
     waste_df = _generate_waste_sheet(groups, originals, max_width) 

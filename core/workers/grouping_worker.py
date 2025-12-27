@@ -40,7 +40,7 @@ class GroupingWorker(QThread):
             # self.signals.progress.emit(5)
             self.signals.log.emit("📖 بدء قراءة ملف البيانات...")
 
-            carpets = read_input_excel(self.input_path)
+            carpets, raw_carpets = read_input_excel(self.input_path)
             self.signals.log.emit(f"✅ تم قراءة {len(carpets)} نوع من السجاد")
 
             self._check_interrupt()
@@ -136,6 +136,7 @@ class GroupingWorker(QThread):
                 tolerance_length= self.tolerance_len,
                 originals=original_carpets,
                 suggested_groups= suggested_groups,
+                raw_originals=raw_carpets
                 )
             
             self.signals.log.emit(f"✅ تم حفظ النتائج في: {self.output_path}")
