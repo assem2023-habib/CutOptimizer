@@ -57,6 +57,17 @@ def build_groups(
             current_max_partner = 10
         if min_width >= 470 and main.width <= 60:
             current_max_partner = 12
+        if main.width <= 40 and main.width >= 30:
+            if min_width >= 370 and min_width <= 400:
+                current_max_partner = 15
+            if min_width >= 470 and min_width <= 500:
+                current_max_partner = 18
+
+        if main.width < 30 :
+            if min_width >= 370 and min_width <= 400:
+                current_max_partner = 18
+            if min_width >= 470 and min_width <= 500:
+                current_max_partner = 21
 
         partner_level = 1
         
